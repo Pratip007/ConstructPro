@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Construction Admin Portal</title>
+    <style>
+        /* General Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Montserrat', sans-serif; /* A more modern font */
+        }
+
+        body {
+            /* Background Image Mockup - A blurred construction site */
+            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), 
+                        url('https://images.unsplash.com/photo-1541888946425-d81bb19240f5?q=80&w=2070&auto=format&fit=crop') no-repeat center center/cover;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: #fff;
+        }
+
+        /* Modern Login Container */
+        .login-container {
+            background: rgba(30, 30, 30, 0.85); /* Semitransparent dark background */
+            padding: 50px 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            max-width: 420px;
+            backdrop-filter: blur(5px); /* Glassmorphism effect */
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Top Accent Bar (Construction Yellow) */
+        .login-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background-color: #ffc107; /* Construction Yellow */
+        }
+
+        /* Header */
+        .login-header {
+            margin-bottom: 35px;
+        }
+
+        .login-header h2 {
+            font-size: 28px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #ffc107; /* Industrial Yellow */
+        }
+
+        .login-header p {
+            font-size: 14px;
+            color: #ccc;
+            margin-top: 5px;
+        }
+
+        /* Input Group */
+        .input-group {
+            margin-bottom: 25px;
+            position: relative;
+            text-align: left;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #aaa;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Input Fields & Select Dropdown */
+        .input-group input, 
+        .input-group select {
+            width: 100%;
+            padding: 15px 45px 15px 45px; /* Extra padding for left & right icons */
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid #444;
+            border-radius: 8px;
+            font-size: 15px;
+            color: #fff;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        /* Custom Dropdown Specific Styles */
+        .input-group select {
+            appearance: none; /* Removes default browser arrow */
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            cursor: pointer;
+        }
+
+        .input-group select option {
+            background-color: #1e1e1e; /* Dark background for options */
+            color: #fff;
+            font-size: 14px;
+            padding: 10px;
+        }
+
+        /* Focus Effects */
+        .input-group input:focus,
+        .input-group select:focus {
+            border-color: #ffc107;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Simple CSS Icons (Mockups for FontAwesome) */
+        .input-icon {
+            position: absolute;
+            left: 15px;
+            top: 39px; /* Adjust based on label height */
+            color: #666;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+
+        /* Custom Dropdown Arrow */
+        .dropdown-arrow {
+            position: absolute;
+            right: 15px;
+            top: 42px;
+            color: #666;
+            font-size: 12px;
+            pointer-events: none; /* Allows clicking through to the select element */
+            transition: all 0.3s ease;
+        }
+
+        /* Eye Button for Password Visibility */
+        .toggle-password {
+            position: absolute;
+            right: 15px;
+            top: 39px;
+            color: #aaa;
+            font-size: 16px;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-password:hover {
+            color: #ffc107;
+        }
+
+        /* Icon Focus Animations */
+        .input-group input:focus + .input-icon,
+        .input-group select:focus + .input-icon {
+            color: #ffc107;
+        }
+
+        .input-group select:focus ~ .dropdown-arrow {
+            color: #ffc107;
+            transform: rotate(180deg); /* Flips arrow on focus */
+        }
+
+        /* Modern Login Button */
+        .btn-login {
+            width: 100%;
+            padding: 15px;
+            background: #ffc107; /* Construction Yellow */
+            border: none;
+            color: #1e1e1e; /* Dark text for contrast */
+            font-size: 15px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+            margin-top: 10px;
+        }
+
+        .btn-login:hover {
+            background: #e0a800;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 193, 7, 0.5);
+        }
+
+        /* Messages */
+        .message {
+            margin-top: 20px;
+            font-size: 13px;
+            padding: 12px;
+            border-radius: 6px;
+            display: none;
+            font-weight: 600;
+        }
+
+        .error-message {
+            background: rgba(220, 53, 69, 0.2);
+            color: #ff6b6b;
+            border: 1px solid rgba(220, 53, 69, 0.4);
+        }
+
+        .success-message {
+            background: rgba(40, 167, 69, 0.2);
+            color: #69db7c;
+            border: 1px solid rgba(40, 167, 69, 0.4);
+        }
+
+        /* Footer */
+        .login-footer {
+            margin-top: 30px;
+            font-size: 12px;
+            color: #777;
+        }
+
+        /* Importing Montserrat Font */
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap');
+    
+    </style>
+</head>
+<body>
+
+<div class="login-container">
+    <div class="login-header">
+        <h2>CONSTRUCT<span style="font-weight:400; color:#fff;">PRO</span></h2>
+        <p>System Portal Access</p>
+    </div>
+
+    <form id="loginForm" onsubmit="validateLogin(event)">
+        
+        <!-- CUSTOMIZED DROPDOWN FOR LOGIN PORTAL TYPE -->
+        <div class="input-group">
+            <label for="portalType">Select Portal Type</label>
+            <select id="portalType" onchange="updatePortalFields()" required>
+                <option value="" disabled selected>-- Choose Portal --</option>
+                <option value="admin">🛠️ Admin Portal (Master)</option>
+                <option value="office">🏢 Office Portal</option>
+                <option value="employee">👥 Employee Portal</option>
+                <option value="supervisor">🛡️ Supervisor Portal</option>
+            </select>
+            <span class="input-icon">🚪</span> 
+            <span class="dropdown-arrow">▼</span>
+        </div>
+
+        <div class="input-group">
+            <label for="username" id="usernameLabel">User ID</label>
+            <input type="text" id="username" placeholder="e.g., admin" required>
+            <span class="input-icon">👤</span> 
+        </div>
+        
+        <div class="input-group">
+            <label for="password" id="passwordLabel">Security Key</label>
+            <input type="password" id="password" placeholder="••••••••" oninput="handlePasswordInput(this)" required>
+            <span class="input-icon" id="passwordIcon">🔒</span>
+            <span class="toggle-password" id="togglePasswordBtn" onclick="togglePasswordVisibility()" title="Show/Hide Security Code">👁️</span>
+        </div>
+        
+        <button type="submit" class="btn-login">SECURE LOGIN</button>
+    </form>
+
+    <div id="errorMessage" class="message error-message">⚠️ ACCESS DENIED: Invalid Credentials or Portal.</div>
+    <div id="successMessage" class="message success-message">✔️ ACCESS GRANTED: Redirecting...</div>
+
+    <div class="login-footer">
+        © 2026 ConstructPro Industries. All rights reserved.
+    </div>
+</div>
+
+<script>
+    function updatePortalFields() {
+        const portalType = document.getElementById('portalType').value;
+        const usernameLabel = document.getElementById('usernameLabel');
+        const usernameInput = document.getElementById('username');
+        const passwordLabel = document.getElementById('passwordLabel');
+        const passwordInput = document.getElementById('password');
+        const passwordIcon = document.getElementById('passwordIcon');
+        const togglePasswordBtn = document.getElementById('togglePasswordBtn');
+
+        // পোর্টাল পরিবর্তন করলে আগের ইনপুট ক্লিয়ার হয়ে যাবে
+        passwordInput.value = '';
+        usernameInput.value = '';
+
+        if (portalType === 'admin') {
+            usernameLabel.innerText = 'Admin ID';
+            usernameInput.placeholder = 'Enter Admin ID (admin)';
+            passwordLabel.innerText = 'Master Security Code';
+            passwordInput.placeholder = '••••••••';
+            passwordInput.type = 'password';
+            passwordInput.removeAttribute('maxlength');
+            passwordInput.removeAttribute('inputmode');
+            passwordIcon.innerText = '🔒';
+            togglePasswordBtn.style.display = 'block';
+            togglePasswordBtn.innerText = '👁️';
+        } else if (portalType === 'office') {
+            usernameLabel.innerText = 'Office ID';
+            usernameInput.placeholder = 'Enter Office ID';
+            passwordLabel.innerText = 'Security Code';
+            passwordInput.placeholder = '••••••••';
+            passwordInput.type = 'password';
+            passwordInput.removeAttribute('maxlength');
+            passwordInput.removeAttribute('inputmode');
+            passwordIcon.innerText = '🔒';
+            togglePasswordBtn.style.display = 'block';
+            togglePasswordBtn.innerText = '👁️';
+        } else if (portalType === 'employee') {
+            usernameLabel.innerText = 'Employee ID';
+            usernameInput.placeholder = 'Enter Employee ID';
+            passwordLabel.innerText = 'Aadhaar Number';
+            passwordInput.placeholder = 'XXXX XXXX XXXX';
+            passwordInput.type = 'text';
+            passwordInput.setAttribute('maxlength', '14'); // ১২টি ডিজিট + ২টি স্পেস = ১৪ ক্যারেক্টার
+            passwordInput.setAttribute('inputmode', 'numeric');
+            passwordIcon.innerText = '🪪';
+            togglePasswordBtn.style.display = 'none'; // আধার নাম্বার টেক্সট মোডে থাকে তাই আই বাটন লুকানো থাকবে
+        } else if (portalType === 'supervisor') {
+            usernameLabel.innerText = 'Supervisor ID';
+            usernameInput.placeholder = 'Enter Supervisor ID';
+            passwordLabel.innerText = 'Security Code';
+            passwordInput.placeholder = '••••••••';
+            passwordInput.type = 'password';
+            passwordInput.removeAttribute('maxlength');
+            passwordInput.removeAttribute('inputmode');
+            passwordIcon.innerText = '🔒';
+            togglePasswordBtn.style.display = 'block';
+            togglePasswordBtn.innerText = '👁️';
+        }
+    }
+
+    // এমপ্লয়ি পোর্টালে শুধুমাত্র নাম্বার ইনপুট, ১২ ডিজিট লিমিট এবং প্রতি ৪ ডিজিট পর অটোমেটিক স্পেস দেওয়ার ফাংশন
+    function handlePasswordInput(input) {
+        const portalType = document.getElementById('portalType').value;
+        if (portalType === 'employee') {
+            // শুধুমাত্র নাম্বার রাখা হবে (অন্য কোনো অক্ষর টাইপ করলে মুছে যাবে)
+            let digitsOnly = input.value.replace(/\D/g, '');
+            
+            // সর্বোচ্চ ১২টি ডিজিটে সীমাবদ্ধ করা
+            digitsOnly = digitsOnly.substring(0, 12);
+            
+            // প্রতি ৪টি ডিজিটের পর স্বয়ংক্রিয়ভাবে একটি স্পেস যোগ করা
+            let formattedValue = digitsOnly.replace(/(\d{4})(?=\d)/g, '$1 ');
+            
+            input.value = formattedValue;
+        }
+    }
+
+    // আই বাটনে ক্লিক করলে সিকিউরিটি কোড দেখানো বা লুকানোর ফাংশন
+    function togglePasswordVisibility() {
+        const portalType = document.getElementById('portalType').value;
+        if (portalType === 'employee') return;
+
+        const passwordInput = document.getElementById('password');
+        const togglePasswordBtn = document.getElementById('togglePasswordBtn');
+
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            togglePasswordBtn.innerText = '🙈';
+        } else {
+            passwordInput.type = 'password';
+            togglePasswordBtn.innerText = '👁️';
+        }
+    }
+
+    // ==============================================================================
+    // 🚀 DYNAMIC ROUTING & SESSION LOGIC ENGINE
+    // ==============================================================================
+    function validateLogin(event) {
+        event.preventDefault(); // Prevent form from reloading the page
+
+        const portalInput = document.getElementById('portalType').value;
+        const usernameInput = document.getElementById('username').value.trim();
+        const passwordInput = document.getElementById('password').value.trim();
+        
+        const errorDiv = document.getElementById('errorMessage');
+        const successDiv = document.getElementById('successMessage');
+
+        // Note: For demo purposes, we accept "admin"/"admin" for all portals. 
+        // In a real application, you would verify against local storage user databases.
+        
+        if (usernameInput !== '' && passwordInput !== '' && portalInput !== '') {
+            errorDiv.style.display = 'none';
+            successDiv.style.display = 'block';
+            
+            // 1. Save Login Session Data
+            localStorage.setItem('atr_current_logged_portal', portalInput);
+            localStorage.setItem('atr_current_logged_user', usernameInput);
+
+            // 2. Dynamic Redirection based on Portal Type
+            let redirectUrl = "dashboard.html"; // Default Fallback
+
+            if (portalInput === 'admin') {
+                redirectUrl = "dashboard.html";
+            } 
+            else if (portalInput === 'office') {
+                redirectUrl = "office/office_dashboard_home.html";
+            } 
+            else if (portalInput === 'supervisor') {
+                redirectUrl = "supervisor/supervisor_dashboard_home.html";
+            } 
+            else if (portalInput === 'employee') {
+                redirectUrl = "employee/EmployeeLedger.html";
+            }
+
+            // Redirecting after success (Simulated Delay)
+            setTimeout(() => { 
+                window.location.href = redirectUrl; 
+            }, 1000);
+            
+        } else {
+            successDiv.style.display = 'none';
+            errorDiv.style.display = 'block';
+        }
+    }
+</script>
+
+</body>
+</html>

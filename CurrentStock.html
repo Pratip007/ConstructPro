@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Stock & Damage Management</title>
+    
+    <!-- Sync theme with Master Dashboard -->
+    <script>
+        function applyDashboardTheme() {
+            const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        }
+        applyDashboardTheme();
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'atr_theme' || !e.key) {
+                applyDashboardTheme();
+            }
+        });
+    </script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- SheetJS CDN for XLSX Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        :root {
+            --bg-body: transparent; 
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #b0b0b0;
+            --border-color: rgba(255, 255, 255, 0.12);
+            
+            /* Dynamic Glass & Input Variables */
+            --glass-bg: rgba(30, 30, 30, 0.75);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --input-bg: rgba(15, 15, 15, 0.6);
+            --input-focus-bg: rgba(20, 20, 20, 0.9);
+            
+            --shadow: 0 4px 20px rgba(0,0,0,0.4);
+            
+            /* Primary Theme Color (#9c27b0) */
+            --theme-color: #9c27b0;
+            --theme-glow: rgba(156, 39, 176, 0.3);
+            --theme-transition: all 0.3s ease;
+        }
+
+        [data-theme="light"] {
+            --bg-body: transparent;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #666666;
+            --border-color: rgba(0, 0, 0, 0.12);
+            
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(0, 0, 0, 0.1);
+            --input-bg: rgba(240, 240, 240, 0.8);
+            --input-focus-bg: #ffffff;
+            
+            --shadow: 0 8px 25px rgba(0,0,0,0.06);
+        }
+
+        /* Crisp Font Rendering */
+        * { 
+            margin: 0; padding: 0; box-sizing: border-box; 
+            font-family: 'Montserrat', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+        }
+        
+        body { background-color: var(--bg-body); color: var(--text-main); height: 100vh; overflow: hidden; display: flex; flex-direction: column; transition: var(--theme-transition); }
+        .main-content { padding: 20px 40px; width: 100%; max-width: 1600px; margin: 0 auto; flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* FIXED HEADER */
+        .header { 
+            flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; 
+            margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; 
+            gap: 20px; transition: var(--theme-transition); flex-wrap: wrap;
+        }
+        .header-left { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+        
+        .role-mode-badge {
+            display: none;
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 700;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-back-dash { 
+            background-color: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color); 
+            text-decoration: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; font-size: 12px; 
+            transition: all 0.3s; display: flex; align-items: center; width: max-content; cursor: pointer;
+        }
+        .btn-back-dash:hover { background-color: var(--theme-color); color: #ffffff; border-color: var(--theme-color); transform: translateY(-2px); box-shadow: 0 4px 10px var(--theme-glow); }
+
+        /* TAB BUTTONS REDESIGNED LIKE REPORT DAMAGE BUTTON */
+        .header-right { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; justify-content: flex-end; flex: 1; }
+        
+        .nav-tabs { display: flex; gap: 10px; flex-shrink: 0; }
+        .tab-btn { 
+            padding: 10px 18px; border-radius: 6px; font-weight: 700; font-size: 12px; cursor: pointer; 
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-transform: uppercase; 
+            transition: all 0.3s; height: 41px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); white-space: nowrap;
+            background: var(--input-bg); color: var(--text-muted); border: 1px solid var(--border-color);
+        }
+        .tab-btn:hover { transform: translateY(-2px); color: var(--text-main); }
+        .tab-btn.active { 
+            background: rgba(156, 39, 176, 0.15);
+            color: var(--theme-color); 
+            border: 1px solid rgba(156, 39, 176, 0.4); 
+            box-shadow: 0 4px 10px var(--theme-glow); 
+        }
+
+        .header-actions { display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
+        
+        .search-input { 
+            background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main); 
+            padding: 10px 15px; border-radius: 6px; font-size: 13px; font-weight: 500; outline: none; transition: 0.3s; 
+            width: 220px; height: 41px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); 
+        }
+        .search-input:focus { border-color: var(--theme-color); box-shadow: 0 0 8px var(--theme-glow); }
+
+        /* VIEWS CONTAINER */
+        .view-section { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+        .view-section.active { display: flex; }
+
+        /* FILTER BAR & TABLE CONTAINER (With Proper Z-Index Layering) */
+        .filter-section { 
+            background: var(--bg-card); padding: 15px 20px; border-radius: 10px; margin-bottom: 15px; 
+            display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color); 
+            border-left: 4px solid var(--theme-color); box-shadow: var(--shadow); flex-shrink: 0; gap: 15px; 
+            flex-wrap: wrap; transition: var(--theme-transition); position: relative; z-index: 50;
+        }
+        .filter-title { font-size: 14px; font-weight: bold; color: var(--theme-color); text-transform: uppercase; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+
+        .table-container { 
+            flex: 1; background: var(--bg-card); border-radius: 10px 10px 0 0; border: 1px solid var(--border-color); 
+            border-top: 4px solid var(--theme-color); box-shadow: var(--shadow); display: flex; flex-direction: column; 
+            overflow: hidden; min-height: 0; transition: var(--theme-transition); position: relative; z-index: 1;
+        }
+        .table-scroll { flex: 1; overflow-y: auto; padding: 0 15px; }
+        
+        .table-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+        .table-scroll::-webkit-scrollbar-track { background: transparent; }
+        .table-scroll::-webkit-scrollbar-thumb { background: rgba(156, 39, 176, 0.3); border-radius: 4px; }
+        .table-scroll::-webkit-scrollbar-thumb:hover { background: var(--theme-color); }
+
+        /* FORM ELEMENTS */
+        .panel { 
+            background: var(--glass-bg); padding: 25px; border-radius: 10px; margin-bottom: 20px; 
+            border: 1px solid var(--border-color); border-top: 3px solid var(--theme-color); box-shadow: var(--shadow);
+            position: relative; overflow: visible;
+        }
+        .panel.panel-top { z-index: 40; }
+        .panel.panel-bottom { z-index: 30; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .form-group { display: flex; flex-direction: column; gap: 8px; position: relative; }
+        .form-group label { font-size: 12px; color: var(--text-muted); font-weight: bold; text-transform: uppercase; }
+        
+        .form-control { 
+            background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main); 
+            padding: 10px 15px; border-radius: 6px; font-size: 13px; font-weight: 500; outline: none; transition: all 0.3s; 
+            width: 100%; height: 41px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); color-scheme: dark;
+        }
+        [data-theme="light"] .form-control { color-scheme: light; }
+        .form-control:focus { border-color: var(--theme-color); box-shadow: 0 0 8px var(--theme-glow); }
+        .form-control[type="date"] { cursor: pointer; }
+        ::-webkit-calendar-picker-indicator { filter: invert(0.8); cursor: pointer; }
+        [data-theme="light"] ::-webkit-calendar-picker-indicator { filter: invert(0); }
+
+        /* BUTTONS */
+        .btn { 
+            padding: 10px 18px; border-radius: 6px; font-weight: 700; font-size: 12px; cursor: pointer; border: none; 
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-transform: uppercase; 
+            transition: all 0.3s; height: 41px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+        }
+        .btn:hover { transform: translateY(-2px); }
+        .btn-export { background: rgba(25, 135, 84, 0.15); color: #198754; border: 1px solid rgba(25, 135, 84, 0.4); }
+        .btn-export:hover { background-color: #198754; color: #ffffff; }
+        .btn-damage { background: rgba(220, 53, 69, 0.15); color: #dc3545; border: 1px solid rgba(220, 53, 69, 0.4); }
+        .btn-damage:hover { background-color: #dc3545; color: #ffffff; box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3); }
+        .btn-view { 
+            background: rgba(23, 162, 184, 0.15); color: #17a2b8; border: 1px solid rgba(23, 162, 184, 0.4); 
+            padding: 6px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; text-decoration: none; 
+            display: inline-flex; align-items: center; gap: 4px; cursor: pointer; transition: 0.2s; text-transform: uppercase; 
+        }
+        .btn-view:hover { background: #17a2b8; color: #ffffff; }
+        .btn-del-sm {
+            background: rgba(220, 53, 69, 0.15); color: #dc3545; border: 1px solid rgba(220, 53, 69, 0.4);
+            padding: 6px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: 0.2s; text-transform: uppercase; margin-left: 5px;
+        }
+        .btn-del-sm:hover { background: #dc3545; color: #ffffff; }
+
+        /* TABLES & STICKY HEADER */
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        thead th { 
+            position: sticky; top: 0; background-color: var(--input-bg); z-index: 5; padding: 15px 10px; 
+            color: var(--theme-color); font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; 
+            border-bottom: 2px solid var(--theme-color); white-space: nowrap; transition: var(--theme-transition); 
+        }
+        tbody td { 
+            padding: 12px 10px; border-bottom: 1px solid var(--border-color); font-size: 13px; color: var(--text-main); 
+            vertical-align: middle; transition: var(--theme-transition); font-weight: 500; 
+        }
+        tbody tr:hover { background: var(--glass-bg); }
+        .empty-row { text-align: center; padding: 40px; color: var(--text-muted); font-size: 14px; font-weight: 600; }
+
+        .pending-status-pill {
+            display: inline-block;
+            background: rgba(255, 193, 7, 0.16);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.45);
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            margin-top: 4px;
+            text-transform: uppercase;
+        }
+
+        /* MODAL OVERLAY & CONTAINER */
+        .modal-overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); 
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 1000; display: none; 
+            justify-content: center; align-items: center; padding: 20px; 
+        }
+        .modal-overlay.show { display: flex; }
+        
+        .modal-container { 
+            background: var(--bg-card); width: 100%; max-width: 850px; max-height: 95vh; overflow-y: visible; 
+            border-radius: 12px; border: 1px solid var(--theme-color); box-shadow: 0 15px 40px rgba(0,0,0,0.5); 
+            position: relative; display: flex; flex-direction: column; transition: var(--theme-transition); 
+        }
+        .modal-header { 
+            background: var(--bg-card); padding: 20px 25px; border-bottom: 1px solid var(--border-color); 
+            z-index: 20; display: flex; justify-content: space-between; align-items: center; border-radius: 12px 12px 0 0; 
+        }
+        .modal-header h2 { font-size: 18px; color: var(--theme-color); margin: 0; font-weight: 700; }
+        .close-btn { font-size: 28px; color: var(--text-muted); cursor: pointer; line-height: 1; transition: 0.2s; }
+        .close-btn:hover { color: #dc3545; }
+        .modal-body { padding: 25px; flex: 1; overflow-y: visible; }
+
+        /* CUSTOM ULTRA-SMOOTH SEARCHABLE DROPDOWN */
+        .custom-select { position: relative; min-width: 220px; user-select: none; }
+        .select-header { 
+            background: var(--input-bg); border: 1px solid var(--border-color); padding: 10px 15px; border-radius: 6px; 
+            cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s ease; 
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); font-size: 13px; font-weight: 600; color: var(--text-main); height: 41px; 
+        }
+        .select-header:hover { border-color: rgba(156, 39, 176, 0.5); }
+        .select-header.active { border-color: var(--theme-color); box-shadow: 0 0 8px var(--theme-glow); background: var(--input-focus-bg); }
+        .select-header .arrow { transition: transform 0.3s ease; font-size: 14px; }
+        .select-header.active .arrow { transform: rotate(180deg); color: var(--theme-color); }
+        .select-header.locked-dropdown {
+            background: rgba(255, 193, 7, 0.08);
+            border-color: rgba(255, 193, 7, 0.4);
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        
+        .select-options-container { 
+            position: absolute; top: calc(100% + 8px); left: 0; width: 100%; background: var(--bg-card); 
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--theme-color); 
+            border-radius: 8px; box-shadow: 0 15px 35px rgba(0,0,0,0.65); z-index: 999; opacity: 0; visibility: hidden; 
+            transform: translateY(-10px); transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); overflow: hidden; 
+        }
+        [data-theme="light"] .select-options-container { box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
+        .select-options-container.active { opacity: 1; visibility: visible; transform: translateY(0); }
+        
+        .select-search { padding: 10px; border-bottom: 1px solid var(--border-color); background: rgba(0,0,0,0.2); }
+        [data-theme="light"] .select-search { background: rgba(255,255,255,0.5); }
+        .select-search input { 
+            width: 100%; padding: 8px 12px; background: var(--input-bg); border: 1px solid var(--border-color); 
+            border-radius: 4px; color: var(--text-main); font-size: 13px; font-weight: 500; outline: none; transition: 0.3s; 
+        }
+        .select-search input:focus { border-color: var(--theme-color); }
+        
+        .select-options { max-height: 200px; overflow-y: auto; list-style: none; margin: 0; padding: 5px 0; }
+        .select-options::-webkit-scrollbar { width: 6px; }
+        .select-options::-webkit-scrollbar-thumb { background: rgba(156, 39, 176, 0.4); border-radius: 3px; }
+        .select-options li { 
+            padding: 10px 15px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text-main); 
+            transition: background 0.2s; border-bottom: 1px solid rgba(255,255,255,0.02); 
+        }
+        .select-options li:hover { background: var(--theme-color); color: #ffffff; }
+        .option-office { color: #ffc107; font-weight: bold; }
+        .item-meta { display: block; font-size: 10px; color: var(--text-muted); margin-top: 3px; }
+        .select-options li:hover .item-meta { color: rgba(255,255,255,0.8); }
+    </style>
+</head>
+<body>
+
+    <div class="main-content">
+        <!-- FIXED HEADER -->
+        <div class="header">
+            <!-- Left Side: Back Button & Role Mode Badge -->
+            <div class="header-left">
+                <a href="dashboard_home.html" id="btnBackDashboard" class="btn-back-dash" onclick="handleBackToDashboard(event)">← Back to Dashboard</a>
+                <span id="roleModeBadge" class="role-mode-badge">🏢 Office Mode</span>
+            </div>
+
+            <!-- Right Side: Tabs + Actions -->
+            <div class="header-right">
+                <!-- TABS -->
+                <div class="nav-tabs">
+                    <button class="tab-btn active" id="tabLedgerBtn" onclick="switchTab('ledger')">📋 Stock Ledger</button>
+                    <button class="tab-btn" id="tabDamageBtn" onclick="switchTab('damage')">⚠️ Damage Ledger</button>
+                </div>
+
+                <!-- Divider Line -->
+                <div style="width: 1px; height: 30px; background: var(--border-color); margin: 0 10px;"></div>
+
+                <!-- ACTIONS FOR STOCK LEDGER TAB -->
+                <div class="header-actions" id="ledgerHeaderActions">
+                    <button class="btn btn-damage" onclick="openDamageModal()">⚠️ Report Damage</button>
+                    <button class="btn btn-export" onclick="exportStockLedgerToExcel()">📤 Export Excel</button>
+                </div>
+
+                <!-- ACTIONS FOR DAMAGE LEDGER TAB -->
+                <div class="header-actions" id="damageHeaderActions" style="display: none;">
+                    <button class="btn btn-damage" onclick="openDamageModal()">⚠️ Report Damage</button>
+                    <button class="btn btn-export" onclick="exportDamageStockToExcel()">📤 Export Excel</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW 1: STOCK LEDGER VIEW (Stock Item, Damage Item, Available Stock) -->
+        <div class="view-section active" id="ledgerViewSection">
+            <div class="filter-section">
+                <div class="filter-title">📦 Stock Inventory Summary</div>
+                <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                    
+                    <!-- CUSTOM SITE FILTER DROPDOWN -->
+                    <div class="custom-select" id="viewSiteDropdown">
+                        <div class="select-header" id="viewSiteSelectHeader">
+                            <span class="selected-text" id="viewSiteSelectedText">🌍 All Sites</span>
+                            <span class="arrow" id="viewSiteSelectArrow">▼</span>
+                        </div>
+                        <div class="select-options-container">
+                            <div class="select-search">
+                                <input type="text" placeholder="Filter site..." class="search-input-dropdown">
+                            </div>
+                            <ul class="select-options" id="viewSiteList">
+                                <!-- Populated via JS -->
+                            </ul>
+                        </div>
+                    </div>
+                    <input type="hidden" id="selectedViewSiteFilter" value="">
+                    
+                    <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search item, site..." onkeyup="renderStockLedgerTable()">
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <div class="table-scroll">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Location / Site</th>
+                                <th>Item Name</th>
+                                <th>Unit</th>
+                                <th style="color:#28a745;">Stock Item (Total Added)</th>
+                                <th style="color:#dc3545;">Damage Item</th>
+                                <th style="color:var(--theme-color); font-weight:bold;">Available Stock</th>
+                            </tr>
+                        </thead>
+                        <tbody id="viewTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW 2: DAMAGE LEDGER VIEW (ONLY Damage Items with Proof View) -->
+        <div class="view-section" id="damageViewSection">
+            <div class="filter-section">
+                <div class="filter-title">⚠️ Damage Ledger & Proofs</div>
+                <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                    
+                    <!-- CUSTOM DAMAGE SITE FILTER DROPDOWN -->
+                    <div class="custom-select" id="damageSiteFilterDropdown">
+                        <div class="select-header" id="damageSiteFilterHeader">
+                            <span class="selected-text" id="damageSiteFilterText">🌍 All Sites</span>
+                            <span class="arrow" id="damageSiteFilterArrow">▼</span>
+                        </div>
+                        <div class="select-options-container">
+                            <div class="select-search">
+                                <input type="text" placeholder="Filter site..." class="search-input-dropdown">
+                            </div>
+                            <ul class="select-options" id="filterSiteList">
+                                <!-- Populated via JS -->
+                            </ul>
+                        </div>
+                    </div>
+                    <input type="hidden" id="selectedFilterSite" value="">
+
+                    <input type="text" id="damageSearchInput" class="search-input" placeholder="🔍 Search item, site..." onkeyup="renderDamageTable()">
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <div class="table-scroll">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Damage ID</th>
+                                <th>Date</th>
+                                <th>Location / Site</th>
+                                <th>Item Name</th>
+                                <th>Unit</th>
+                                <th style="color:#dc3545;">Damaged Qty</th>
+                                <th style="text-align: center;">Proof (Image / PDF)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="damageTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ================= REPORT DAMAGE MODAL ================= -->
+    <div class="modal-overlay" id="damageModal">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2>⚠️ Report Damaged Item</h2>
+                <span class="close-btn" onclick="closeDamageModal()">&times;</span>
+            </div>
+            
+            <div class="modal-body">
+                <div class="panel panel-top">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Damage Date</label>
+                            <input type="date" id="damageDate" class="form-control">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Select Site / Location</label>
+                            <div class="custom-select" id="modalDamageSiteDropdown" style="width: 100%;">
+                                <div class="select-header" id="modalDamageSiteHeader">
+                                    <span class="selected-text" id="modalDamageSiteText" style="color: var(--text-muted);">-- Choose Location --</span>
+                                    <span class="arrow" id="modalDamageSiteArrow">▼</span>
+                                </div>
+                                <div class="select-options-container">
+                                    <div class="select-search">
+                                        <input type="text" placeholder="Search location..." class="search-input-dropdown">
+                                    </div>
+                                    <ul class="select-options" id="damageSiteList">
+                                        <!-- Populated via JS -->
+                                    </ul>
+                                </div>
+                            </div>
+                            <input type="hidden" id="damageSiteValue">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel panel-bottom">
+                    <div class="form-grid" style="grid-template-columns: 2fr 1fr 1fr;">
+                        <div class="form-group">
+                            <label>Select Product</label>
+                            <div class="custom-select" id="modalDamageProductDropdown" style="width: 100%;">
+                                <div class="select-header" id="modalDamageProductHeader">
+                                    <span class="selected-text" id="modalDamageProductText" style="color: var(--text-muted);">-- Choose Product --</span>
+                                    <span class="arrow">▼</span>
+                                </div>
+                                <div class="select-options-container">
+                                    <div class="select-search">
+                                        <input type="text" placeholder="Search product..." class="search-input-dropdown">
+                                    </div>
+                                    <ul class="select-options" id="damageProductList">
+                                        <!-- Populated via JS -->
+                                    </ul>
+                                </div>
+                            </div>
+                            <input type="hidden" id="damageProductName">
+                            <input type="hidden" id="damageProductUnit">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Damaged Qty</label>
+                            <input type="number" id="damageQty" class="form-control" placeholder="Qty" min="0.01" step="any">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Upload Proof (Image / PDF)</label>
+                            <input type="file" id="damageFileProof" accept="image/*,.pdf" class="form-control" style="padding: 6px;">
+                        </div>
+                    </div>
+                </div>
+
+                <div style="text-align: right;">
+                    <button type="button" id="btnSubmitDamageMain" class="btn btn-damage" onclick="submitDamageReport()">⚠️ Submit Damage Report</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ================= PREVIEW MODAL FOR IMAGE/PDF ================= -->
+    <div class="modal-overlay" id="previewModal" style="z-index: 2200;">
+        <div class="modal-container" style="max-width: 650px; text-align: center;">
+            <div class="modal-header">
+                <h2 id="previewModalTitle">📄 Damage Proof Preview</h2>
+                <span class="close-btn" onclick="closePreviewModal()">&times;</span>
+            </div>
+            <div class="modal-body" id="previewContainer" style="padding: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 220px;">
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= OFFICE / SUPERVISOR APPROVAL MODAL ================= -->
+    <div class="modal-overlay" id="roleApprovalModal" style="z-index: 2500;">
+        <div class="modal-container" style="max-width: 480px; border-color: #ffc107;">
+            <div class="modal-header">
+                <h2 id="roleApprovalTitle" style="color: #ffc107;">🏢 Send Request to ApproveOffice.html</h2>
+                <span class="close-btn" onclick="closeRoleApprovalModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p id="roleApprovalDesc" style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.5;">
+                    অফিস পোর্টাল থেকে ড্যামেজ স্টক রিপোর্ট বা পরিবর্তন করলে তা অ্যাডমিনের <strong>ApproveOffice.html</strong>-এ পাঠানো হবে। অ্যাডমিন অ্যাপ্রুভ করলেই এটি চূড়ান্ত হবে।
+                </p>
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label>Damage Action Summary</label>
+                    <input type="text" id="roleApprovalSummary" class="form-control" readonly style="color: #ffc107; font-weight: 700;">
+                </div>
+                <div class="form-group" style="margin-bottom: 18px;">
+                    <label>Reason / Remarks for Approval <span style="color: #dc3545;">*</span></label>
+                    <textarea id="roleApprovalReason" class="form-control" rows="3" placeholder="Explain how the item was damaged or why this action is needed..." style="height: auto; resize: none;"></textarea>
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" class="btn btn-del-sm" style="height: 40px; padding: 0 18px;" onclick="closeRoleApprovalModal()">Cancel</button>
+                    <button type="button" class="btn" style="height: 40px; background: #ffc107; color: #121212;" onclick="confirmRoleApprovalRequest()">📤 Send for Approval</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================================================
+        // 1. PORTAL ROLE DETECTION (ADMIN / OFFICE STAFF / SUPERVISOR) & LOCALSTORAGE ENGINE
+        // =========================================================================================
+        const ADMIN_PASSWORD = "admin"; // Accepts both 'admin' and 'admin123'
+        let currentPortalMode = "admin"; // 'admin', 'office', or 'supervisor'
+        let isSupervisorMode = false;
+        let loggedUserId = "ADMIN";
+        let loggedUserName = "Super Admin";
+        let assignedSite = "";
+        let pendingRolePayload = null;
+
+        const defaultSubmittedStocks = [
+            { id: "STK-1001-1", date: "01-08-2026", site: "🏢 Office Stock (Main)", itemName: "Ambuja Cement PPC", unit: "Bags", qty: 50, billNo: "INV-2026/01" },
+            { id: "STK-1001-2", date: "01-08-2026", site: "🏢 Office Stock (Main)", itemName: "Tata Tiscon TMT Bar 8mm", unit: "Kg", qty: 200, billNo: "INV-2026/01" },
+            { id: "STK-1002-1", date: "03-08-2026", site: "Dum Dum Project", itemName: "Red Bricks", unit: "Pcs", qty: 5000, billNo: "MEMO-45" }
+        ];
+
+        const defaultDamagedStocks = [
+            { id: "DMG-501", date: "02-08-2026", site: "Dum Dum Project", itemName: "Red Bricks", unit: "Pcs", qty: 150, proofUrl: "SAMPLE_PROOF", proofName: "sample_proof.pdf", isPdf: true, pendingStatus: null }
+        ];
+
+        const sites = [
+            "🏢 Office Stock (Main)", 
+            "Dum Dum Project", 
+            "Commercial Complex B3", 
+            "Barasat Highway", 
+            "Rajarhat Extension",
+            "Salt Lake Sector V",
+            "New Town Action Area 1"
+        ];
+
+        const defaultRetailItems = [
+            { name: "Ambuja Cement PPC", unit: "Bags" },
+            { name: "Tata Tiscon TMT Bar 8mm", unit: "Kg" },
+            { name: "Red Bricks", unit: "Pcs" }
+        ];
+
+        let submittedStocks = [];
+        let damagedStocks = [];
+        let retailItems = [];
+
+        function loadAndSyncDatabases() {
+            const storedStocks = JSON.parse(localStorage.getItem('atr_submitted_stocks_db'));
+            if (Array.isArray(storedStocks) && storedStocks.length > 0) {
+                submittedStocks = storedStocks;
+            } else {
+                submittedStocks = JSON.parse(JSON.stringify(defaultSubmittedStocks));
+                localStorage.setItem('atr_submitted_stocks_db', JSON.stringify(submittedStocks));
+            }
+
+            const storedDamages = JSON.parse(localStorage.getItem('atr_damaged_stocks_db'));
+            if (Array.isArray(storedDamages) && storedDamages.length > 0) {
+                damagedStocks = storedDamages;
+            } else {
+                damagedStocks = JSON.parse(JSON.stringify(defaultDamagedStocks));
+                saveDamagedStocksToStorage();
+            }
+
+            // Merge default items with any items added in StockView.html
+            retailItems = JSON.parse(JSON.stringify(defaultRetailItems));
+            submittedStocks.forEach(s => {
+                if (s.itemName && !retailItems.some(r => r.name.toLowerCase() === s.itemName.toLowerCase())) {
+                    retailItems.push({ name: s.itemName, unit: s.unit || "Unit" });
+                }
+            });
+        }
+
+        function saveDamagedStocksToStorage() {
+            try {
+                localStorage.setItem('atr_damaged_stocks_db', JSON.stringify(damagedStocks));
+            } catch (err) {
+                const lightCopy = damagedStocks.map(d => ({
+                    ...d,
+                    proofUrl: d.proofUrl && d.proofUrl.length > 300000 ? "SAMPLE_PROOF" : d.proofUrl
+                }));
+                localStorage.setItem('atr_damaged_stocks_db', JSON.stringify(lightCopy));
+            }
+        }
+
+        function checkPortalPermissions() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewParam = (urlParams.get('view') || '').toLowerCase();
+            const siteParam = urlParams.get('site');
+
+            let parentPath = "";
+            try {
+                if (window.parent && window.parent !== window) {
+                    parentPath = (window.parent.location.pathname || '').toLowerCase();
+                }
+            } catch (e) {}
+
+            const badge = document.getElementById('roleModeBadge');
+            const backBtn = document.getElementById('btnBackDashboard');
+            const submitDmgBtn = document.getElementById('btnSubmitDamageMain');
+
+            if (viewParam === 'supervisor' || parentPath.includes('supervisordashboard')) {
+                currentPortalMode = 'supervisor';
+                isSupervisorMode = true;
+                assignedSite = (siteParam || sessionStorage.getItem('atr_supervisor_site') || "Salt Lake Sector V").trim();
+                loggedUserId = urlParams.get('supId') || "SUP-003";
+                loggedUserName = urlParams.get('supName') || "Supervisor";
+
+                if (!sites.includes(assignedSite)) sites.push(assignedSite);
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🔒 Site Locked: ${assignedSite}`;
+                }
+                if (backBtn) {
+                    backBtn.href = "supervisor/supervisor_dashboard_home.html";
+                }
+                if (submitDmgBtn) {
+                    submitDmgBtn.innerText = "📤 Submit Damage for Approval";
+                }
+
+                // Lock Both View Site Dropdowns to Supervisor's Site
+                document.getElementById('selectedViewSiteFilter').value = assignedSite;
+                document.getElementById('viewSiteSelectedText').innerText = `📍 ${assignedSite}`;
+                document.getElementById('viewSiteSelectedText').style.color = "#ffc107";
+                document.getElementById('viewSiteSelectHeader').classList.add('locked-dropdown');
+                document.getElementById('viewSiteSelectArrow').innerText = "🔒";
+
+                document.getElementById('selectedFilterSite').value = assignedSite;
+                document.getElementById('damageSiteFilterText').innerText = `📍 ${assignedSite}`;
+                document.getElementById('damageSiteFilterText').style.color = "#ffc107";
+                document.getElementById('damageSiteFilterHeader').classList.add('locked-dropdown');
+                document.getElementById('damageSiteFilterArrow').innerText = "🔒";
+
+            } else if (viewParam === 'office' || parentPath.includes('officedashboard')) {
+                currentPortalMode = 'office';
+                isSupervisorMode = false;
+                assignedSite = "";
+                loggedUserId = urlParams.get('userId') || sessionStorage.getItem('atr_logged_office_id') || localStorage.getItem('atr_logged_office_id') || "OFF-101";
+                loggedUserName = urlParams.get('userName') || "Office Staff";
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🏢 Office Mode (${loggedUserName}) — Synced with ApproveOffice.html`;
+                }
+                if (backBtn) {
+                    backBtn.href = "office/office_dashboard_home.html";
+                }
+                if (submitDmgBtn) {
+                    submitDmgBtn.innerText = "📤 Submit Damage for Approval";
+                }
+            } else {
+                currentPortalMode = 'admin';
+                isSupervisorMode = false;
+                assignedSite = "";
+                if (backBtn) {
+                    backBtn.href = "dashboard_home.html";
+                }
+            }
+        }
+
+        function handleBackToDashboard(event) {
+            if (currentPortalMode === 'office') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.loadOfficeWorkspaceHome === 'function') {
+                        window.parent.loadOfficeWorkspaceHome();
+                        return;
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "office_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "office/office_dashboard_home.html";
+            } else if (currentPortalMode === 'supervisor') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window) {
+                        const parentHomeLink = window.parent.document.querySelector('.dashboard-home-link');
+                        if (parentHomeLink) {
+                            if (typeof window.parent.clearTreeActiveLinks === 'function') {
+                                window.parent.clearTreeActiveLinks();
+                            }
+                            window.location.href = parentHomeLink.href;
+                            return;
+                        }
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "supervisor_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "supervisor/supervisor_dashboard_home.html";
+            }
+        }
+
+        window.onload = () => {
+            checkPortalPermissions();
+            loadAndSyncDatabases();
+            populateSiteLists();
+            populateDamageProducts();
+            initCustomDropdowns();
+            renderStockLedgerTable();
+            renderDamageTable();
+        };
+
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'atr_submitted_stocks_db' || e.key === 'atr_damaged_stocks_db') {
+                loadAndSyncDatabases();
+                populateDamageProducts();
+                renderStockLedgerTable();
+                renderDamageTable();
+            }
+        });
+
+        // --- TAB SWITCHING ---
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.view-section').forEach(sec => sec.classList.remove('active'));
+
+            if(tabName === 'ledger') {
+                document.getElementById('tabLedgerBtn').classList.add('active');
+                document.getElementById('ledgerViewSection').classList.add('active');
+                document.getElementById('ledgerHeaderActions').style.display = 'flex';
+                document.getElementById('damageHeaderActions').style.display = 'none';
+                renderStockLedgerTable();
+            } else if(tabName === 'damage') {
+                document.getElementById('tabDamageBtn').classList.add('active');
+                document.getElementById('damageViewSection').classList.add('active');
+                document.getElementById('ledgerHeaderActions').style.display = 'none';
+                document.getElementById('damageHeaderActions').style.display = 'flex';
+                renderDamageTable();
+            }
+        }
+
+        // --- CUSTOM DROPDOWN LOGIC ---
+        function initCustomDropdowns() {
+            setupDropdown('viewSiteDropdown', 'selectedViewSiteFilter', renderStockLedgerTable);
+            setupDropdown('damageSiteFilterDropdown', 'selectedFilterSite', renderDamageTable);
+            setupDropdown('modalDamageSiteDropdown', 'damageSiteValue', null);
+            setupDropdown('modalDamageProductDropdown', null, null);
+            
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.custom-select')) {
+                    document.querySelectorAll('.select-options-container.active').forEach(c => c.classList.remove('active'));
+                    document.querySelectorAll('.select-header.active').forEach(h => h.classList.remove('active'));
+                }
+            });
+        }
+
+        function setupDropdown(dropdownId, hiddenInputId, callback) {
+            const dropdown = document.getElementById(dropdownId);
+            const header = dropdown.querySelector('.select-header');
+            const container = dropdown.querySelector('.select-options-container');
+            const searchInput = dropdown.querySelector('.search-input-dropdown');
+            const optionsList = dropdown.querySelector('.select-options');
+            const selectedText = dropdown.querySelector('.selected-text');
+            const hiddenInput = hiddenInputId ? document.getElementById(hiddenInputId) : null;
+
+            header.addEventListener('click', () => {
+                if (isSupervisorMode && dropdownId !== 'modalDamageProductDropdown') {
+                    return;
+                }
+
+                document.querySelectorAll('.select-options-container.active').forEach(c => {
+                    if (c !== container) {
+                        c.classList.remove('active');
+                        if(c.parentElement.querySelector('.select-header')) {
+                            c.parentElement.querySelector('.select-header').classList.remove('active');
+                        }
+                    }
+                });
+                
+                container.classList.toggle('active');
+                header.classList.toggle('active');
+                
+                if(container.classList.contains('active')) {
+                    searchInput.value = ''; 
+                    filterDropdownOptions('', optionsList);
+                    setTimeout(() => searchInput.focus(), 100);
+                }
+            });
+
+            searchInput.addEventListener('keyup', (e) => {
+                filterDropdownOptions(e.target.value, optionsList);
+            });
+
+            optionsList.addEventListener('click', (e) => {
+                const li = e.target.closest('li');
+                if(li) {
+                    if (isSupervisorMode && dropdownId !== 'modalDamageProductDropdown') return;
+
+                    const value = li.getAttribute('data-value');
+                    const unitAttr = li.getAttribute('data-unit');
+                    const text = unitAttr ? `${value} (${unitAttr})` : li.innerText;
+                    
+                    selectedText.innerText = text;
+                    selectedText.style.color = (value === "" || value === null) ? "var(--text-main)" : "var(--theme-color)";
+                    if(text.includes("Office")) selectedText.style.color = "#ffc107";
+                    selectedText.style.fontWeight = "700";
+                    
+                    if(hiddenInput) hiddenInput.value = value;
+                    if (dropdownId === 'modalDamageProductDropdown') {
+                        document.getElementById('damageProductName').value = value;
+                        document.getElementById('damageProductUnit').value = unitAttr || "Unit";
+                    }
+                    
+                    container.classList.remove('active');
+                    header.classList.remove('active');
+                    
+                    if(callback) callback();
+                }
+            });
+        }
+
+        function filterDropdownOptions(term, list) {
+            const searchTerm = term.toLowerCase();
+            const items = list.querySelectorAll('li');
+            items.forEach(item => {
+                const text = item.innerText.toLowerCase();
+                item.style.display = text.includes(searchTerm) ? 'block' : 'none';
+            });
+        }
+
+        function populateSiteLists() {
+            const viewList = document.getElementById('viewSiteList');
+            const filterList = document.getElementById('filterSiteList');
+            const modalList = document.getElementById('damageSiteList');
+            
+            viewList.innerHTML = `<li data-value="">🌍 All Sites</li>`;
+            filterList.innerHTML = `<li data-value="">🌍 All Sites</li>`;
+            modalList.innerHTML = '';
+
+            sites.forEach(s => {
+                let html = `<li data-value="${s}" ${s.includes('Office') ? 'class="option-office"' : ''}>${s}</li>`;
+                viewList.innerHTML += html;
+                filterList.innerHTML += html;
+                modalList.innerHTML += html;
+            });
+        }
+
+        function populateDamageProducts() {
+            const list = document.getElementById('damageProductList');
+            list.innerHTML = '';
+            retailItems.forEach(i => {
+                const li = document.createElement('li');
+                li.setAttribute('data-value', i.name);
+                li.setAttribute('data-unit', i.unit);
+                li.innerHTML = `<strong>${i.name}</strong><span class="item-meta">Unit: ${i.unit}</span>`;
+                list.appendChild(li);
+            });
+        }
+
+        // --- DATE FORMAT UTILITY ---
+        function parseExcelDate(rawDate) {
+            if (!rawDate) return new Date().toLocaleDateString('en-GB').split('/').join('-');
+            if (!isNaN(rawDate) && typeof rawDate === 'number') {
+                const excelEpoch = new Date(1899, 11, 30);
+                const jsDate = new Date(excelEpoch.getTime() + rawDate * 86400000);
+                const day = String(jsDate.getDate()).padStart(2, '0');
+                const month = String(jsDate.getMonth() + 1).padStart(2, '0');
+                const year = jsDate.getFullYear();
+                return `${day}-${month}-${year}`;
+            }
+            let dateStr = String(rawDate).trim();
+            if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/.test(dateStr)) {
+                const parts = dateStr.split(/[-/]/);
+                return `${parts[2].padStart(2, '0')}-${parts[1].padStart(2, '0')}-${parts[0]}`;
+            }
+            if (/^\d{1,2}[-/]\d{1,2}[-/]\d{4}$/.test(dateStr)) {
+                const parts = dateStr.split(/[-/]/);
+                return `${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}-${parts[2]}`;
+            }
+            return dateStr;
+        }
+
+        function formatDateToDDMMYYYY(dateStr) { return parseExcelDate(dateStr); }
+
+        // ================= STOCK LEDGER TABLE =================
+        function getFilteredStockInventory() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const selectedSite = (isSupervisorMode && assignedSite)
+                ? assignedSite.toLowerCase()
+                : document.getElementById('selectedViewSiteFilter').value.toLowerCase();
+
+            let inventoryMap = {};
+
+            submittedStocks.forEach(s => {
+                let key = s.site.toLowerCase() + "___" + s.itemName.toLowerCase();
+                if (!inventoryMap[key]) {
+                    inventoryMap[key] = { site: s.site, itemName: s.itemName, unit: s.unit, totalAdded: 0, totalDamaged: 0 };
+                }
+                inventoryMap[key].totalAdded += Number(s.qty) || 0;
+            });
+
+            damagedStocks.forEach(d => {
+                let key = d.site.toLowerCase() + "___" + d.itemName.toLowerCase();
+                if (!inventoryMap[key]) {
+                    inventoryMap[key] = { site: d.site, itemName: d.itemName, unit: d.unit, totalAdded: 0, totalDamaged: 0 };
+                }
+                inventoryMap[key].totalDamaged += Number(d.qty) || 0;
+            });
+
+            return Object.values(inventoryMap).filter(item => {
+                let matchesSearch = item.itemName.toLowerCase().includes(query) || item.site.toLowerCase().includes(query);
+                let matchesSite = !selectedSite || item.site.toLowerCase() === selectedSite;
+                return matchesSearch && matchesSite;
+            });
+        }
+
+        function renderStockLedgerTable() {
+            const tbody = document.getElementById('viewTableBody');
+            tbody.innerHTML = '';
+
+            const filtered = getFilteredStockInventory();
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="empty-row">No stock records found.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(item => {
+                let availableStock = item.totalAdded - item.totalDamaged;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="color: ${item.site.includes('Office') ? '#ffc107' : 'var(--text-main)'}; font-weight: 600;">${item.site}</td>
+                    <td style="color:var(--text-main); font-weight:bold;">${item.itemName}</td>
+                    <td>${item.unit}</td>
+                    <td style="color:#28a745; font-weight:bold; font-size:14px;">${item.totalAdded}</td>
+                    <td style="color:#dc3545; font-weight:bold; font-size:14px;">${item.totalDamaged}</td>
+                    <td style="color:var(--theme-color); font-weight:bold; font-size:14px;">${availableStock}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- EXPORT STOCK LEDGER TO XLSX ---
+        function exportStockLedgerToExcel() {
+            const filtered = getFilteredStockInventory();
+            if (filtered.length === 0) {
+                alert("No stock ledger data available to export!");
+                return;
+            }
+
+            const ws_data = [["Location / Site", "Item Name", "Unit", "Stock Item (Total Added)", "Damage Item", "Available Stock"]];
+            filtered.forEach(item => {
+                let availableStock = item.totalAdded - item.totalDamaged;
+                ws_data.push([
+                    item.site,
+                    item.itemName,
+                    item.unit,
+                    item.totalAdded.toString(),
+                    item.totalDamaged.toString(),
+                    availableStock.toString()
+                ]);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(ws_data);
+            for (let cell in ws) {
+                if (cell[0] === '!') continue; 
+                ws[cell].t = 's'; ws[cell].z = '@'; 
+            }
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Stock_Ledger");
+            XLSX.writeFile(wb, "ATR_Stock_Ledger_Report.xlsx");
+        }
+
+        // ================= DAMAGE LEDGER VIEW LOGIC =================
+        function getFilteredDamageRecords() {
+            const query = document.getElementById('damageSearchInput').value.toLowerCase();
+            const selectedSite = (isSupervisorMode && assignedSite)
+                ? assignedSite.toLowerCase()
+                : document.getElementById('selectedFilterSite').value.toLowerCase();
+
+            return damagedStocks.filter(d => {
+                let matchesSearch = d.itemName.toLowerCase().includes(query) || d.site.toLowerCase().includes(query) || d.id.toLowerCase().includes(query);
+                let matchesSite = !selectedSite || d.site.toLowerCase() === selectedSite;
+                return matchesSearch && matchesSite;
+            });
+        }
+
+        function renderDamageTable() {
+            const tbody = document.getElementById('damageTableBody');
+            tbody.innerHTML = '';
+
+            const filtered = getFilteredDamageRecords();
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="empty-row">No damage records found.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(item => {
+                const tr = document.createElement('tr');
+                let proofButton = `<span style="color: var(--text-muted); font-size: 11px;">No Proof</span>`;
+                if (item.proofUrl || (item.proofName && item.proofName !== "No File")) {
+                    proofButton = `<button class="btn-view" onclick="openPreview('${item.id}')">👁️ View Proof</button>`;
+                }
+
+                const pendingBadge = item.pendingStatus
+                    ? `<br><span class="pending-status-pill">⏳ ${item.pendingStatus}</span>`
+                    : '';
+
+                tr.innerHTML = `
+                    <td style="color:#dc3545; font-weight:bold;">
+                        ${item.id}
+                        ${pendingBadge}
+                    </td>
+                    <td>${formatDateToDDMMYYYY(item.date)}</td>
+                    <td style="color: ${item.site.includes('Office') ? '#ffc107' : 'var(--text-main)'}; font-weight: 600;">${item.site}</td>
+                    <td style="color:var(--text-main); font-weight:bold;">${item.itemName}</td>
+                    <td>${item.unit}</td>
+                    <td style="color:#dc3545; font-weight:bold; font-size: 14px;">${item.qty}</td>
+                    <td style="text-align: center; white-space: nowrap;">
+                        ${proofButton}
+                        <button class="btn-del-sm" onclick="handleDeleteDamage('${item.id}')" title="Delete Damage Entry">🗑️</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function handleDeleteDamage(dmgId) {
+            const target = damagedStocks.find(d => d.id === dmgId);
+            if (!target) return;
+
+            if (currentPortalMode !== 'admin') {
+                openRoleApprovalModal({
+                    type: 'DELETE_DAMAGE',
+                    targetId: target.id,
+                    actionLabel: "DELETE DAMAGE RECORD",
+                    summary: `Delete Damage Entry ${target.id}: ${target.itemName} (${target.qty} ${target.unit}) @ ${target.site}`,
+                    oldData: { ...target, proofUrl: undefined },
+                    newData: null
+                });
+                return;
+            }
+
+            const pass = prompt(`🛡️ ADMIN PROTECTED ACTION\n\nEnter Admin Password to delete damage record ${dmgId}:`);
+            if (pass === null) return;
+            if (pass === ADMIN_PASSWORD || pass === "admin123") {
+                if (confirm(`Are you sure you want to delete damage record ${dmgId}?`)) {
+                    damagedStocks = damagedStocks.filter(d => d.id !== dmgId);
+                    saveDamagedStocksToStorage();
+                    renderDamageTable();
+                    renderStockLedgerTable();
+                }
+            } else {
+                alert("❌ Incorrect Admin Password!");
+            }
+        }
+
+        // --- EXPORT DAMAGE STOCK TO EXCEL ---
+        function exportDamageStockToExcel() {
+            const filtered = getFilteredDamageRecords();
+            if (filtered.length === 0) {
+                alert("No damage data available to export!");
+                return;
+            }
+
+            const ws_data = [["Damage ID", "Date", "Location / Site", "Item Name", "Unit", "Damaged Qty", "Proof File"]];
+            filtered.forEach(d => {
+                ws_data.push([
+                    d.id,
+                    d.date,
+                    d.site,
+                    d.itemName,
+                    d.unit,
+                    d.qty.toString(),
+                    d.proofName || "N/A"
+                ]);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(ws_data);
+            for (let cell in ws) {
+                if (cell[0] === '!') continue; 
+                ws[cell].t = 's'; ws[cell].z = '@'; 
+            }
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Damage_Ledger");
+            XLSX.writeFile(wb, "ATR_Damage_Ledger_Report.xlsx");
+        }
+
+        // ================= DAMAGE REPORT MODAL LOGIC =================
+        function openDamageModal() {
+            document.getElementById('damageDate').value = new Date().toISOString().split('T')[0];
+            
+            const siteHeader = document.getElementById('modalDamageSiteHeader');
+            const siteText = document.getElementById('modalDamageSiteText');
+            const siteArrow = document.getElementById('modalDamageSiteArrow');
+
+            if (isSupervisorMode && assignedSite) {
+                siteText.innerText = `📍 ${assignedSite}`;
+                siteText.style.color = "#ffc107";
+                siteHeader.classList.add('locked-dropdown');
+                if (siteArrow) siteArrow.innerText = "🔒";
+                document.getElementById('damageSiteValue').value = assignedSite;
+            } else {
+                siteText.innerText = "-- Choose Location --";
+                siteText.style.color = "var(--text-muted)";
+                siteHeader.classList.remove('locked-dropdown');
+                if (siteArrow) siteArrow.innerText = "▼";
+                document.getElementById('damageSiteValue').value = "";
+            }
+
+            const prodText = document.getElementById('modalDamageProductText');
+            prodText.innerText = "-- Choose Product --";
+            prodText.style.color = "var(--text-muted)";
+            document.getElementById('damageProductName').value = "";
+            document.getElementById('damageProductUnit').value = "";
+            
+            document.getElementById('damageQty').value = "";
+            document.getElementById('damageFileProof').value = "";
+            
+            document.getElementById('damageModal').classList.add('show');
+        }
+
+        function closeDamageModal() {
+            document.getElementById('damageModal').classList.remove('show');
+        }
+
+        function submitDamageReport() {
+            const date = document.getElementById('damageDate').value;
+            const site = (isSupervisorMode && assignedSite) ? assignedSite : document.getElementById('damageSiteValue').value;
+            const itemName = document.getElementById('damageProductName').value;
+            const unit = document.getElementById('damageProductUnit').value;
+            const qty = parseFloat(document.getElementById('damageQty').value);
+            const fileInput = document.getElementById('damageFileProof');
+
+            if (!date || !site || !itemName || !qty || qty <= 0) {
+                alert("⚠️ Please fill all required fields (Date, Site, Product, Qty).");
+                return;
+            }
+
+            const processDamageEntry = (proofUrl, proofName, isPdf) => {
+                const newDmgRecord = {
+                    id: "DMG-" + Math.floor(1000 + Math.random() * 9000),
+                    date: formatDateToDDMMYYYY(date),
+                    site: site,
+                    itemName: itemName,
+                    unit: unit,
+                    qty: qty,
+                    proofUrl: proofUrl,
+                    proofName: proofName,
+                    isPdf: isPdf,
+                    pendingStatus: null
+                };
+
+                // OFFICE OR SUPERVISOR PORTAL: Route to Approval Modal
+                if (currentPortalMode !== 'admin') {
+                    closeDamageModal();
+                    openRoleApprovalModal({
+                        type: 'REPORT_DAMAGE',
+                        targetId: newDmgRecord.id,
+                        actionLabel: "REPORT DAMAGED STOCK",
+                        summary: `Damaged: ${itemName} (${qty} ${unit}) @ ${site} on ${newDmgRecord.date}`,
+                        oldData: null,
+                        newData: { ...newDmgRecord, proofUrl: undefined },
+                        fullRecord: newDmgRecord
+                    });
+                    return;
+                }
+
+                // ADMIN DIRECT SAVE
+                damagedStocks.push(newDmgRecord);
+                saveDamagedStocksToStorage();
+                alert(`⚠️ Damage Report Submitted Successfully!`);
+                closeDamageModal();
+                renderDamageTable();
+                renderStockLedgerTable();
+            };
+
+            if (fileInput.files && fileInput.files[0]) {
+                const file = fileInput.files[0];
+                const proofName = file.name;
+                const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith('.pdf');
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    processDamageEntry(evt.target.result, proofName, isPdf);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                processDamageEntry("", "No File", false);
+            }
+        }
+
+        // --- PREVIEW MODAL FOR PROOF ---
+        function openPreview(dmgId) {
+            const item = damagedStocks.find(d => d.id === dmgId);
+            if (!item) return;
+
+            document.getElementById('previewModalTitle').innerText = `📄 Proof: ${item.id} (${item.itemName})`;
+            const container = document.getElementById('previewContainer');
+            container.innerHTML = '';
+
+            if (item.proofUrl && item.proofUrl.startsWith('data:')) {
+                if (item.isPdf || item.proofUrl.startsWith('data:application/pdf')) {
+                    container.innerHTML = `<iframe src="${item.proofUrl}" width="100%" height="460px" style="border:none; border-radius: 8px;"></iframe>`;
+                } else {
+                    container.innerHTML = `<img src="${item.proofUrl}" style="max-width: 100%; max-height: 460px; border-radius: 8px; box-shadow: var(--shadow);" />`;
+                }
+            } else {
+                container.innerHTML = `
+                    <div style="padding: 30px; background: var(--input-bg); border: 1px dashed var(--theme-color); border-radius: 10px; width: 100%;">
+                        <div style="font-size: 42px; margin-bottom: 10px;">📄</div>
+                        <h3 style="color: var(--theme-color); margin-bottom: 6px;">${item.proofName || 'Damage Verification Certificate'}</h3>
+                        <p style="font-size: 13px; color: var(--text-main);"><strong>Damage ID:</strong> ${item.id} &nbsp;|&nbsp; <strong>Date:</strong> ${item.date}</p>
+                        <p style="font-size: 13px; color: var(--text-main); margin-top: 4px;"><strong>Site:</strong> ${item.site}</p>
+                        <p style="font-size: 14px; color: #dc3545; font-weight: 700; margin-top: 8px;">Damaged Item: ${item.itemName} — ${item.qty} ${item.unit}</p>
+                    </div>
+                `;
+            }
+            document.getElementById('previewModal').classList.add('show');
+        }
+
+        function closePreviewModal() {
+            document.getElementById('previewModal').classList.remove('show');
+        }
+
+        // =========================================================================================
+        // OFFICE & SUPERVISOR APPROVAL MODAL ENGINE (ROUTES TO ApproveOffice / ApproveSupervisor)
+        // =========================================================================================
+        function openRoleApprovalModal(payload) {
+            pendingRolePayload = payload;
+            document.getElementById('roleApprovalSummary').value = `${payload.actionLabel}: ${payload.summary}`;
+            document.getElementById('roleApprovalReason').value = '';
+
+            const titleEl = document.getElementById('roleApprovalTitle');
+            const descEl = document.getElementById('roleApprovalDesc');
+
+            if (currentPortalMode === 'supervisor') {
+                titleEl.innerText = "🛡️ Send Request to ApproveSupervisor.html";
+                descEl.innerHTML = "সুপারভাইজার পোর্টাল থেকে ড্যামেজ স্টক রিপোর্ট বা পরিবর্তন করার রিকোয়েস্টটি অ্যাডমিনের <strong>ApproveSupervisor.html</strong>-এ পাঠানো হবে।";
+            } else {
+                titleEl.innerText = "🏢 Send Request to ApproveOffice.html";
+                descEl.innerHTML = "অফিস পোর্টাল থেকে ড্যামেজ স্টক রিপোর্ট বা পরিবর্তন করলে তা অ্যাডমিনের <strong>ApproveOffice.html</strong>-এ পাঠানো হবে। অ্যাডমিন অ্যাপ্রুভ করলেই এটি চূড়ান্ত হবে।";
+            }
+
+            document.getElementById('roleApprovalModal').classList.add('show');
+            setTimeout(() => document.getElementById('roleApprovalReason').focus(), 50);
+        }
+
+        function closeRoleApprovalModal() {
+            document.getElementById('roleApprovalModal').classList.remove('show');
+            pendingRolePayload = null;
+        }
+
+        function confirmRoleApprovalRequest() {
+            const reason = document.getElementById('roleApprovalReason').value.trim();
+            if (!reason) {
+                alert("⚠️ Please enter a valid reason/remark for Admin Approval.");
+                return;
+            }
+            if (!pendingRolePayload) return;
+
+            const targetApprovalPage = currentPortalMode === 'supervisor' ? 'ApproveSupervisor.html' : 'ApproveOffice.html';
+
+            if (pendingRolePayload.type === 'REPORT_DAMAGE') {
+                const rec = pendingRolePayload.fullRecord || pendingRolePayload.newData;
+                damagedStocks.push({
+                    ...rec,
+                    pendingStatus: `Pending in ${targetApprovalPage}`
+                });
+            } else if (pendingRolePayload.type === 'DELETE_DAMAGE') {
+                const idx = damagedStocks.findIndex(d => d.id === pendingRolePayload.targetId);
+                if (idx > -1) {
+                    damagedStocks[idx].pendingStatus = "Delete Pending";
+                }
+            }
+
+            saveDamagedStocksToStorage();
+            renderDamageTable();
+            renderStockLedgerTable();
+
+            if (currentPortalMode === 'supervisor') {
+                const supQueue = JSON.parse(localStorage.getItem('atr_supervisor_approvals')) || [];
+                supQueue.unshift({
+                    id: "SUP-DMG-" + Date.now().toString().slice(-5),
+                    module: "CurrentStock.html",
+                    action: pendingRolePayload.actionLabel,
+                    site: assignedSite,
+                    reason: reason,
+                    summary: pendingRolePayload.summary,
+                    requestedAt: new Date().toISOString(),
+                    status: "Pending",
+                    oldData: pendingRolePayload.oldData,
+                    newData: pendingRolePayload.newData
+                });
+                localStorage.setItem('atr_supervisor_approvals', JSON.stringify(supQueue));
+            } else {
+                const newReq = {
+                    reqId: "OFF-DMG-" + Date.now().toString().slice(-5),
+                    userId: loggedUserId,
+                    userName: loggedUserName,
+                    designation: "Office Staff",
+                    module: "CurrentStock.html",
+                    action: pendingRolePayload.actionLabel,
+                    summary: pendingRolePayload.summary,
+                    oldData: pendingRolePayload.oldData,
+                    newData: pendingRolePayload.newData,
+                    reason: reason,
+                    timestamp: new Date().toLocaleString('en-IN'),
+                    status: "Pending"
+                };
+
+                const officeQueue = JSON.parse(localStorage.getItem('atr_office_approvals')) || [];
+                officeQueue.unshift(newReq);
+                localStorage.setItem('atr_office_approvals', JSON.stringify(officeQueue));
+                localStorage.setItem('approve_office_requests', JSON.stringify(officeQueue));
+                localStorage.setItem('ApproveOffice_requests', JSON.stringify(officeQueue));
+
+                // Log in Office Daily Work Report (office_dashboard_home.html)
+                const workLogs = JSON.parse(localStorage.getItem('atr_office_daily_work')) || [];
+                const todayStr = new Date().toISOString().split('T')[0];
+                const nowTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+                workLogs.unshift({
+                    id: "WRK-" + Date.now().toString().slice(-5),
+                    userId: loggedUserId,
+                    userName: loggedUserName,
+                    date: todayStr,
+                    time: nowTime,
+                    module: "Stock & Damage (CurrentStock.html)",
+                    refNo: newReq.reqId,
+                    desc: `${pendingRolePayload.actionLabel}: ${pendingRolePayload.summary}`,
+                    status: "Sent for Approval"
+                });
+                localStorage.setItem('atr_office_daily_work', JSON.stringify(workLogs));
+
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.refreshNotificationsUI === 'function') {
+                        window.parent.refreshNotificationsUI();
+                    }
+                } catch (e) {}
+            }
+
+            closeRoleApprovalModal();
+            alert(`📤 Request sent to ${targetApprovalPage} for Admin Approval!`);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1523 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Bank Statement</title>
+    
+    <!-- Sync theme with Master Dashboard -->
+    <script>
+        const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        window.addEventListener('storage', function(e) {
+            if(e.key === 'atr_theme') { document.documentElement.setAttribute('data-theme', e.newValue); }
+        });
+    </script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- SheetJS (XLSX) Library for real Excel Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- html2canvas & jsPDF Libraries for Exact Multi-Page A4 Portrait PDF Download -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-body: transparent; 
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.1);
+            
+            /* Dynamic Glass & Input Variables */
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(0, 0, 0, 0.2);
+            --input-focus-bg: rgba(0, 0, 0, 0.4);
+            
+            --shadow: 0 4px 15px rgba(0,0,0,0.3);
+            
+            /* Primary Theme Color (Green #28a745 as requested) */
+            --theme-color: #28a745;
+            --theme-glow: rgba(40, 167, 69, 0.4);
+            --theme-transition: all 0.4s ease;
+
+            /* Specific Financial Colors */
+            --color-credit: #69db7c;
+            --color-debit: #ff6b6b;
+        }
+
+        [data-theme="light"] {
+            --bg-body: transparent;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #555555;
+            --border-color: rgba(0, 0, 0, 0.1);
+            
+            --glass-bg: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --input-bg: rgba(255, 255, 255, 0.5);
+            --input-focus-bg: #ffffff;
+            
+            --shadow: 0 8px 25px rgba(0,0,0,0.05);
+
+            --color-credit: #1e7e34;
+            --color-debit: #dc3545;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Montserrat', sans-serif;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden; 
+            transition: var(--theme-transition);
+        }
+
+        /* Main Content Layout */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 30px;
+            height: 100vh;
+            overflow: hidden;
+            width: 100%;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+            flex-shrink: 0;
+            transition: var(--theme-transition);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .role-mode-badge {
+            display: none;
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 700;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .header-actions { 
+            display: flex; 
+            gap: 15px; 
+            align-items: center; 
+            flex-wrap: wrap; 
+        }
+
+        .user-info {
+            font-size: 13px;
+            color: var(--theme-color);
+            background: rgba(40, 167, 69, 0.1);
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 1px solid var(--theme-color);
+            font-weight: 600;
+        }
+
+        .btn-back-dash { 
+            background-color: var(--glass-bg); 
+            color: var(--text-main); 
+            border: 1px solid var(--border-color); 
+            text-decoration: none; 
+            padding: 9px 16px; 
+            border-radius: 6px; 
+            font-weight: bold; 
+            font-size: 13px; 
+            transition: all 0.3s; 
+            display: flex; 
+            align-items: center; 
+            cursor: pointer;
+        }
+        .btn-back-dash:hover { 
+            background-color: var(--theme-color); 
+            color: #fff; 
+            border-color: var(--theme-color); 
+            transform: translateY(-2px); 
+            box-shadow: 0 4px 10px var(--theme-glow); 
+        }
+
+        /* Filter Panel Form */
+        .filter-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 22px;
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            border-top: 4px solid var(--theme-color);
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+            flex-shrink: 0;
+            transition: var(--theme-transition);
+            
+            /* Key for 3D Dropdown: Higher z-index than toolbar and table */
+            position: relative;
+            z-index: 100;
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 18px;
+            align-items: end;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            position: relative;
+        }
+
+        .form-group label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: color 0.3s;
+        }
+
+        .form-control {
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 12px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            outline: none;
+            transition: all 0.3s;
+            width: 100%;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+            color-scheme: dark;
+        }
+        [data-theme="light"] .form-control[type="date"] {
+            color-scheme: light;
+        }
+
+        .form-control:focus {
+            border-color: var(--theme-color);
+            background: var(--input-focus-bg);
+            box-shadow: 0 0 10px var(--theme-glow);
+        }
+        
+        .form-group:focus-within label { 
+            color: var(--theme-color); 
+        }
+
+        /* 3D Searchable Dropdown Over Table */
+        .custom-dropdown-container {
+            position: relative;
+        }
+
+        .dropdown-selected {
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+
+        .dropdown-menu-custom {
+            position: absolute;
+            top: calc(100% + 12px);
+            left: 0;
+            right: 0;
+            background: var(--bg-card);
+            border: 1px solid var(--theme-color);
+            border-radius: 8px;
+            
+            /* Intense 3D Shadow to float over table */
+            box-shadow: 0 25px 50px rgba(0,0,0,0.6), 0 0 15px var(--theme-glow);
+            z-index: 9999;
+            overflow: hidden;
+            
+            /* 3D Animation Setup */
+            display: block; 
+            visibility: hidden;
+            opacity: 0;
+            transform: translateY(-15px) scale(0.95);
+            transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform-origin: top center;
+            pointer-events: none;
+        }
+
+        .dropdown-menu-custom.show {
+            visibility: visible;
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            pointer-events: auto;
+        }
+
+        .dropdown-search-input {
+            width: 100%;
+            padding: 12px 14px;
+            background: var(--input-bg);
+            border: none;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-main);
+            font-size: 13px;
+            outline: none;
+        }
+
+        .dropdown-list {
+            max-height: 180px;
+            overflow-y: auto;
+            list-style: none;
+        }
+
+        .dropdown-list li {
+            padding: 12px 14px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--text-main);
+        }
+
+        .dropdown-list li:hover {
+            background: rgba(40, 167, 69, 0.1);
+            color: var(--theme-color);
+        }
+
+        .dropdown-list li.selected {
+            background: var(--theme-color);
+            color: #ffffff;
+            font-weight: bold;
+        }
+
+        /* Action Buttons Grid */
+        .btn-group-custom {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-custom {
+            padding: 12px 18px;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            flex: 1;
+        }
+
+        .btn-search {
+            background-color: var(--theme-color);
+            color: #ffffff;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+
+        .btn-search:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px var(--theme-glow);
+            filter: brightness(1.1);
+        }
+
+        .btn-reset {
+            background-color: var(--glass-bg);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-reset:hover {
+            background-color: var(--input-focus-bg);
+        }
+
+        /* Toolbar Actions Bar */
+        .action-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-shrink: 0;
+            background: var(--glass-bg);
+            padding: 12px 20px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            transition: var(--theme-transition);
+            flex-wrap: wrap;
+            gap: 10px;
+            
+            position: relative;
+            z-index: 50;
+        }
+
+        .toolbar-info {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .toolbar-info span {
+            color: var(--theme-color);
+            font-weight: 700;
+        }
+
+        .export-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn-export {
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+            background: var(--glass-bg);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-export:hover {
+            background: var(--input-focus-bg);
+            transform: translateY(-1px);
+        }
+
+        .btn-excel:hover {
+            border-color: #28a745;
+            color: #28a745;
+        }
+
+        .btn-pdf:hover {
+            border-color: #dc3545;
+            color: #dc3545;
+        }
+
+        .btn-print:hover {
+            border-color: #007bff;
+            color: #007bff;
+        }
+
+        /* ================= TABLE CONTAINER & STRICT SCROLL LAYOUT (SCOPED TO #statementTable) ================= */
+        .table-container-box {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            flex: 1;
+            min-height: 0; 
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--glass-border);
+            overflow: hidden;
+            transition: var(--theme-transition);
+            
+            position: relative;
+            z-index: 10;
+        }
+
+        /* ONLY Table Rows Scroll Here */
+        .table-scroll-area {
+            flex: 1;
+            overflow-y: auto;
+            position: relative;
+            background: var(--bg-card);
+        }
+
+        .table-scroll-area::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .table-scroll-area::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .table-scroll-area::-webkit-scrollbar-thumb {
+            background: rgba(40, 167, 69, 0.3);
+            border-radius: 10px;
+        }
+
+        .table-scroll-area::-webkit-scrollbar-thumb:hover {
+            background: var(--theme-color);
+        }
+
+        #statementTable {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        #statementTable thead {
+            position: sticky;
+            top: 0;
+            background-color: var(--input-bg);
+            z-index: 10;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        #statementTable th {
+            padding: 16px;
+            color: var(--theme-color);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.8px;
+            border-bottom: 2px solid var(--theme-color);
+        }
+
+        #statementTable td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 13px;
+            color: var(--text-main);
+            transition: var(--theme-transition);
+            vertical-align: middle;
+        }
+
+        #statementTable tbody tr {
+            transition: background 0.2s;
+        }
+
+        #statementTable tbody tr:hover {
+            background: var(--glass-bg);
+        }
+
+        /* Badges */
+        .badge-credit {
+            background: rgba(40, 167, 69, 0.15);
+            color: var(--color-credit);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+            border: 1px solid rgba(40, 167, 69, 0.3);
+            display: inline-block;
+        }
+
+        .badge-debit {
+            background: rgba(220, 53, 69, 0.15);
+            color: var(--color-debit);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+            border: 1px solid rgba(220, 53, 69, 0.3);
+            display: inline-block;
+        }
+
+        .bank-tag {
+            font-size: 11px;
+            background: var(--input-bg);
+            padding: 4px 8px;
+            border-radius: 4px;
+            color: var(--theme-color);
+            font-weight: 600;
+            border: 1px solid var(--border-color);
+        }
+
+        /* STRICT FIXED FOOTER AT BOTTOM */
+        .table-footer-summary {
+            flex-shrink: 0;
+            background: var(--input-bg);
+            padding: 14px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 2px solid var(--theme-color);
+            font-size: 13px;
+            z-index: 20;
+            transition: var(--theme-transition);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .summary-item {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .summary-label {
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .summary-val {
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--text-main);
+        }
+
+        .val-credit { color: var(--color-credit); }
+        .val-debit { color: var(--color-debit); }
+        .val-balance { color: var(--theme-color); }
+
+        /* =========================================================================================
+           EXACT A4 PORTRAIT MULTI-PAGE REPORT ENGINE (IDENTICAL FOR BOTH PRINT & PDF DOWNLOAD)
+           Each .a4-report-page is locked to 794px x 1122px (210mm x 297mm) with 36px x 38px safe margins
+           ========================================================================================= */
+        #a4BankStatementWrapper {
+            display: none;
+            width: 794px;
+            background: #ffffff !important;
+            color: #111111 !important;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        .a4-report-page {
+            width: 794px !important;
+            min-height: 1122px !important;
+            height: 1122px !important;
+            max-height: 1122px !important;
+            padding: 34px 38px !important;
+            background: #ffffff !important;
+            color: #111111 !important;
+            box-sizing: border-box !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-between !important;
+            position: relative !important;
+            overflow: hidden !important;
+            page-break-after: always !important;
+            page-break-inside: avoid !important;
+            break-after: page !important;
+            break-inside: avoid !important;
+        }
+
+        .a4-report-page:last-child {
+            page-break-after: auto !important;
+            break-after: auto !important;
+        }
+
+        .a4-page-top-content {
+            width: 100%;
+        }
+
+        .a4-page-bottom-content {
+            width: 100%;
+            margin-top: auto;
+        }
+
+        .rpt-top-banner {
+            border-bottom: 3px solid #1e7e34;
+            padding-bottom: 10px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            width: 100%;
+        }
+
+        .rpt-brand-block h1 {
+            font-size: 22px;
+            font-weight: 800;
+            color: #111111 !important;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            margin: 0 0 3px 0;
+        }
+
+        .rpt-brand-block p {
+            font-size: 11px;
+            font-weight: 700;
+            color: #1e7e34 !important;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 0;
+        }
+
+        .rpt-meta-block {
+            text-align: right;
+            font-size: 10px;
+            color: #222222 !important;
+            line-height: 1.45;
+            font-weight: 700;
+        }
+
+        .rpt-filter-strip {
+            background: #f4f7f5 !important;
+            border: 1px solid #c8d6cc;
+            border-left: 4px solid #28a745;
+            padding: 7px 12px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            color: #111111 !important;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .rpt-summary-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 14px;
+            width: 100%;
+        }
+
+        .rpt-sum-card {
+            background: #fafafa !important;
+            border: 1px solid #bbbbbb;
+            border-radius: 6px;
+            padding: 8px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .rpt-sum-card.crd { border-top: 3px solid #28a745; }
+        .rpt-sum-card.dbt { border-top: 3px solid #dc3545; }
+        .rpt-sum-card.bal { border-top: 3px solid #007bff; }
+
+        .rpt-sum-card span {
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #555555 !important;
+        }
+
+        .rpt-sum-card strong {
+            font-size: 13.5px;
+            font-weight: 800;
+        }
+
+        /* Strictly Locked 718px Inner Table - Fits all 8 columns inside A4 Portrait without horizontal clipping */
+        .rpt-a4-table {
+            width: 100% !important;
+            max-width: 100% !important;
+            border-collapse: collapse !important;
+            table-layout: fixed !important;
+            margin-bottom: 8px;
+        }
+
+        .rpt-a4-table th,
+        .rpt-a4-table td {
+            border: 1px solid #222222 !important;
+            padding: 5.5px 5px !important;
+            font-size: 9.2px !important;
+            line-height: 1.35 !important;
+            color: #111111 !important;
+            background: #ffffff !important;
+            vertical-align: middle !important;
+            word-wrap: break-word !important;
+            overflow-wrap: break-word !important;
+            white-space: normal !important;
+            box-sizing: border-box !important;
+        }
+
+        .rpt-a4-table th {
+            background: #e9ecef !important;
+            font-weight: 800 !important;
+            text-transform: uppercase;
+            font-size: 8.8px !important;
+            color: #000000 !important;
+        }
+
+        .rpt-a4-table tfoot td {
+            background: #f1f5f2 !important;
+            font-weight: 800 !important;
+            font-size: 9.5px !important;
+            padding: 7px 5px !important;
+        }
+
+        .rpt-type-pill {
+            display: inline-block;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-size: 8px;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+        .rpt-pill-crd { color: #155724 !important; background: #d4edda !important; border: 1px solid #c3e6cb; }
+        .rpt-pill-dbt { color: #721c24 !important; background: #f8d7da !important; border: 1px solid #f5c6cb; }
+
+        .rpt-signatures {
+            padding-top: 26px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            width: 100%;
+        }
+
+        .rpt-sig-box {
+            width: 30%;
+            text-align: center;
+            border-top: 1.5px solid #222222;
+            padding-top: 5px;
+            font-size: 10px;
+            font-weight: 700;
+            color: #111111 !important;
+        }
+
+        .rpt-page-footer-bar {
+            border-top: 1px solid #cccccc;
+            padding-top: 6px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 9px;
+            color: #555555 !important;
+            font-weight: 600;
+            width: 100%;
+        }
+
+        /* Active during Direct PDF Download (Pinned to top-left 0,0 so html2canvas NEVER cuts half the page) */
+        body.pdf-export-mode {
+            display: block !important;
+            width: 794px !important;
+            height: auto !important;
+            background: #ffffff !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: visible !important;
+        }
+        body.pdf-export-mode .main-content {
+            display: none !important;
+        }
+        body.pdf-export-mode #a4BankStatementWrapper {
+            display: block !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 794px !important;
+        }
+
+        /* Active during Browser Print */
+        @media print {
+            @page { size: A4 portrait; margin: 0; }
+            html, body {
+                display: block !important;
+                width: 794px !important;
+                height: auto !important;
+                background: #ffffff !important;
+                color: #111111 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                overflow: visible !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .main-content {
+                display: none !important;
+            }
+            #a4BankStatementWrapper {
+                display: block !important;
+                width: 794px !important;
+                margin: 0 auto !important;
+                padding: 0 !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Main Workspace Area -->
+    <div class="main-content">
+        <div class="header">
+            <h1>
+                📜 Company Bank Statement Console
+                <span id="roleModeBadge" class="role-mode-badge">🏢 Office Mode</span>
+            </h1>
+            <div class="header-actions">
+                <div class="user-info">ATR Construction Financials</div>
+                <a href="dashboard_home.html" id="btnBackDashboard" class="btn-back-dash" onclick="handleBackToDashboard(event)">← Back to Dashboard</a>
+            </div>
+        </div>
+
+        <!-- Filter Form Console -->
+        <div class="filter-panel">
+            <form id="filterForm" onsubmit="event.preventDefault(); applyFilter();">
+                <div class="filter-grid">
+                    
+                    <!-- Searchable Custom Dropdown for Bank Selection -->
+                    <div class="form-group">
+                        <label>🏦 Select Bank Account</label>
+                        <div class="custom-dropdown-container">
+                            <div class="form-control dropdown-selected" id="dropdownSelected" onclick="toggleBankDropdown()">
+                                <span id="selectedBankText">All Bank Accounts</span>
+                                <span style="font-size: 10px;">▼</span>
+                            </div>
+                            <div class="dropdown-menu-custom" id="dropdownMenu">
+                                <input type="text" class="dropdown-search-input" placeholder="🔍 Search Bank or A/C..." id="bankSearchInput" onkeyup="filterBankList()">
+                                <ul class="dropdown-list" id="bankList">
+                                    <li class="selected" data-bank-code="ALL" onclick="selectBank('ALL', 'All Bank Accounts')"><span>🏦 All Bank Accounts</span></li>
+                                    <li data-bank-code="HDFC" onclick="selectBank('HDFC', 'HDFC Bank - A/C 9876')"><span>🏛️ HDFC Bank (A/C: ****9876)</span></li>
+                                    <li data-bank-code="SBI" onclick="selectBank('SBI', 'State Bank of India - A/C 1234')"><span>🏛️️ SBI Main (A/C: ****1234)</span></li>
+                                    <li data-bank-code="ICICI" onclick="selectBank('ICICI', 'ICICI Bank Ltd - A/C 4567')"><span>🏛️ ICICI Bank (A/C: ****4567)</span></li>
+                                    <li data-bank-code="AXIS" onclick="selectBank('AXIS', 'Axis Bank Corp - A/C 8890')"><span>🏛️ Axis Bank (A/C: ****8890)</span></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- From Date -->
+                    <div class="form-group">
+                        <label>📅 From Date</label>
+                        <input type="date" class="form-control" id="fromDate" value="2026-07-31" onchange="applyFilter()">
+                    </div>
+
+                    <!-- To Date -->
+                    <div class="form-group">
+                        <label>📅 To Date</label>
+                        <input type="date" class="form-control" id="toDate" value="2026-08-03" onchange="applyFilter()">
+                    </div>
+
+                    <!-- Search Filter Keyword -->
+                    <div class="form-group">
+                        <label>🔍 Quick Keyword Search</label>
+                        <input type="text" class="form-control" id="keywordInput" placeholder="Search narration, ref, amount..." onkeyup="applyFilter()">
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="btn-group-custom">
+                        <button type="button" class="btn-custom btn-search" onclick="applyFilter()">⚡ Search</button>
+                        <button type="button" class="btn-custom btn-reset" onclick="resetForm()">🔄 Reset</button>
+                    </div>
+
+                </div>
+            </form>
+        </div>
+
+        <!-- Export & Options Toolbar -->
+        <div class="action-toolbar">
+            <div class="toolbar-info">
+                Showing Statements for: <span id="activeBankLabel">All Bank Accounts</span>
+            </div>
+            <div class="export-buttons">
+                <button class="btn-export btn-excel" onclick="exportToExcel('statementTable', 'ATR_Bank_Statement')">📊 Export Excel</button>
+                <button class="btn-export btn-pdf" onclick="downloadA4BankStatementPDF()">📥 Download PDF</button>
+                <button class="btn-export btn-print" onclick="printA4BankStatement()">🖨️ Print A4</button>
+            </div>
+        </div>
+
+        <!-- Outer Box for Table + Fixed Summary -->
+        <div class="table-container-box">
+            
+            <!-- Scrollable Table Body Container -->
+            <div class="table-scroll-area">
+                <table id="statementTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Bank Name & A/C</th>
+                            <th>Transaction Description / Narration</th>
+                            <th>Ref / Chq No.</th>
+                            <th>Type</th>
+                            <th style="text-align: right;">Credit (Deposit)</th>
+                            <th style="text-align: right;">Debit (Withdrawal)</th>
+                            <th style="text-align: right;">Running Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr data-bank="HDFC" data-date="2026-08-03">
+                            <td style="white-space: nowrap;">03 Aug 2026</td>
+                            <td><span class="bank-tag">HDFC Bank</span></td>
+                            <td>Payment received from Client Rajat Dutta (Dum Dum Site)</td>
+                            <td>TXN8829102</td>
+                            <td><span class="badge-credit">CREDIT</span></td>
+                            <td style="text-align: right; color: var(--color-credit); font-weight: bold;">₹2,50,000.00</td>
+                            <td style="text-align: right; color: var(--text-muted);">-</td>
+                            <td style="text-align: right; font-weight: bold;">₹24,50,000.00</td>
+                        </tr>
+                        <tr data-bank="SBI" data-date="2026-08-02">
+                            <td style="white-space: nowrap;">02 Aug 2026</td>
+                            <td><span class="bank-tag">SBI Main</span></td>
+                            <td>Cement Batch Purchase - Sayan Karmakar Retailer</td>
+                            <td>CHQ-400129</td>
+                            <td><span class="badge-debit">DEBIT</span></td>
+                            <td style="text-align: right; color: var(--text-muted);">-</td>
+                            <td style="text-align: right; color: var(--color-debit); font-weight: bold;">₹85,500.00</td>
+                            <td style="text-align: right; font-weight: bold;">₹22,00,000.00</td>
+                        </tr>
+                        <tr data-bank="ICICI" data-date="2026-08-02">
+                            <td style="white-space: nowrap;">02 Aug 2026</td>
+                            <td><span class="bank-tag">ICICI Bank</span></td>
+                            <td>Equipment Rental Mobilization Deposit</td>
+                            <td>NFT9912041</td>
+                            <td><span class="badge-debit">DEBIT</span></td>
+                            <td style="text-align: right; color: var(--text-muted);">-</td>
+                            <td style="text-align: right; color: var(--color-debit); font-weight: bold;">₹45,000.00</td>
+                            <td style="text-align: right; font-weight: bold;">₹22,85,500.00</td>
+                        </tr>
+                        <tr data-bank="AXIS" data-date="2026-08-01">
+                            <td style="white-space: nowrap;">01 Aug 2026</td>
+                            <td><span class="bank-tag">Axis Bank</span></td>
+                            <td>Advance Payment from ATR Construction Project B3</td>
+                            <td>TXN1002341</td>
+                            <td><span class="badge-credit">CREDIT</span></td>
+                            <td style="text-align: right; color: var(--color-credit); font-weight: bold;">₹5,00,000.00</td>
+                            <td style="text-align: right; color: var(--text-muted);">-</td>
+                            <td style="text-align: right; font-weight: bold;">₹23,30,500.00</td>
+                        </tr>
+                        <tr data-bank="HDFC" data-date="2026-08-01">
+                            <td style="white-space: nowrap;">01 Aug 2026</td>
+                            <td><span class="bank-tag">HDFC Bank</span></td>
+                            <td>Supervisor Weekly Advance Payout - Rahul Sk</td>
+                            <td>UPI3910293</td>
+                            <td><span class="badge-debit">DEBIT</span></td>
+                            <td style="text-align: right; color: var(--text-muted);">-</td>
+                            <td style="text-align: right; color: var(--color-debit); font-weight: bold;">₹25,000.00</td>
+                            <td style="text-align: right; font-weight: bold;">₹18,30,500.00</td>
+                        </tr>
+                        <tr data-bank="SBI" data-date="2026-07-31">
+                            <td style="white-space: nowrap;">31 Jul 2026</td>
+                            <td><span class="bank-tag">SBI Main</span></td>
+                            <td>Site Worker Wages Clearance - Dum Dum Project</td>
+                            <td>NFT8821034</td>
+                            <td><span class="badge-debit">DEBIT</span></td>
+                            <td style="text-align: right; color: var(--text-muted);">-</td>
+                            <td style="text-align: right; color: var(--color-debit); font-weight: bold;">₹1,20,000.00</td>
+                            <td style="text-align: right; font-weight: bold;">₹18,55,500.00</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Strictly Fixed Total Summary Bar at Bottom -->
+            <div class="table-footer-summary">
+                <div class="summary-item">
+                    <span class="summary-label">Total Credit:</span>
+                    <span class="summary-val val-credit" id="totalCredit">₹7,50,000.00</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Total Debit:</span>
+                    <span class="summary-val val-debit" id="totalDebit">₹2,75,500.00</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Net Period Flow (Cr - Dr):</span>
+                    <span class="summary-val val-balance" id="netBalance">₹4,74,500.00</span>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- =========================================================================================
+         DEDICATED A4 PORTRAIT MULTI-PAGE REPORT CONTAINER (SHARED BY PRINT & PDF DOWNLOAD)
+         ========================================================================================= -->
+    <div id="a4BankStatementWrapper">
+        <!-- Populated dynamically via JS into exact 794x1122px A4 Portrait sheets -->
+    </div>
+
+    <!-- Interactivity JavaScript Engine -->
+    <script>
+        // =========================================================================================
+        // 1. PORTAL ROLE DETECTION (ADMIN vs OFFICE STAFF vs SUPERVISOR)
+        // =========================================================================================
+        let currentPortalMode = "admin";
+        let loggedUserName = "Super Admin";
+        let selectedBankCode = 'ALL';
+
+        function checkPortalPermissions() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewParam = (urlParams.get('view') || '').toLowerCase();
+            const badge = document.getElementById('roleModeBadge');
+            const backBtn = document.getElementById('btnBackDashboard');
+
+            let parentPath = "";
+            try {
+                if (window.parent && window.parent !== window) {
+                    parentPath = (window.parent.location.pathname || '').toLowerCase();
+                }
+            } catch (e) {}
+
+            if (viewParam === 'office' || parentPath.includes('officedashboard')) {
+                currentPortalMode = 'office';
+                loggedUserName = urlParams.get('userName') || "Office Staff";
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🏢 Office Mode (${loggedUserName})`;
+                }
+                if (backBtn) {
+                    backBtn.href = "office/office_dashboard_home.html";
+                }
+            } else if (viewParam === 'supervisor' || parentPath.includes('supervisordashboard')) {
+                currentPortalMode = 'supervisor';
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🛡️ Supervisor Mode`;
+                }
+                if (backBtn) {
+                    backBtn.href = "supervisor/supervisor_dashboard_home.html";
+                }
+            } else {
+                currentPortalMode = 'admin';
+                if (backBtn) {
+                    backBtn.href = "dashboard_home.html";
+                }
+            }
+        }
+
+        function handleBackToDashboard(event) {
+            if (currentPortalMode === 'office') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.loadOfficeWorkspaceHome === 'function') {
+                        window.parent.loadOfficeWorkspaceHome();
+                        return;
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "office_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "office/office_dashboard_home.html";
+            } else if (currentPortalMode === 'supervisor') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window) {
+                        const parentHomeLink = window.parent.document.querySelector('.dashboard-home-link');
+                        if (parentHomeLink) {
+                            window.location.href = parentHomeLink.href;
+                            return;
+                        }
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "supervisor_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "supervisor/supervisor_dashboard_home.html";
+            }
+        }
+
+        // =========================================================================================
+        // 2. DROPDOWN, FILTER & LIVE TOTALS ENGINE
+        // =========================================================================================
+        function toggleBankDropdown() {
+            document.getElementById('dropdownMenu').classList.toggle('show');
+        }
+
+        window.onclick = function(event) {
+            if (!event.target.closest('.custom-dropdown-container')) {
+                const dropdowns = document.getElementsByClassName("dropdown-menu-custom");
+                for (let i = 0; i < dropdowns.length; i++) {
+                    dropdowns[i].classList.remove('show');
+                }
+            }
+        };
+
+        function filterBankList() {
+            const input = document.getElementById('bankSearchInput').value.toLowerCase();
+            const li = document.getElementById('bankList').getElementsByTagName('li');
+            for (let i = 0; i < li.length; i++) {
+                const text = li[i].textContent || li[i].innerText;
+                if (text.toLowerCase().indexOf(input) > -1) {
+                    li[i].style.display = "";
+                } else {
+                    li[i].style.display = "none";
+                }
+            }
+        }
+
+        function selectBank(code, name) {
+            selectedBankCode = code;
+            document.getElementById('selectedBankText').innerText = name;
+            document.getElementById('activeBankLabel').innerText = name;
+            
+            const items = document.querySelectorAll('#bankList li');
+            items.forEach(item => {
+                item.classList.toggle('selected', item.getAttribute('data-bank-code') === code);
+            });
+
+            document.getElementById('dropdownMenu').classList.remove('show');
+            applyFilter();
+        }
+
+        function applyFilter() {
+            const keyword = document.getElementById('keywordInput').value.toLowerCase().trim();
+            const fromDateVal = document.getElementById('fromDate').value;
+            const toDateVal = document.getElementById('toDate').value;
+            
+            const rows = document.querySelectorAll('#tableBody tr');
+
+            rows.forEach(row => {
+                const bankAttr = row.getAttribute('data-bank');
+                const dateAttr = row.getAttribute('data-date') || '';
+                const rowText = row.innerText.toLowerCase();
+
+                const matchesBank = (selectedBankCode === 'ALL' || bankAttr === selectedBankCode);
+                const matchesKeyword = !keyword || rowText.includes(keyword);
+                let matchesDate = true;
+                
+                if (fromDateVal && dateAttr && dateAttr < fromDateVal) matchesDate = false;
+                if (toDateVal && dateAttr && dateAttr > toDateVal) matchesDate = false;
+
+                if (matchesBank && matchesKeyword && matchesDate) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            calculateTotals();
+        }
+
+        function resetForm() {
+            document.getElementById('keywordInput').value = '';
+            document.getElementById('bankSearchInput').value = '';
+            document.getElementById('fromDate').value = '';
+            document.getElementById('toDate').value = '';
+            filterBankList();
+            selectBank('ALL', 'All Bank Accounts');
+        }
+
+        function formatINR(num) {
+            return Number(num || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function calculateTotals() {
+            const rows = document.querySelectorAll('#tableBody tr');
+            let tCredit = 0;
+            let tDebit = 0;
+            const visibleRecords = [];
+
+            rows.forEach(row => {
+                if (row.style.display !== 'none') {
+                    const dateText = row.cells[0].innerText.trim();
+                    const bankName = row.cells[1].innerText.trim();
+                    const narration = row.cells[2].innerText.trim();
+                    const refNo = row.cells[3].innerText.trim();
+                    const txnType = row.cells[4].innerText.trim();
+                    const creditRaw = row.cells[5].innerText.trim();
+                    const debitRaw = row.cells[6].innerText.trim();
+                    const runBalRaw = row.cells[7].innerText.trim();
+
+                    const creditVal = parseFloat(creditRaw.replace(/[^0-9.-]+/g, "")) || 0;
+                    const debitVal = parseFloat(debitRaw.replace(/[^0-9.-]+/g, "")) || 0;
+                    
+                    if (creditRaw !== '-') tCredit += creditVal;
+                    if (debitRaw !== '-') tDebit += debitVal;
+
+                    visibleRecords.push({
+                        date: dateText,
+                        bank: bankName,
+                        narration: narration,
+                        refNo: refNo,
+                        type: txnType,
+                        creditRaw: creditRaw,
+                        debitRaw: debitRaw,
+                        runBalRaw: runBalRaw
+                    });
+                }
+            });
+
+            const netFlow = tCredit - tDebit;
+            document.getElementById('totalCredit').innerText = '₹' + formatINR(tCredit);
+            document.getElementById('totalDebit').innerText = '₹' + formatINR(tDebit);
+            document.getElementById('netBalance').innerText = (netFlow >= 0 ? '₹' : '-₹') + formatINR(Math.abs(netFlow));
+
+            // Keep A4 Portrait Report Pages synced with current filtered rows
+            buildPaginatedA4BankStatementPages(visibleRecords, tCredit, tDebit, netFlow);
+        }
+
+        // =========================================================================================
+        // 3. MULTI-PAGE A4 PORTRAIT REPORT BUILDER (ZERO CUTOFF IN BOTH PRINT & PDF)
+        // =========================================================================================
+        function buildPaginatedA4BankStatementPages(records, tCredit, tDebit, netFlow) {
+            const wrapper = document.getElementById('a4BankStatementWrapper');
+            if (!wrapper) return;
+
+            const nowStr = new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+            const activeBankName = document.getElementById('selectedBankText').innerText || "All Bank Accounts";
+            const fromD = document.getElementById('fromDate').value;
+            const toD = document.getElementById('toDate').value;
+            const periodLabel = (fromD || toD)
+                ? `Period: ${fromD || 'Beginning'} to ${toD || 'Today'}`
+                : `Period: All Time Statement`;
+            const netFormatted = (netFlow >= 0 ? '+₹' : '-₹') + formatINR(Math.abs(netFlow));
+            const netColor = netFlow >= 0 ? '#1e7e34' : '#c82333';
+
+            // Paginate records into discrete A4 Portrait sheets so rows never overflow or get clipped
+            const pages = [];
+            if (records.length === 0) {
+                pages.push([]);
+            } else {
+                const firstPageMaxRows = 13;
+                const nextPagesMaxRows = 17;
+                pages.push(records.slice(0, firstPageMaxRows));
+                let cursor = firstPageMaxRows;
+                while (cursor < records.length) {
+                    pages.push(records.slice(cursor, cursor + nextPagesMaxRows));
+                    cursor += nextPagesMaxRows;
+                }
+            }
+
+            const totalPages = pages.length;
+            let globalRowIdx = 0;
+            let allPagesHtml = '';
+
+            pages.forEach((pageRows, pageIdx) => {
+                const isFirstPage = (pageIdx === 0);
+                const isLastPage = (pageIdx === totalPages - 1);
+
+                const headerBannerHtml = `
+                    <div class="rpt-top-banner">
+                        <div class="rpt-brand-block">
+                            <h1>ATR CONSTRUCTION</h1>
+                            <p>Official Company Bank Statement ${!isFirstPage ? '(Continued)' : ''}</p>
+                        </div>
+                        <div class="rpt-meta-block">
+                            <div>Generated: ${nowStr}</div>
+                            <div>Transactions: ${records.length} &nbsp;|&nbsp; Page ${pageIdx + 1} of ${totalPages}</div>
+                        </div>
+                    </div>
+                `;
+
+                const summarySectionHtml = isFirstPage ? `
+                    <div class="rpt-filter-strip">
+                        <span>Bank Account: ${activeBankName}</span>
+                        <span>${periodLabel}</span>
+                    </div>
+                    <div class="rpt-summary-row">
+                        <div class="rpt-sum-card crd">
+                            <span>Total Credit (Deposit)</span>
+                            <strong style="color: #1e7e34 !important;">₹${formatINR(tCredit)}</strong>
+                        </div>
+                        <div class="rpt-sum-card dbt">
+                            <span>Total Debit (Withdrawal)</span>
+                            <strong style="color: #c82333 !important;">₹${formatINR(tDebit)}</strong>
+                        </div>
+                        <div class="rpt-sum-card bal">
+                            <span>Net Period Flow (Cr - Dr)</span>
+                            <strong style="color: ${netColor} !important;">${netFormatted}</strong>
+                        </div>
+                    </div>
+                ` : `
+                    <div class="rpt-filter-strip" style="margin-bottom: 10px;">
+                        <span>Bank Account: ${activeBankName}</span>
+                        <span>${periodLabel}</span>
+                    </div>
+                `;
+
+                let rowsHtml = '';
+                if (pageRows.length === 0) {
+                    rowsHtml = `<tr><td colspan="8" style="text-align:center; padding: 22px; font-weight: 600;">No bank transactions found for the selected filter criteria.</td></tr>`;
+                } else {
+                    pageRows.forEach(r => {
+                        globalRowIdx++;
+                        const isCredit = r.type.toUpperCase().includes('CREDIT');
+                        const pillClass = isCredit ? 'rpt-pill-crd' : 'rpt-pill-dbt';
+
+                        rowsHtml += `
+                            <tr>
+                                <td style="font-weight: 600;">${r.date}</td>
+                                <td style="font-weight: 700;">${r.bank}</td>
+                                <td>${r.narration}</td>
+                                <td style="font-weight: 600;">${r.refNo}</td>
+                                <td style="text-align: center;"><span class="rpt-type-pill ${pillClass}">${r.type}</span></td>
+                                <td style="text-align: right; font-weight: 700; color: #1e7e34 !important;">${r.creditRaw}</td>
+                                <td style="text-align: right; font-weight: 700; color: #c82333 !important;">${r.debitRaw}</td>
+                                <td style="text-align: right; font-weight: 800;">${r.runBalRaw}</td>
+                            </tr>
+                        `;
+                    });
+                }
+
+                const tfootHtml = isLastPage ? `
+                    <tfoot>
+                        <tr>
+                            <td colspan="5" style="text-align: right; text-transform: uppercase;">Statement Totals:</td>
+                            <td style="text-align: right; color: #1e7e34 !important;">₹${formatINR(tCredit)}</td>
+                            <td style="text-align: right; color: #c82333 !important;">₹${formatINR(tDebit)}</td>
+                            <td style="text-align: right; color: ${netColor} !important;">Net: ${netFormatted}</td>
+                        </tr>
+                    </tfoot>
+                ` : '';
+
+                const signaturesHtml = isLastPage ? `
+                    <div class="rpt-signatures">
+                        <div class="rpt-sig-box">Prepared By (Office)</div>
+                        <div class="rpt-sig-box">Verified By (Accountant)</div>
+                        <div class="rpt-sig-box">For ATR Construction (Authorized)</div>
+                    </div>
+                ` : '';
+
+                allPagesHtml += `
+                    <div class="a4-report-page">
+                        <div class="a4-page-top-content">
+                            ${headerBannerHtml}
+                            ${summarySectionHtml}
+                            <table class="rpt-a4-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 10%;">Date</th>
+                                        <th style="width: 12%;">Bank & A/C</th>
+                                        <th style="width: 24%;">Description / Narration</th>
+                                        <th style="width: 11%;">Ref / Chq</th>
+                                        <th style="width: 8%; text-align: center;">Type</th>
+                                        <th style="width: 11.5%; text-align: right;">Credit (₹)</th>
+                                        <th style="width: 11.5%; text-align: right;">Debit (₹)</th>
+                                        <th style="width: 12%; text-align: right;">Balance (₹)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${rowsHtml}
+                                </tbody>
+                                ${tfootHtml}
+                            </table>
+                        </div>
+                        <div class="a4-page-bottom-content">
+                            ${signaturesHtml}
+                            <div class="rpt-page-footer-bar">
+                                <span>ATR Construction — System Generated Official Bank Statement</span>
+                                <span>Page ${pageIdx + 1} of ${totalPages}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            wrapper.innerHTML = allPagesHtml;
+        }
+
+        function printA4BankStatement() {
+            calculateTotals();
+            window.print();
+        }
+
+        async function downloadA4BankStatementPDF() {
+            calculateTotals();
+            const wrapper = document.getElementById('a4BankStatementWrapper');
+            wrapper.style.display = 'block';
+            document.body.classList.add('pdf-export-mode');
+            window.scrollTo(0, 0);
+
+            const pageElements = wrapper.querySelectorAll('.a4-report-page');
+            const bankSlug = (selectedBankCode || 'ALL').replace(/[^a-zA-Z0-9_-]/g, '_');
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            try {
+                await new Promise(r => setTimeout(r, 120));
+
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'mm',
+                    format: 'a4'
+                });
+
+                for (let i = 0; i < pageElements.length; i++) {
+                    const pageEl = pageElements[i];
+
+                    // Show only the current page at (0,0) so html2canvas captures 100% of the 794x1122 A4 sheet
+                    pageElements.forEach((el, idx) => {
+                        el.style.display = (idx === i) ? 'flex' : 'none';
+                    });
+                    window.scrollTo(0, 0);
+
+                    const canvas = await html2canvas(pageEl, {
+                        scale: 2,
+                        useCORS: true,
+                        backgroundColor: '#ffffff',
+                        width: 794,
+                        height: 1122,
+                        windowWidth: 794,
+                        windowHeight: 1122,
+                        x: 0,
+                        y: 0,
+                        scrollX: 0,
+                        scrollY: 0
+                    });
+
+                    const imgData = canvas.toDataURL('image/jpeg', 0.98);
+                    if (i > 0) {
+                        pdf.addPage();
+                    }
+                    pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
+                }
+
+                pageElements.forEach(el => { el.style.display = 'flex'; });
+                pdf.save(`ATR_Bank_Statement_${bankSlug}_${todayStr}.pdf`);
+            } catch (err) {
+                window.print();
+            } finally {
+                document.body.classList.remove('pdf-export-mode');
+                wrapper.style.display = 'none';
+            }
+        }
+
+        // =========================================================================================
+        // 4. REAL EXCEL EXPORT LOGIC USING SHEETJS
+        // =========================================================================================
+        function exportToExcel(tableID, filename = '') {
+            let tableSelect = document.getElementById(tableID);
+            let tableClone = tableSelect.cloneNode(true);
+            let rows = tableClone.querySelectorAll('tr');
+            
+            rows.forEach(row => {
+                if(row.style.display === 'none') {
+                    row.parentNode.removeChild(row);
+                }
+            });
+            
+            let wb = XLSX.utils.table_to_book(tableClone, {sheet:"Bank Statement"});
+            XLSX.writeFile(wb, filename + '.xlsx');
+        }
+
+        window.onload = function() {
+            checkPortalPermissions();
+            applyFilter();
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Add Contractor</title>
+    
+    <!-- Sync theme with Master Dashboard -->
+    <script>
+        const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        window.addEventListener('storage', function(e) {
+            if(e.key === 'atr_theme') { document.documentElement.setAttribute('data-theme', e.newValue); }
+        });
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap');
+
+        :root {
+            --bg-body: transparent; 
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.1);
+            
+            /* Dynamic Glass & Input Variables */
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(0, 0, 0, 0.2);
+            --input-focus-bg: rgba(0, 0, 0, 0.4);
+            
+            --shadow: 0 4px 15px rgba(0,0,0,0.3);
+            
+            /* Theme Color (Orange for Contractor Section) */
+            --theme-color: #fd7e14;
+            --theme-glow: rgba(253, 126, 20, 0.4);
+            --theme-transition: all 0.4s ease;
+        }
+
+        [data-theme="light"] {
+            --bg-body: transparent;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #555555;
+            --border-color: rgba(0, 0, 0, 0.1);
+            
+            --glass-bg: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --input-bg: rgba(255, 255, 255, 0.5);
+            --input-focus-bg: #ffffff;
+            
+            --shadow: 0 8px 25px rgba(0,0,0,0.05);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; scroll-behavior: smooth; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(136, 136, 136, 0.3); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(136, 136, 136, 0.6); }
+
+        body { background-color: var(--bg-body); color: var(--text-main); display: flex; min-height: 100vh; transition: var(--theme-transition); }
+
+        .main-content {
+            flex: 1; padding: 40px; overflow-y: auto; max-width: 1200px; margin: 0 auto; width: 100%;
+        }
+
+        .header-section {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 30px; border-bottom: 1px solid var(--border-color); padding-bottom: 20px;
+            transition: var(--theme-transition); flex-wrap: wrap; gap: 15px;
+        }
+
+        .header-section h1 { font-size: 24px; color: var(--text-main); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+        .role-mode-badge {
+            display: none;
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 700;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-back {
+            background-color: var(--glass-bg); color: var(--text-main);
+            border: 1px solid var(--border-color); text-decoration: none;
+            padding: 9px 16px; border-radius: 6px; font-weight: bold; font-size: 13px;
+            transition: all 0.3s; cursor: pointer;
+        }
+        .btn-back:hover { 
+            background-color: var(--theme-color); color: #fff; border-color: var(--theme-color); 
+            transform: translateY(-2px); box-shadow: 0 4px 10px var(--theme-glow); 
+        }
+
+        /* Glassy Form Container */
+        .glassy-form-container {
+            background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border); border-top: 4px solid var(--theme-color);
+            border-radius: 12px; padding: 30px; box-shadow: var(--shadow); margin-bottom: 40px;
+            transition: var(--theme-transition);
+        }
+
+        .glassy-form-container h2 { font-size: 20px; margin-bottom: 25px; color: var(--theme-color); text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+        .form-group { display: flex; flex-direction: column; gap: 8px; position: relative; }
+        .form-group label { font-size: 12px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; transition: color 0.3s; }
+
+        .form-group input, .form-group select, .form-group textarea {
+            background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main);
+            padding: 12px 15px; border-radius: 6px; font-size: 14px; transition: all 0.3s; outline: none;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            border-color: var(--theme-color); background-color: var(--input-focus-bg);
+            box-shadow: 0 0 10px var(--theme-glow), inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .form-group:focus-within label { color: var(--theme-color); }
+        select option { background: var(--bg-card); color: var(--text-main); }
+
+        /* TDS Section Styling */
+        .tds-container {
+            background-color: var(--glass-bg); padding: 15px; border-radius: 8px;
+            border: 1px solid var(--glass-border); grid-column: 1 / -1; 
+            display: flex; flex-wrap: wrap; gap: 20px; align-items: center;
+        }
+
+        .tds-toggle { display: flex; gap: 15px; align-items: center; }
+        .tds-toggle label { display: flex; align-items: center; gap: 5px; cursor: pointer; color: var(--text-main); font-size: 14px; text-transform: none; }
+        .tds-toggle input[type="radio"] { accent-color: var(--theme-color); width: 16px; height: 16px; }
+
+        #tdsPercentageGroup { display: none; flex-direction: row; align-items: center; gap: 10px; }
+        #tdsPercentageGroup input { width: 120px; padding: 8px 12px; }
+
+        .form-btn-row { display: flex; gap: 12px; margin-top: 20px; }
+
+        .btn-submit {
+            background-color: var(--theme-color); color: #ffffff; border: 1px solid rgba(255,255,255,0.2);
+            padding: 14px 25px; border-radius: 6px; font-weight: 700; font-size: 14px; cursor: pointer;
+            text-transform: uppercase; transition: all 0.3s; flex: 1; letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 8px 20px var(--theme-glow); }
+
+        .btn-cancel-edit {
+            display: none; background-color: var(--glass-bg); color: var(--text-main);
+            border: 1px solid var(--border-color); padding: 14px 22px; border-radius: 6px;
+            font-weight: 700; font-size: 13px; cursor: pointer; text-transform: uppercase;
+        }
+        .btn-cancel-edit:hover { background-color: rgba(220,53,69,0.15); color: #ff6b6b; border-color: #dc3545; }
+
+        /* Table Section */
+        .table-container {
+            background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border); border-radius: 12px; padding: 25px; box-shadow: var(--shadow);
+            transition: var(--theme-transition);
+        }
+        .table-header-bar {
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;
+        }
+        .table-container h3 { margin-bottom: 0; color: var(--theme-color); font-size: 18px; text-transform: uppercase; }
+        .table-search-input {
+            background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main);
+            padding: 9px 14px; border-radius: 6px; font-size: 13px; width: 260px; outline: none;
+        }
+        .table-search-input:focus { border-color: var(--theme-color); }
+
+        .table-responsive { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 15px; border-bottom: 1px solid var(--border-color); font-size: 14px; color: var(--text-main); transition: var(--theme-transition); vertical-align: middle; white-space: nowrap; }
+        th { color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 12px; background: var(--input-bg); }
+        tbody tr:hover { background: var(--glass-bg); }
+
+        .badge-tds-yes { background: rgba(40, 167, 69, 0.2); color: #28a745; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid rgba(40,167,69,0.4); }
+        .badge-tds-no { background: rgba(220, 53, 69, 0.2); color: #dc3545; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid rgba(220,53,69,0.4); }
+        .pending-status-pill {
+            display: inline-block; background: rgba(255, 193, 7, 0.16); color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.45); padding: 2px 7px; border-radius: 4px;
+            font-size: 10px; font-weight: 700; margin-left: 8px; text-transform: uppercase;
+        }
+
+        .action-btns { display: inline-flex; gap: 6px; align-items: center; flex-wrap: nowrap; }
+
+        .btn-view {
+            background-color: transparent; color: var(--theme-color); border: 1px solid var(--theme-color);
+            padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer; font-weight: bold; transition: all 0.3s;
+        }
+        .btn-view:hover { background-color: var(--theme-color); color: #ffffff; }
+
+        .btn-edit-row {
+            background-color: #007bff; color: #ffffff; border: none;
+            padding: 6px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; font-weight: bold; transition: 0.2s;
+        }
+        .btn-edit-row:hover { background-color: #0056b3; }
+
+        .btn-del-row {
+            background-color: #dc3545; color: #ffffff; border: none;
+            padding: 6px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; font-weight: bold; transition: 0.2s;
+        }
+        .btn-del-row:hover { background-color: #c82333; }
+
+        /* Modal / Profile Popup Styles */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7); display: none; justify-content: center; align-items: center; z-index: 1000;
+            backdrop-filter: blur(5px); padding: 20px;
+        }
+
+        .modal-content {
+            background-color: var(--bg-card); width: 90%; max-width: 650px; border-radius: 12px;
+            border-top: 4px solid var(--theme-color); padding: 30px; position: relative; box-shadow: var(--shadow);
+            max-height: 90vh; overflow-y: auto; border-left: 1px solid var(--border-color); border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);
+            transition: var(--theme-transition);
+        }
+
+        .close-modal { position: absolute; top: 15px; right: 20px; font-size: 24px; color: var(--text-muted); cursor: pointer; transition: 0.3s; }
+        .close-modal:hover { color: var(--text-main); }
+
+        .profile-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--border-color); }
+        .profile-avatar {
+            background: var(--input-bg); width: 80px; height: 80px; display: flex; justify-content: center; align-items: center;
+            border-radius: 50%; border: 2px solid var(--theme-color); overflow: hidden; cursor: zoom-in; position: relative; flex-shrink: 0;
+        }
+        .profile-avatar img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease; }
+        .profile-avatar:hover img { transform: scale(1.15); }
+
+        .profile-info h3 { color: var(--theme-color); margin-bottom: 5px; }
+        .profile-info p { font-size: 13px; color: var(--text-muted); margin-bottom: 3px; }
+
+        .profile-meta-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;
+            background: var(--input-bg); padding: 12px 15px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 15px; font-size: 12.5px;
+        }
+        .profile-meta-grid div span { color: var(--text-muted); display: block; font-size: 11px; text-transform: uppercase; }
+        .profile-meta-grid div strong { color: var(--text-main); }
+
+        .upload-section { background: var(--input-bg); padding: 20px; border-radius: 8px; margin-top: 15px; border: 1px dashed var(--theme-color); }
+        .upload-section h4 { margin-bottom: 15px; color: var(--text-main); font-size: 15px; }
+        
+        .file-input-wrapper { margin-bottom: 15px; }
+        .file-input-wrapper label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 5px; }
+        .file-input-wrapper input[type="file"] {
+            width: 100%; padding: 8px; background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: 4px; color: var(--text-main); font-size: 12px;
+        }
+
+        .btn-upload {
+            background-color: #28a745; color: white; border: none; padding: 10px 20px;
+            border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 10px; width: 100%; transition: opacity 0.2s;
+        }
+        .btn-upload:hover { opacity: 0.9; }
+
+        .doc-list-container { margin-top: 20px; background: var(--input-bg); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .doc-list-container h4 { color: var(--theme-color); font-size: 14px; margin-bottom: 10px; }
+        .doc-item {
+            display: flex; justify-content: space-between; align-items: center; background: var(--bg-card);
+            padding: 8px 12px; border-radius: 5px; margin-bottom: 8px; font-size: 13px; border: 1px solid var(--border-color);
+        }
+        .doc-item span { color: var(--text-main); }
+        .no-doc { color: var(--text-muted); font-size: 12px; font-style: italic; }
+
+        /* FULLSCREEN IMAGE VIEWER STYLES */
+        .image-viewer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9);
+            display: none; justify-content: center; align-items: center; z-index: 2000; cursor: zoom-out;
+        }
+        .image-viewer img {
+            max-width: 90%; max-height: 90%; border-radius: 10px; border: 3px solid var(--theme-color);
+            box-shadow: 0 0 30px var(--theme-glow); animation: zoomIn 0.3s ease-out;
+        }
+        @keyframes zoomIn { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <div class="main-content">
+        <div class="header-section">
+            <h1>
+                👷 Contractor Registration
+                <span id="roleModeBadge" class="role-mode-badge">🏢 Office Mode</span>
+            </h1>
+            <a href="dashboard_home.html" id="btnBackDashboard" class="btn-back" onclick="handleBackToDashboard(event)">← Back to Dashboard</a>
+        </div>
+
+        <!-- Registration Form -->
+        <div class="glassy-form-container">
+            <h2 id="formSectionTitle">Add New Contractor</h2>
+            <!-- data-office-hooked="true" prevents duplicate parent interception so this file handles custom Office Approval cleanly -->
+            <form id="contractorForm" data-office-hooked="true" onsubmit="submitForm(event)">
+                <input type="hidden" id="editContractorId">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Full Name / Company Name *</label>
+                        <input type="text" id="conName" placeholder="Enter contractor name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Phone Number *</label>
+                        <input type="tel" id="conPhone" placeholder="Enter mobile number" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email ID</label>
+                        <input type="email" id="conEmail" placeholder="Enter email address">
+                    </div>
+                    <div class="form-group">
+                        <label>PAN Number *</label>
+                        <input type="text" id="conPan" placeholder="Enter PAN" required style="text-transform: uppercase;">
+                    </div>
+                    <div class="form-group">
+                        <label>GST / Trade License No</label>
+                        <input type="text" id="conGst" placeholder="Enter GST or License" style="text-transform: uppercase;">
+                    </div>
+                    <div class="form-group">
+                        <label>Work Type / Category</label>
+                        <select id="conCategory">
+                            <option value="Civil Work">Civil Work</option>
+                            <option value="Plumbing">Plumbing</option>
+                            <option value="Electrical">Electrical</option>
+                            <option value="Painting">Painting</option>
+                            <option value="Material Supplier">Material Supplier</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label>Full Address</label>
+                        <textarea id="conAddress" rows="2" placeholder="Enter full address..."></textarea>
+                    </div>
+
+                    <!-- TDS Section -->
+                    <div class="tds-container">
+                        <div class="form-group">
+                            <label style="color: var(--theme-color); font-size: 13px;">Is TDS Applicable? *</label>
+                            <div class="tds-toggle">
+                                <label><input type="radio" name="tds" value="yes" onchange="toggleTDSInput()" required> Yes</label>
+                                <label><input type="radio" name="tds" value="no" onchange="toggleTDSInput()" checked> No</label>
+                            </div>
+                        </div>
+
+                        <div class="form-group" id="tdsPercentageGroup">
+                            <label style="color: #28a745;">TDS Percentage (%) *</label>
+                            <input type="number" id="tdsValue" step="0.01" min="0" placeholder="e.g. 1.0 or 2.0">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-btn-row">
+                    <button type="submit" class="btn-submit" id="btnSubmitForm">Register Contractor</button>
+                    <button type="button" class="btn-cancel-edit" id="btnCancelEdit" onclick="cancelEditContractor()">Cancel Edit</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- View Section -->
+        <div class="table-container">
+            <div class="table-header-bar">
+                <h3>Registered Contractors List</h3>
+                <input type="text" id="contractorSearchInput" class="table-search-input" placeholder="🔍 Search contractor, phone, PAN..." onkeyup="renderContractorsTable()">
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Contractor Name</th>
+                            <th>Work Type</th>
+                            <th>Phone</th>
+                            <th>PAN / GST</th>
+                            <th>TDS Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="contractorTableBody">
+                        <!-- Dynamically populated via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modal / Profile Popup -->
+    <div class="modal-overlay" id="profileModal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            
+            <div class="profile-header">
+                <div class="profile-avatar" onclick="openImageViewer('profile')" title="Click to view full image">
+                    <img id="contractorImage" src="https://ui-avatars.com/api/?name=Contractor&background=2b2b2b&color=fd7e14&size=128" alt="Profile Photo">
+                </div>
+                <div class="profile-info">
+                    <h3 id="modalName">Contractor Name</h3>
+                    <p id="modalPhone">Phone: +91 xxxxxxxxxx</p>
+                    <p id="modalCategory">Category: Civil</p>
+                    <p id="modalTDS" style="margin-top: 5px; font-weight: bold;">TDS: -</p>
+                </div>
+            </div>
+
+            <div class="profile-meta-grid">
+                <div><span>Email ID</span><strong id="modalEmail">N/A</strong></div>
+                <div><span>PAN Number</span><strong id="modalPan">N/A</strong></div>
+                <div><span>GST / License</span><strong id="modalGst">N/A</strong></div>
+                <div style="grid-column: 1 / -1;"><span>Address</span><strong id="modalAddress">N/A</strong></div>
+            </div>
+
+            <!-- Upload Section -->
+            <div class="upload-section">
+                <h4>📁 Upload KYC, Documents & Photo</h4>
+                
+                <div class="file-input-wrapper">
+                    <label style="color:var(--theme-color); font-weight:bold;">Contractor Profile Photo:</label>
+                    <input type="file" id="photoInput" accept="image/*">
+                </div>
+                <div class="file-input-wrapper">
+                    <label>Aadhar Card (PDF/Image):</label>
+                    <input type="file" id="aadharInput" accept=".pdf, image/*">
+                </div>
+                <div class="file-input-wrapper">
+                    <label>PAN Card (PDF/Image):</label>
+                    <input type="file" id="panInput" accept=".pdf, image/*">
+                </div>
+                <div class="file-input-wrapper">
+                    <label>Bank Passbook / Cancelled Cheque:</label>
+                    <input type="file" id="bankInput" accept=".pdf, image/*">
+                </div>
+                <div class="file-input-wrapper">
+                    <label>Agreement Copy (Optional):</label>
+                    <input type="file" id="agreementInput" accept=".pdf, image/*">
+                </div>
+
+                <button class="btn-upload" id="btnUploadDocs" onclick="uploadDocs()">Save & Upload Documents</button>
+            </div>
+
+            <!-- SAVED / UPLOADED DOCUMENTS LIST SECTION -->
+            <div class="doc-list-container">
+                <h4>📋 Uploaded Documents (View / Check)</h4>
+                <div id="uploadedDocsList">
+                    <p class="no-doc">No documents uploaded yet for this contractor.</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Office Portal Approval Request Modal (Routes to ApproveOffice.html) -->
+    <div class="modal-overlay" id="officeApprovalModal" style="z-index: 1500;">
+        <div class="modal-content" style="max-width: 480px; border-top-color: #ffc107;">
+            <span class="close-modal" onclick="closeOfficeApprovalModal()">&times;</span>
+            <h3 style="color: #ffc107; margin-bottom: 10px; font-size: 18px;">🏢 Send Request to ApproveOffice.html</h3>
+            <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">
+                অফিস পোর্টাল থেকে নতুন কন্ট্রাক্টর অ্যাড, তথ্য এডিট, ডকুমেন্ট আপলোড বা ডিলিট করলে তা অ্যাডমিনের <strong>ApproveOffice.html</strong>-এ পাঠানো হবে। অ্যাডমিন অ্যাপ্রুভ করলেই এটি চূড়ান্ত হবে।
+            </p>
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label>Action & Contractor Summary</label>
+                <input type="text" id="officeApprovalSummary" readonly style="color: #ffc107; font-weight: 700;">
+            </div>
+            <div class="form-group" style="margin-bottom: 18px;">
+                <label>Reason / Remarks for Admin Approval <span style="color: #ff4d4d;">*</span></label>
+                <textarea id="officeApprovalReason" rows="3" placeholder="Explain the reason for this contractor entry, update, or deletion..." style="resize: none;"></textarea>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button type="button" class="btn-submit" style="margin-top: 0; background: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color);" onclick="closeOfficeApprovalModal()">Cancel</button>
+                <button type="button" class="btn-submit" style="margin-top: 0; background: #ffc107; color: #121212;" onclick="confirmOfficeApprovalRequest()">📤 Send for Approval</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fullscreen Image / Document Viewer Modal -->
+    <div class="image-viewer" id="imageViewer" onclick="closeImageViewer()">
+        <img id="fullImage" src="" alt="Full Screen Preview">
+    </div>
+
+    <script>
+        // =========================================================================================
+        // 1. PORTAL ROLE DETECTION (ADMIN vs OFFICE STAFF)
+        // =========================================================================================
+        let currentPortalMode = "admin"; // 'admin' or 'office'
+        let loggedUserId = "ADMIN";
+        let loggedUserName = "Super Admin";
+        let activeProfileContractorId = null;
+        let pendingOfficePayload = null;
+
+        const defaultContractors = [
+            {
+                id: "CON-101",
+                name: "Amitabha Roy",
+                phone: "+91 9876543210",
+                email: "amitabha.civil@example.com",
+                pan: "ABCDE1234F",
+                gst: "19ABCDE1234F1Z5",
+                category: "Civil Work",
+                address: "Dum Dum, Kolkata - 700028",
+                tdsApplicable: true,
+                tdsPercent: "1",
+                tdsDisplay: "Yes (1%)",
+                avatar: "",
+                docs: {},
+                pendingStatus: null
+            },
+            {
+                id: "CON-102",
+                name: "Sayan Karmakar",
+                phone: "+91 8765432109",
+                email: "sayan.electrical@example.com",
+                pan: "PQRSX6789K",
+                gst: "N/A",
+                category: "Electrical",
+                address: "Market Para, Durgapur - 713201",
+                tdsApplicable: false,
+                tdsPercent: "",
+                tdsDisplay: "No",
+                avatar: "",
+                docs: {},
+                pendingStatus: null
+            }
+        ];
+
+        let contractorsDb = [];
+
+        function loadContractorsDatabase() {
+            const stored = JSON.parse(localStorage.getItem('atr_contractors'));
+            if (Array.isArray(stored) && stored.length > 0) {
+                contractorsDb = stored;
+            } else {
+                contractorsDb = [...defaultContractors];
+                localStorage.setItem('atr_contractors', JSON.stringify(contractorsDb));
+            }
+        }
+
+        function saveContractorsDatabase() {
+            localStorage.setItem('atr_contractors', JSON.stringify(contractorsDb));
+        }
+
+        function checkPortalPermissions() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewParam = (urlParams.get('view') || '').toLowerCase();
+            const badge = document.getElementById('roleModeBadge');
+            const backBtn = document.getElementById('btnBackDashboard');
+            const submitBtn = document.getElementById('btnSubmitForm');
+
+            let parentPath = "";
+            try {
+                if (window.parent && window.parent !== window) {
+                    parentPath = (window.parent.location.pathname || '').toLowerCase();
+                }
+            } catch (e) {}
+
+            if (viewParam === 'office' || parentPath.includes('officedashboard')) {
+                currentPortalMode = 'office';
+                loggedUserId = urlParams.get('userId') || sessionStorage.getItem('atr_logged_office_id') || localStorage.getItem('atr_logged_office_id') || "OFF-101";
+                loggedUserName = urlParams.get('userName') || "Office Staff";
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🏢 Office Mode (${loggedUserName}) — Synced with ApproveOffice.html`;
+                }
+                if (submitBtn) {
+                    submitBtn.innerText = "📤 Submit Contractor for Admin Approval";
+                }
+                if (backBtn) {
+                    backBtn.href = "office/office_dashboard_home.html";
+                }
+            } else {
+                currentPortalMode = 'admin';
+                if (backBtn) {
+                    backBtn.href = "dashboard_home.html";
+                }
+            }
+        }
+
+        function handleBackToDashboard(event) {
+            if (currentPortalMode === 'office') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.loadOfficeWorkspaceHome === 'function') {
+                        window.parent.loadOfficeWorkspaceHome();
+                        return;
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "office_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "office/office_dashboard_home.html";
+            }
+        }
+
+        window.onload = function() {
+            checkPortalPermissions();
+            loadContractorsDatabase();
+            renderContractorsTable();
+        };
+
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'atr_contractors') {
+                loadContractorsDatabase();
+                renderContractorsTable();
+            }
+        });
+
+        // =========================================================================================
+        // 2. FORM HANDLING (REGISTER & EDIT CONTRACTOR)
+        // =========================================================================================
+        function toggleTDSInput() {
+            const tdsYesRadio = document.querySelector('input[name="tds"][value="yes"]');
+            const tdsInputGroup = document.getElementById('tdsPercentageGroup');
+            const tdsValueInput = document.getElementById('tdsValue');
+
+            if (tdsYesRadio.checked) {
+                tdsInputGroup.style.display = 'flex';
+                tdsValueInput.setAttribute('required', 'true'); 
+            } else {
+                tdsInputGroup.style.display = 'none';
+                tdsValueInput.removeAttribute('required'); 
+                tdsValueInput.value = ''; 
+            }
+        }
+
+        function submitForm(event) {
+            event.preventDefault();
+
+            const editId = document.getElementById('editContractorId').value;
+            const name = document.getElementById('conName').value.trim();
+            const phone = document.getElementById('conPhone').value.trim();
+            const email = document.getElementById('conEmail').value.trim() || "N/A";
+            const pan = document.getElementById('conPan').value.trim().toUpperCase();
+            const gst = document.getElementById('conGst').value.trim().toUpperCase() || "N/A";
+            const category = document.getElementById('conCategory').value;
+            const address = document.getElementById('conAddress').value.trim() || "N/A";
+            const isTdsYes = document.querySelector('input[name="tds"][value="yes"]').checked;
+            const tdsPercent = isTdsYes ? document.getElementById('tdsValue').value.trim() : "";
+            const tdsDisplay = isTdsYes ? `Yes (${tdsPercent}%)` : "No";
+
+            if (editId) {
+                const idx = contractorsDb.findIndex(c => c.id === editId);
+                if (idx === -1) return;
+
+                const oldContractor = { ...contractorsDb[idx] };
+                const updatedContractor = {
+                    ...oldContractor,
+                    name,
+                    phone,
+                    email,
+                    pan,
+                    gst,
+                    category,
+                    address,
+                    tdsApplicable: isTdsYes,
+                    tdsPercent,
+                    tdsDisplay,
+                    pendingStatus: null
+                };
+
+                // OFFICE PORTAL: Route Edit to ApproveOffice.html
+                if (currentPortalMode === 'office') {
+                    openOfficeApprovalModal({
+                        type: 'EDIT',
+                        targetId: editId,
+                        actionLabel: "EDIT CONTRACTOR DETAILS",
+                        summary: `${name} (${category}) — Phone: ${phone}, PAN: ${pan}, TDS: ${tdsDisplay}`,
+                        oldData: oldContractor,
+                        newData: updatedContractor
+                    });
+                    return;
+                }
+
+                // ADMIN DIRECT UPDATE
+                contractorsDb[idx] = updatedContractor;
+                saveContractorsDatabase();
+                renderContractorsTable();
+                cancelEditContractor();
+                alert("✅ Contractor details updated successfully!");
+            } else {
+                const newId = "CON-" + Date.now().toString().slice(-5);
+                const newContractor = {
+                    id: newId,
+                    name,
+                    phone,
+                    email,
+                    pan,
+                    gst,
+                    category,
+                    address,
+                    tdsApplicable: isTdsYes,
+                    tdsPercent,
+                    tdsDisplay,
+                    avatar: "",
+                    docs: {},
+                    pendingStatus: null
+                };
+
+                // OFFICE PORTAL: Route New Registration to ApproveOffice.html
+                if (currentPortalMode === 'office') {
+                    openOfficeApprovalModal({
+                        type: 'CREATE',
+                        targetId: newId,
+                        actionLabel: "NEW CONTRACTOR REGISTRATION",
+                        summary: `New Contractor: ${name} (${category}) | Phone: ${phone} | PAN: ${pan} | TDS: ${tdsDisplay}`,
+                        oldData: null,
+                        newData: newContractor
+                    });
+                    return;
+                }
+
+                // ADMIN DIRECT SAVE
+                contractorsDb.push(newContractor);
+                saveContractorsDatabase();
+                renderContractorsTable();
+                document.getElementById('contractorForm').reset();
+                toggleTDSInput();
+                alert("✅ Contractor Registered Successfully!");
+            }
+        }
+
+        function startEditContractor(id) {
+            const con = contractorsDb.find(c => c.id === id);
+            if (!con) return;
+
+            document.getElementById('editContractorId').value = con.id;
+            document.getElementById('conName').value = con.name;
+            document.getElementById('conPhone').value = con.phone;
+            document.getElementById('conEmail').value = con.email !== "N/A" ? con.email : "";
+            document.getElementById('conPan').value = con.pan !== "N/A" ? con.pan : "";
+            document.getElementById('conGst').value = con.gst !== "N/A" ? con.gst : "";
+            document.getElementById('conCategory').value = con.category;
+            document.getElementById('conAddress').value = con.address !== "N/A" ? con.address : "";
+
+            if (con.tdsApplicable) {
+                document.querySelector('input[name="tds"][value="yes"]').checked = true;
+                document.getElementById('tdsValue').value = con.tdsPercent || "1";
+            } else {
+                document.querySelector('input[name="tds"][value="no"]').checked = true;
+            }
+            toggleTDSInput();
+
+            document.getElementById('formSectionTitle').innerText = currentPortalMode === 'office'
+                ? `✏️ Edit Contractor (Requires Approval): ${con.name}`
+                : `✏️ Edit Contractor: ${con.name}`;
+            document.getElementById('btnSubmitForm').innerText = currentPortalMode === 'office'
+                ? "📤 Send Contractor Update for Approval"
+                : "Update Contractor";
+            document.getElementById('btnCancelEdit').style.display = 'inline-block';
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function cancelEditContractor() {
+            document.getElementById('contractorForm').reset();
+            document.getElementById('editContractorId').value = "";
+            toggleTDSInput();
+            document.getElementById('formSectionTitle').innerText = "Add New Contractor";
+            document.getElementById('btnSubmitForm').innerText = currentPortalMode === 'office'
+                ? "📤 Submit Contractor for Admin Approval"
+                : "Register Contractor";
+            document.getElementById('btnCancelEdit').style.display = 'none';
+        }
+
+        function deleteContractor(id) {
+            const con = contractorsDb.find(c => c.id === id);
+            if (!con) return;
+
+            // OFFICE PORTAL: Route Delete to ApproveOffice.html
+            if (currentPortalMode === 'office') {
+                openOfficeApprovalModal({
+                    type: 'DELETE',
+                    targetId: id,
+                    actionLabel: "DELETE CONTRACTOR",
+                    summary: `Delete Contractor: ${con.name} (${con.category} | Phone: ${con.phone} | PAN: ${con.pan})`,
+                    oldData: { ...con },
+                    newData: null
+                });
+                return;
+            }
+
+            // ADMIN DIRECT DELETE WITH PASSWORD
+            const pwd = prompt(`⚠️ AUTHORIZATION REQUIRED\n\nEnter Administrator Password (admin123) to permanently delete contractor "${con.name}":`);
+            if (pwd === "admin123") {
+                contractorsDb = contractorsDb.filter(c => c.id !== id);
+                saveContractorsDatabase();
+                renderContractorsTable();
+                if (document.getElementById('editContractorId').value === id) cancelEditContractor();
+                alert(`🗑️ Contractor "${con.name}" has been deleted.`);
+            } else if (pwd !== null) {
+                alert("❌ Incorrect Admin Password! Deletion cancelled.");
+            }
+        }
+
+        // =========================================================================================
+        // 3. RENDER CONTRACTORS TABLE
+        // =========================================================================================
+        function renderContractorsTable() {
+            const tbody = document.getElementById('contractorTableBody');
+            const query = (document.getElementById('contractorSearchInput').value || '').toLowerCase();
+            tbody.innerHTML = '';
+
+            const filtered = contractorsDb.filter(c =>
+                c.name.toLowerCase().includes(query) ||
+                c.category.toLowerCase().includes(query) ||
+                c.phone.toLowerCase().includes(query) ||
+                (c.pan || '').toLowerCase().includes(query) ||
+                (c.gst || '').toLowerCase().includes(query)
+            );
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 25px;">No contractors found.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(con => {
+                const tdsBadge = con.tdsApplicable
+                    ? `<span class="badge-tds-yes">${con.tdsDisplay}</span>`
+                    : `<span class="badge-tds-no">No</span>`;
+
+                const pendingBadge = con.pendingStatus
+                    ? `<span class="pending-status-pill">⏳ ${con.pendingStatus}</span>`
+                    : '';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${con.name}</strong>${pendingBadge}</td>
+                    <td>${con.category}</td>
+                    <td>${con.phone}</td>
+                    <td><small>PAN: <strong>${con.pan || 'N/A'}</strong><br>GST: ${con.gst || 'N/A'}</small></td>
+                    <td>${tdsBadge}</td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="btn-view" onclick="openProfile('${con.id}')">View Profile</button>
+                            <button class="btn-edit-row" onclick="startEditContractor('${con.id}')" title="Edit Contractor">✏️</button>
+                            <button class="btn-del-row" onclick="deleteContractor('${con.id}')" title="Delete Contractor">🗑️</button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // =========================================================================================
+        // 4. PROFILE MODAL & PERSISTENT KYC DOCUMENT UPLOADS
+        // =========================================================================================
+        function openProfile(contractorId) {
+            const con = contractorsDb.find(c => c.id === contractorId);
+            if (!con) return;
+
+            activeProfileContractorId = con.id;
+
+            document.getElementById('modalName').innerText = con.name;
+            document.getElementById('modalPhone').innerText = "Phone: " + con.phone;
+            document.getElementById('modalCategory').innerText = "Category: " + con.category;
+            document.getElementById('modalEmail').innerText = con.email || "N/A";
+            document.getElementById('modalPan').innerText = con.pan || "N/A";
+            document.getElementById('modalGst').innerText = con.gst || "N/A";
+            document.getElementById('modalAddress').innerText = con.address || "N/A";
+            
+            let tdsText = con.tdsApplicable
+                ? `<span style="color:#28a745">Applicable - ${con.tdsDisplay}</span>`
+                : '<span style="color:#dc3545">Not Applicable</span>';
+            document.getElementById('modalTDS').innerHTML = "TDS Status: " + tdsText;
+            
+            const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(con.name)}&background=2b2b2b&color=fd7e14&size=128`;
+            document.getElementById('contractorImage').src = con.avatar || defaultAvatar;
+            
+            // Clear file inputs
+            ['photoInput', 'aadharInput', 'panInput', 'bankInput', 'agreementInput'].forEach(inpId => {
+                document.getElementById(inpId).value = '';
+            });
+
+            renderDocsList(con);
+            document.getElementById('profileModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('profileModal').style.display = 'none';
+            activeProfileContractorId = null;
+        }
+
+        function uploadDocs() {
+            if (!activeProfileContractorId) return;
+            const idx = contractorsDb.findIndex(c => c.id === activeProfileContractorId);
+            if (idx === -1) return;
+
+            const con = contractorsDb[idx];
+            if (!con.docs) con.docs = {};
+
+            const photoFile = document.getElementById('photoInput').files[0];
+            const aadharFile = document.getElementById('aadharInput').files[0];
+            const panFile = document.getElementById('panInput').files[0];
+            const bankFile = document.getElementById('bankInput').files[0];
+            const agreementFile = document.getElementById('agreementInput').files[0];
+
+            if (!photoFile && !aadharFile && !panFile && !bankFile && !agreementFile) {
+                alert("⚠️ Please select at least one document or photo to upload.");
+                return;
+            }
+
+            let uploadedNames = [];
+            let isReplacingExisting = false;
+
+            const processSelectedDocs = (avatarBase64 = null) => {
+                const updatedDocs = { ...con.docs };
+                let newAvatar = con.avatar;
+
+                if (avatarBase64) {
+                    if (con.avatar) isReplacingExisting = true;
+                    newAvatar = avatarBase64;
+                    updatedDocs['Profile Photo'] = avatarBase64;
+                    uploadedNames.push('Profile Photo');
+                }
+                if (aadharFile) {
+                    if (updatedDocs['Aadhar Card']) isReplacingExisting = true;
+                    updatedDocs['Aadhar Card'] = URL.createObjectURL(aadharFile);
+                    uploadedNames.push(`Aadhar Card (${aadharFile.name})`);
+                }
+                if (panFile) {
+                    if (updatedDocs['PAN Card']) isReplacingExisting = true;
+                    updatedDocs['PAN Card'] = URL.createObjectURL(panFile);
+                    uploadedNames.push(`PAN Card (${panFile.name})`);
+                }
+                if (bankFile) {
+                    if (updatedDocs['Bank Passbook']) isReplacingExisting = true;
+                    updatedDocs['Bank Passbook'] = URL.createObjectURL(bankFile);
+                    uploadedNames.push(`Bank Passbook (${bankFile.name})`);
+                }
+                if (agreementFile) {
+                    if (updatedDocs['Agreement Copy']) isReplacingExisting = true;
+                    updatedDocs['Agreement Copy'] = URL.createObjectURL(agreementFile);
+                    uploadedNames.push(`Agreement Copy (${agreementFile.name})`);
+                }
+
+                // If Office Mode: Route KYC Upload/Update to ApproveOffice.html
+                if (currentPortalMode === 'office') {
+                    openOfficeApprovalModal({
+                        type: 'DOC_UPLOAD',
+                        targetId: con.id,
+                        newAvatar: newAvatar,
+                        updatedDocs: updatedDocs,
+                        actionLabel: isReplacingExisting ? "UPDATE CONTRACTOR KYC DOCS" : "UPLOAD CONTRACTOR KYC DOCS",
+                        summary: `${con.name} — Uploaded: ${uploadedNames.join(', ')}`,
+                        oldData: { ...con },
+                        newData: { ...con, avatar: newAvatar, docs: updatedDocs }
+                    });
+                    return;
+                }
+
+                // Admin Direct Save
+                contractorsDb[idx].avatar = newAvatar;
+                contractorsDb[idx].docs = updatedDocs;
+                if (newAvatar) document.getElementById('contractorImage').src = newAvatar;
+                saveContractorsDatabase();
+                renderDocsList(contractorsDb[idx]);
+                alert("✅ Documents uploaded & saved successfully!");
+            };
+
+            if (photoFile) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    processSelectedDocs(e.target.result);
+                };
+                reader.readAsDataURL(photoFile);
+            } else {
+                processSelectedDocs(null);
+            }
+        }
+
+        function renderDocsList(con) {
+            const container = document.getElementById('uploadedDocsList');
+            container.innerHTML = '';
+
+            const docsObj = (con && con.docs) ? con.docs : {};
+            const keys = Object.keys(docsObj);
+            if (keys.length === 0) {
+                container.innerHTML = `<p class="no-doc">No documents uploaded yet for this contractor.</p>`;
+                return;
+            }
+
+            keys.forEach(docName => {
+                const fileUrl = docsObj[docName];
+                const item = document.createElement('div');
+                item.className = 'doc-item';
+                item.innerHTML = `
+                    <span>📄 ${docName}</span>
+                    <button class="btn-view" onclick="viewDocument('${fileUrl}', '${docName}')">View</button>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function viewDocument(url, title) {
+            const viewer = document.getElementById('imageViewer');
+            const fullImg = document.getElementById('fullImage');
+            
+            if (url.startsWith('data:image') || url.startsWith('blob:')) {
+                fullImg.src = url;
+                viewer.style.display = 'flex';
+            } else {
+                window.open(url, '_blank');
+            }
+        }
+
+        function openImageViewer(type) {
+            const imgSrc = document.getElementById('contractorImage').src;
+            document.getElementById('fullImage').src = imgSrc;
+            document.getElementById('imageViewer').style.display = 'flex';
+        }
+
+        function closeImageViewer() {
+            document.getElementById('imageViewer').style.display = 'none';
+        }
+
+        // =========================================================================================
+        // 5. OFFICE PORTAL APPROVAL MODAL ENGINE (ROUTES TO ApproveOffice.html)
+        // =========================================================================================
+        function openOfficeApprovalModal(payload) {
+            pendingOfficePayload = payload;
+            document.getElementById('officeApprovalSummary').value = `${payload.actionLabel}: ${payload.summary}`;
+            document.getElementById('officeApprovalReason').value = '';
+            document.getElementById('officeApprovalModal').style.display = 'flex';
+            setTimeout(() => document.getElementById('officeApprovalReason').focus(), 50);
+        }
+
+        function closeOfficeApprovalModal() {
+            document.getElementById('officeApprovalModal').style.display = 'none';
+            pendingOfficePayload = null;
+        }
+
+        function confirmOfficeApprovalRequest() {
+            const reason = document.getElementById('officeApprovalReason').value.trim();
+            if (!reason) {
+                alert("⚠️ Please enter a reason/remark for Admin Approval.");
+                return;
+            }
+            if (!pendingOfficePayload) return;
+
+            if (pendingOfficePayload.type === 'CREATE') {
+                contractorsDb.push({
+                    ...pendingOfficePayload.newData,
+                    pendingStatus: "Pending in ApproveOffice"
+                });
+                saveContractorsDatabase();
+                document.getElementById('contractorForm').reset();
+                toggleTDSInput();
+            } else if (pendingOfficePayload.type === 'EDIT') {
+                const idx = contractorsDb.findIndex(c => c.id === pendingOfficePayload.targetId);
+                if (idx > -1) {
+                    contractorsDb[idx].pendingStatus = "Edit Pending";
+                    saveContractorsDatabase();
+                }
+                cancelEditContractor();
+            } else if (pendingOfficePayload.type === 'DELETE') {
+                const idx = contractorsDb.findIndex(c => c.id === pendingOfficePayload.targetId);
+                if (idx > -1) {
+                    contractorsDb[idx].pendingStatus = "Delete Pending";
+                    saveContractorsDatabase();
+                }
+            } else if (pendingOfficePayload.type === 'DOC_UPLOAD') {
+                const idx = contractorsDb.findIndex(c => c.id === pendingOfficePayload.targetId);
+                if (idx > -1) {
+                    contractorsDb[idx].avatar = pendingOfficePayload.newAvatar;
+                    contractorsDb[idx].docs = pendingOfficePayload.updatedDocs;
+                    contractorsDb[idx].pendingStatus = "KYC Approval Pending";
+                    if (pendingOfficePayload.newAvatar) {
+                        document.getElementById('contractorImage').src = pendingOfficePayload.newAvatar;
+                    }
+                    saveContractorsDatabase();
+                    renderDocsList(contractorsDb[idx]);
+                }
+            }
+
+            // 1. Push Request to ApproveOffice.html queue
+            const newReq = {
+                reqId: "OFF-CON-" + Date.now().toString().slice(-5),
+                userId: loggedUserId,
+                userName: loggedUserName,
+                designation: "Office Staff",
+                module: "AddContractor.html",
+                action: pendingOfficePayload.actionLabel,
+                summary: pendingOfficePayload.summary,
+                oldData: pendingOfficePayload.oldData,
+                newData: pendingOfficePayload.newData,
+                reason: reason,
+                timestamp: new Date().toLocaleString('en-IN'),
+                status: "Pending"
+            };
+
+            const officeQueue = JSON.parse(localStorage.getItem('atr_office_approvals')) || [];
+            officeQueue.unshift(newReq);
+            localStorage.setItem('atr_office_approvals', JSON.stringify(officeQueue));
+            localStorage.setItem('approve_office_requests', JSON.stringify(officeQueue));
+            localStorage.setItem('ApproveOffice_requests', JSON.stringify(officeQueue));
+
+            // 2. Log in Office Daily Work Report (office_dashboard_home.html)
+            const workLogs = JSON.parse(localStorage.getItem('atr_office_daily_work')) || [];
+            const todayStr = new Date().toISOString().split('T')[0];
+            const nowTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+            workLogs.unshift({
+                id: "WRK-" + Date.now().toString().slice(-5),
+                userId: loggedUserId,
+                userName: loggedUserName,
+                date: todayStr,
+                time: nowTime,
+                module: "Add Contractor (AddContractor.html)",
+                refNo: pendingOfficePayload.targetId || newReq.reqId,
+                desc: `${pendingOfficePayload.actionLabel}: ${pendingOfficePayload.summary}`,
+                status: "Sent for Approval"
+            });
+            localStorage.setItem('atr_office_daily_work', JSON.stringify(workLogs));
+
+            // 3. Refresh Parent OfficeDashboard.html Notification Bell if inside iframe
+            try {
+                if (window.parent && window.parent !== window && typeof window.parent.refreshNotificationsUI === 'function') {
+                    window.parent.refreshNotificationsUI();
+                }
+            } catch (e) {}
+
+            closeOfficeApprovalModal();
+            renderContractorsTable();
+            alert("📤 Request sent to ApproveOffice.html for Admin Approval!");
+        }
+
+        window.onclick = function(event) {
+            let profileModal = document.getElementById('profileModal');
+            let officeModal = document.getElementById('officeApprovalModal');
+            let imageViewer = document.getElementById('imageViewer');
+            
+            if (event.target == profileModal) { closeModal(); }
+            if (event.target == officeModal) { closeOfficeApprovalModal(); }
+            if (event.target == imageViewer) { closeImageViewer(); }
+        }
+    </script>
+</body>
+</html>

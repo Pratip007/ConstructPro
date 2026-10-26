@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Employee Position & Working Days</title>
+    
+    <!-- Sync theme with Master Dashboard -->
+    <script>
+        const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        window.addEventListener('storage', function(e) {
+            if(e.key === 'atr_theme') { document.documentElement.setAttribute('data-theme', e.newValue); }
+        });
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap');
+
+        :root {
+            --bg-body: transparent; 
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.1);
+            
+            /* Dynamic Glass & Input Variables */
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(0, 0, 0, 0.2);
+            --input-focus-bg: rgba(0, 0, 0, 0.4);
+            
+            --shadow: 0 4px 15px rgba(0,0,0,0.3);
+            
+            /* Theme Color (Green for Employee Section) */
+            --theme-color: #28a745;
+            --theme-glow: rgba(40, 167, 69, 0.4);
+            --theme-color-alt: #007bff;
+            --theme-glow-alt: rgba(0, 123, 255, 0.4);
+            --theme-transition: all 0.4s ease;
+        }
+
+        [data-theme="light"] {
+            --bg-body: transparent;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #555555;
+            --border-color: rgba(0, 0, 0, 0.1);
+            
+            --glass-bg: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --input-bg: rgba(255, 255, 255, 0.5);
+            --input-focus-bg: #ffffff;
+            
+            --shadow: 0 8px 25px rgba(0,0,0,0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Montserrat', sans-serif;
+            scroll-behavior: smooth;
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(136, 136, 136, 0.3); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(136, 136, 136, 0.6); }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            display: flex;
+            min-height: 100vh;
+            transition: var(--theme-transition);
+        }
+
+        /* Main Workspace Control Frame */
+        .main-content {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+        }
+
+        .header-section { 
+            display: flex; justify-content: space-between; align-items: center; 
+            margin-bottom: 30px; border-bottom: 1px solid var(--border-color); 
+            padding-bottom: 20px; transition: var(--theme-transition);
+            flex-wrap: wrap; gap: 15px;
+        }
+        
+        .header-section h1 { font-size: 24px; color: var(--text-main); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        
+        .role-mode-badge {
+            display: none;
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 700;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .header-actions { display: flex; gap: 15px; align-items: center; }
+
+        .btn-back {
+            background-color: var(--glass-bg);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            text-decoration: none;
+            padding: 9px 16px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 13px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .btn-back:hover { 
+            background-color: var(--theme-color); 
+            color: #fff; 
+            border-color: var(--theme-color); 
+            transform: translateY(-2px); 
+            box-shadow: 0 4px 10px var(--theme-glow); 
+        }
+
+        /* Glassy Section Boxes */
+        .section-box {
+            background: var(--glass-bg); 
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border); 
+            border-radius: 12px; padding: 30px; box-shadow: var(--shadow); 
+            margin-bottom: 35px;
+            transition: var(--theme-transition);
+        }
+        
+        .box-green { border-top: 4px solid var(--theme-color); }
+        .box-blue { border-top: 4px solid var(--theme-color-alt); }
+
+        .section-box h2 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .box-green h2 { color: var(--theme-color); }
+        .box-blue h2 { color: var(--theme-color-alt); }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .form-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: color 0.3s;
+        }
+
+        .form-group input, .form-group textarea {
+            padding: 12px 15px;
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-main);
+            font-size: 14px;
+            transition: all 0.3s;
+            outline: none;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .form-group input:focus, .form-group textarea:focus {
+            border-color: var(--theme-color);
+            background-color: var(--input-focus-bg);
+            box-shadow: 0 0 10px var(--theme-glow), inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .form-group:focus-within label { color: var(--theme-color); }
+
+        .form-btn-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn-submit {
+            background-color: var(--theme-color);
+            color: #ffffff;
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 12px 25px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px var(--theme-glow);
+        }
+        .btn-submit:active { transform: translateY(1px); }
+
+        .btn-cancel-edit {
+            display: none;
+            background-color: var(--glass-bg);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.3s;
+        }
+        .btn-cancel-edit:hover { background-color: rgba(220, 53, 69, 0.15); color: #ff6b6b; border-color: #dc3545; }
+
+        /* Table styling for View Section */
+        .table-responsive {
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-card);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th, td {
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 14px;
+            color: var(--text-main);
+            transition: var(--theme-transition);
+        }
+
+        th {
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 12px;
+            background: var(--input-bg);
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .btn-edit {
+            background-color: #ffc107;
+            color: #121212;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-weight: 700;
+            font-size: 11px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.2s;
+        }
+        .btn-edit:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(255, 193, 7, 0.4); }
+
+        .btn-delete {
+            background-color: #dc3545;
+            color: #ffffff;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-weight: 700;
+            font-size: 11px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.2s;
+        }
+        .btn-delete:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(220, 53, 69, 0.4); }
+
+        .pending-badge {
+            display: inline-block;
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            margin-left: 8px;
+            text-transform: uppercase;
+        }
+
+        /* ================= MODALS (ADMIN LOCK & OFFICE APPROVAL) ================= */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(6px);
+            z-index: 3000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .modal-overlay.active { display: flex; }
+
+        .modal-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-top: 4px solid #dc3545;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 440px;
+            padding: 28px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+            animation: popIn 0.25s ease;
+        }
+        @keyframes popIn {
+            from { transform: scale(0.92); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .modal-card h3 {
+            font-size: 18px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .modal-card p {
+            font-size: 12.5px;
+            color: var(--text-muted);
+            margin-bottom: 18px;
+            line-height: 1.5;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 18px;
+        }
+        .btn-modal {
+            flex: 1;
+            padding: 11px 16px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 12.5px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: 0.2s;
+        }
+        .btn-modal-cancel {
+            background: var(--glass-bg);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+        }
+        .btn-modal-cancel:hover { background: var(--input-focus-bg); }
+
+        /* Toast Notification */
+        #toastMsg {
+            visibility: hidden;
+            min-width: 260px;
+            background-color: var(--theme-color);
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 14px 20px;
+            position: fixed;
+            z-index: 4000;
+            right: 25px;
+            bottom: 25px;
+            font-size: 13px;
+            font-weight: 700;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+            opacity: 0;
+            transition: opacity 0.3s, bottom 0.3s;
+            border-left: 4px solid #ffc107;
+        }
+        #toastMsg.show {
+            visibility: visible;
+            opacity: 1;
+            bottom: 35px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Toast Notification -->
+    <div id="toastMsg">Message</div>
+
+    <div class="main-content">
+        <div class="header-section">
+            <h1>
+                👥 Employee Position & Working Days
+                <span id="roleModeBadge" class="role-mode-badge">🏢 Office Mode</span>
+            </h1>
+            <div class="header-actions">
+                <a href="dashboard_home.html" id="btnBackDashboard" class="btn-back" onclick="handleBackToDashboard(event)">← Back to Dashboard</a>
+            </div>
+        </div>
+
+        <!-- Entry Form Section -->
+        <div class="section-box box-green">
+            <h2 id="formSectionTitle">📝 Add New Position & Working Days</h2>
+            <!-- data-office-hooked="true" lets this module handle its own custom Approval Modal cleanly -->
+            <form id="positionForm" data-office-hooked="true" onsubmit="handleFormSubmit(event)">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="positionName">Position / Designation</label>
+                        <input type="text" id="positionName" placeholder="e.g. Site Engineer, Supervisor" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="workingDays">Working Days (per month / cycle)</label>
+                        <input type="number" id="workingDays" placeholder="e.g. 26" min="1" max="31" required>
+                    </div>
+                </div>
+                <div class="form-btn-row">
+                    <button type="submit" class="btn-submit" id="submitBtn">Save Entry</button>
+                    <button type="button" class="btn-cancel-edit" id="cancelEditBtn" onclick="cancelEditMode()">Cancel Edit</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- View Section -->
+        <div class="section-box box-blue">
+            <h2>👁️ Position & Working Days List</h2>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Position / Designation</th>
+                            <th>Working Days</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="positionTableBody">
+                        <!-- Populated dynamically via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 1. ADMIN PASSWORD AUTHORIZATION MODAL (FOR ADMIN EDIT & DELETE) ================= -->
+    <div class="modal-overlay" id="adminLockModal">
+        <div class="modal-card" style="border-top-color: #dc3545; text-align: center;">
+            <h3 style="color: #dc3545; justify-content: center;">🔒 Admin Authorization Required</h3>
+            <p id="adminLockDesc">Please enter the Administrator Password to edit or delete this position record.</p>
+            <div class="form-group" style="margin-bottom: 10px;">
+                <input type="password" id="adminPassInput" placeholder="Enter Admin Password (admin123)" onkeydown="if(event.key==='Enter') confirmAdminPassword()">
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-modal btn-modal-cancel" onclick="closeAdminLockModal()">Cancel</button>
+                <button type="button" class="btn-modal" style="background: #dc3545; color: #fff;" onclick="confirmAdminPassword()">Verify & Proceed</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 2. OFFICE / SUPERVISOR APPROVAL MODAL (ROUTES TO ApproveOffice.html) ================= -->
+    <div class="modal-overlay" id="officeApprovalModal">
+        <div class="modal-card" style="border-top-color: #ffc107; max-width: 480px;">
+            <h3 id="officeApprovalTitle" style="color: #ffc107;">🏢 Send Request to ApproveOffice.html</h3>
+            <p id="officeApprovalDesc">
+                নতুন পজিশন অ্যাড, এডিট বা ডিলিট করার রিকোয়েস্টটি অ্যাডমিনের <strong>ApproveOffice.html</strong>-এ পাঠানো হবে। অ্যাডমিন অ্যাপ্রুভ করলেই এটি চূড়ান্ত হবে।
+            </p>
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label>Action & Position Details</label>
+                <input type="text" id="officeApprovalSummary" readonly style="color: #ffc107; font-weight: 700;">
+            </div>
+            <div class="form-group">
+                <label>Reason / Remarks for Approval <span style="color: #dc3545;">*</span></label>
+                <textarea id="officeApprovalReason" rows="3" placeholder="Write a short note or reason for this entry, edit, or deletion..." style="resize: none;"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-modal btn-modal-cancel" onclick="closeOfficeApprovalModal()">Cancel</button>
+                <button type="button" class="btn-modal" style="background: #ffc107; color: #121212;" onclick="submitOfficeApprovalRequest()">📤 Send for Approval</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================================================
+        // 1. SMART PORTAL ROLE DETECTION (ADMIN / OFFICE / SUPERVISOR)
+        // =========================================================================================
+        const ADMIN_PASS = "admin123";
+        let currentPortalMode = "admin"; // 'admin', 'office', or 'supervisor'
+        let loggedUserId = "ADMIN";
+        let loggedUserName = "Admin";
+        let assignedSite = "";
+
+        // State for Edit & Modals
+        let editingItemId = null;
+        let pendingAdminAction = null; // 'EDIT' or 'DELETE'
+        let pendingAdminTargetId = null;
+
+        let pendingOfficeAction = null; // 'CREATE', 'EDIT', or 'DELETE'
+        let pendingOfficeTargetId = null;
+        let pendingOfficeNewData = null;
+
+        // Default Positions Database synced with localStorage
+        const defaultPositions = [
+            { id: 1, position: "Senior Site Engineer", days: 26, pendingStatus: null },
+            { id: 2, position: "Quality Supervisor", days: 30, pendingStatus: null }
+        ];
+
+        let positionsDb = JSON.parse(localStorage.getItem('atr_employee_categories')) || defaultPositions;
+
+        function savePositionsToStorage() {
+            localStorage.setItem('atr_employee_categories', JSON.stringify(positionsDb));
+        }
+
+        function checkPortalRole() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewParam = (urlParams.get('view') || '').toLowerCase();
+            const badge = document.getElementById('roleModeBadge');
+            const backBtn = document.getElementById('btnBackDashboard');
+            const submitBtn = document.getElementById('submitBtn');
+
+            // Detect if loaded inside OfficeDashboard.html or SupervisorDashboard.html even if URL param was omitted
+            let parentPath = "";
+            try {
+                if (window.parent && window.parent !== window) {
+                    parentPath = (window.parent.location.pathname || '').toLowerCase();
+                }
+            } catch (e) {}
+
+            if (viewParam === 'office' || parentPath.includes('officedashboard')) {
+                currentPortalMode = 'office';
+                loggedUserId = urlParams.get('userId') || sessionStorage.getItem('atr_logged_office_id') || localStorage.getItem('atr_logged_office_id') || "OFF-101";
+                loggedUserName = urlParams.get('userName') || "Office Staff";
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🏢 Office Mode (${loggedUserName}) — Routes to ApproveOffice.html`;
+                }
+                if (submitBtn) {
+                    submitBtn.innerText = "📤 Submit Entry for Approval";
+                }
+                if (backBtn) {
+                    backBtn.href = "office/office_dashboard_home.html";
+                }
+            } else if (viewParam === 'supervisor' || parentPath.includes('supervisordashboard')) {
+                currentPortalMode = 'supervisor';
+                assignedSite = urlParams.get('site') || "";
+                loggedUserId = urlParams.get('supId') || "SUP-003";
+                loggedUserName = "Supervisor";
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🛡️ Supervisor Mode${assignedSite ? ': ' + assignedSite : ''} — Routes to Approval`;
+                }
+                if (submitBtn) {
+                    submitBtn.innerText = "📤 Submit Entry for Approval";
+                }
+                if (backBtn) {
+                    backBtn.href = "supervisor/supervisor_dashboard_home.html";
+                }
+            } else {
+                currentPortalMode = 'admin';
+                if (backBtn) {
+                    backBtn.href = "dashboard_home.html";
+                }
+            }
+        }
+
+        function handleBackToDashboard(event) {
+            if (currentPortalMode === 'office') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.loadOfficeWorkspaceHome === 'function') {
+                        window.parent.loadOfficeWorkspaceHome();
+                        return;
+                    }
+                } catch (e) {}
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "office_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "office/office_dashboard_home.html";
+            } else if (currentPortalMode === 'supervisor') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window) {
+                        const parentHomeLink = window.parent.document.querySelector('.dashboard-home-link');
+                        if (parentHomeLink) {
+                            window.location.href = parentHomeLink.href;
+                            return;
+                        }
+                    }
+                } catch (e) {}
+                window.location.href = "supervisor/supervisor_dashboard_home.html";
+            }
+        }
+
+        // =========================================================================================
+        // 2. RENDER TABLE
+        // =========================================================================================
+        function renderTable() {
+            const tbody = document.getElementById('positionTableBody');
+            tbody.innerHTML = '';
+
+            if (positionsDb.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 25px; color: var(--text-muted);">No positions added yet.</td></tr>`;
+                return;
+            }
+
+            positionsDb.forEach((item, index) => {
+                const pendingBadge = item.pendingStatus
+                    ? `<span class="pending-badge">⏳ ${item.pendingStatus}</span>`
+                    : '';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td style="font-weight: 600;">${item.position}${pendingBadge}</td>
+                    <td>${item.days} Days</td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="btn-edit" onclick="editRow(${item.id})">Edit</button>
+                            <button class="btn-delete" onclick="deleteRow(${item.id})">Delete</button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // =========================================================================================
+        // 3. FORM SUBMIT (CREATE & UPDATE FOR ADMIN vs OFFICE/SUPERVISOR)
+        // =========================================================================================
+        function handleFormSubmit(event) {
+            event.preventDefault();
+            
+            const position = document.getElementById('positionName').value.trim();
+            const days = parseInt(document.getElementById('workingDays').value, 10);
+
+            if (!position || isNaN(days)) return;
+
+            if (editingItemId !== null) {
+                const targetItem = positionsDb.find(p => p.id === editingItemId);
+                if (!targetItem) return;
+
+                // IF OFFICE / SUPERVISOR IS UPDATING: Route to ApproveOffice.html
+                if (currentPortalMode !== 'admin') {
+                    pendingOfficeAction = 'EDIT';
+                    pendingOfficeTargetId = editingItemId;
+                    pendingOfficeNewData = { id: editingItemId, position: position, days: days };
+                    openOfficeApprovalModal(
+                        'EDIT',
+                        `EDIT: ${targetItem.position} (${targetItem.days} Days) → ${position} (${days} Days)`
+                    );
+                    return;
+                }
+
+                // ADMIN UPDATE (Already unlocked via Admin Password when clicking Edit)
+                targetItem.position = position;
+                targetItem.days = days;
+                targetItem.pendingStatus = null;
+                savePositionsToStorage();
+                renderTable();
+                cancelEditMode();
+                showToast("✅ Position updated successfully!");
+            } else {
+                // IF OFFICE / SUPERVISOR IS ADDING A NEW ENTRY: Route to ApproveOffice.html
+                if (currentPortalMode !== 'admin') {
+                    pendingOfficeAction = 'CREATE';
+                    pendingOfficeTargetId = null;
+                    pendingOfficeNewData = { id: Date.now(), position: position, days: days };
+                    openOfficeApprovalModal(
+                        'CREATE',
+                        `NEW ENTRY: ${position} — ${days} Working Days`
+                    );
+                    return;
+                }
+
+                // ADMIN DIRECT ADD NEW POSITION
+                positionsDb.push({
+                    id: Date.now(),
+                    position: position,
+                    days: days,
+                    pendingStatus: null
+                });
+                savePositionsToStorage();
+                renderTable();
+                document.getElementById('positionForm').reset();
+                showToast("✅ Position added successfully!");
+            }
+        }
+
+        // =========================================================================================
+        // 4. EDIT & DELETE HANDLERS (WITH ADMIN PASSWORD LOCK & OFFICE APPROVAL)
+        // =========================================================================================
+        function editRow(id) {
+            const item = positionsDb.find(p => p.id === id);
+            if (!item) return;
+
+            if (currentPortalMode === 'admin') {
+                // Require Admin Password before allowing Edit in Admin Mode
+                pendingAdminAction = 'EDIT';
+                pendingAdminTargetId = id;
+                document.getElementById('adminLockDesc').innerText = `Enter Admin Password to edit "${item.position} (${item.days} Days)".`;
+                openAdminLockModal();
+            } else {
+                // Office / Supervisor Mode: Load into form so they can propose new values for Approval
+                startEditMode(item);
+            }
+        }
+
+        function startEditMode(item) {
+            editingItemId = item.id;
+            document.getElementById('positionName').value = item.position;
+            document.getElementById('workingDays').value = item.days;
+            document.getElementById('formSectionTitle').innerText = currentPortalMode === 'admin'
+                ? "✏️️ Edit Position & Working Days"
+                : "✏️ Edit Position (Requires Admin Approval)";
+            document.getElementById('submitBtn').innerText = currentPortalMode === 'admin'
+                ? "Update Entry"
+                : "📤 Request Edit Approval";
+            document.getElementById('cancelEditBtn').style.display = 'inline-block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function cancelEditMode() {
+            editingItemId = null;
+            document.getElementById('positionForm').reset();
+            document.getElementById('formSectionTitle').innerText = "📝 Add New Position & Working Days";
+            document.getElementById('submitBtn').innerText = currentPortalMode === 'admin'
+                ? "Save Entry"
+                : "📤 Submit Entry for Approval";
+            document.getElementById('cancelEditBtn').style.display = 'none';
+        }
+
+        function deleteRow(id) {
+            const item = positionsDb.find(p => p.id === id);
+            if (!item) return;
+
+            if (currentPortalMode === 'admin') {
+                // Require Admin Password before deleting in Admin Mode
+                pendingAdminAction = 'DELETE';
+                pendingAdminTargetId = id;
+                document.getElementById('adminLockDesc').innerText = `Enter Admin Password to permanently delete "${item.position} (${item.days} Days)".`;
+                openAdminLockModal();
+            } else {
+                // Office / Supervisor Mode: Route deletion to ApproveOffice.html
+                pendingOfficeAction = 'DELETE';
+                pendingOfficeTargetId = id;
+                pendingOfficeNewData = null;
+                openOfficeApprovalModal(
+                    'DELETE',
+                    `DELETE: ${item.position} (${item.days} Working Days)`
+                );
+            }
+        }
+
+        // =========================================================================================
+        // 5. ADMIN PASSWORD MODAL FUNCTIONS
+        // =========================================================================================
+        function openAdminLockModal() {
+            document.getElementById('adminPassInput').value = '';
+            document.getElementById('adminLockModal').classList.add('active');
+            setTimeout(() => document.getElementById('adminPassInput').focus(), 50);
+        }
+
+        function closeAdminLockModal() {
+            document.getElementById('adminLockModal').classList.remove('active');
+            pendingAdminAction = null;
+            pendingAdminTargetId = null;
+        }
+
+        function confirmAdminPassword() {
+            const entered = document.getElementById('adminPassInput').value;
+            if (entered !== ADMIN_PASS) {
+                showToast("❌ Incorrect Admin Password! Access Denied.", true);
+                return;
+            }
+
+            const item = positionsDb.find(p => p.id === pendingAdminTargetId);
+            if (!item) {
+                closeAdminLockModal();
+                return;
+            }
+
+            if (pendingAdminAction === 'EDIT') {
+                closeAdminLockModal();
+                startEditMode(item);
+                showToast("🔓 Admin Verified! You can now edit the position.");
+            } else if (pendingAdminAction === 'DELETE') {
+                positionsDb = positionsDb.filter(p => p.id !== pendingAdminTargetId);
+                savePositionsToStorage();
+                renderTable();
+                if (editingItemId === pendingAdminTargetId) cancelEditMode();
+                closeAdminLockModal();
+                showToast("🗑️ Position entry deleted permanently!", true);
+            }
+        }
+
+        // =========================================================================================
+        // 6. OFFICE / SUPERVISOR APPROVAL MODAL ENGINE (ROUTES TO ApproveOffice.html)
+        // =========================================================================================
+        function openOfficeApprovalModal(actionType, summaryText) {
+            const titleEl = document.getElementById('officeApprovalTitle');
+            document.getElementById('officeApprovalSummary').value = summaryText;
+            document.getElementById('officeApprovalReason').value = '';
+
+            if (actionType === 'CREATE') {
+                titleEl.innerText = "🏢 Send New Position for Admin Approval";
+            } else if (actionType === 'EDIT') {
+                titleEl.innerText = "🏢 Send Position Edit for Admin Approval";
+            } else {
+                titleEl.innerText = "🗑️ Send Position Delete for Admin Approval";
+            }
+
+            document.getElementById('officeApprovalModal').classList.add('active');
+            setTimeout(() => document.getElementById('officeApprovalReason').focus(), 50);
+        }
+
+        function closeOfficeApprovalModal() {
+            document.getElementById('officeApprovalModal').classList.remove('active');
+            pendingOfficeAction = null;
+            pendingOfficeTargetId = null;
+            pendingOfficeNewData = null;
+        }
+
+        function submitOfficeApprovalRequest() {
+            const reason = document.getElementById('officeApprovalReason').value.trim();
+            if (!reason) {
+                showToast("⚠️ Please enter a reason/remark for Admin Approval!", true);
+                return;
+            }
+
+            const summaryText = document.getElementById('officeApprovalSummary').value;
+            let oldDataObj = null;
+            let actionLabel = "NEW POSITION ENTRY";
+
+            if (pendingOfficeAction === 'CREATE') {
+                actionLabel = "NEW POSITION ENTRY";
+                // Add to table with "New Entry Pending" badge so staff sees it is queued for approval
+                positionsDb.push({
+                    id: pendingOfficeNewData.id,
+                    position: pendingOfficeNewData.position,
+                    days: pendingOfficeNewData.days,
+                    pendingStatus: "New Entry Pending"
+                });
+                savePositionsToStorage();
+                document.getElementById('positionForm').reset();
+            } else if (pendingOfficeAction === 'EDIT') {
+                actionLabel = "EDIT POSITION";
+                const idx = positionsDb.findIndex(p => p.id === pendingOfficeTargetId);
+                if (idx > -1) {
+                    oldDataObj = { ...positionsDb[idx] };
+                    positionsDb[idx].pendingStatus = "Edit Pending";
+                    savePositionsToStorage();
+                }
+                cancelEditMode();
+            } else if (pendingOfficeAction === 'DELETE') {
+                actionLabel = "DELETE POSITION";
+                const idx = positionsDb.findIndex(p => p.id === pendingOfficeTargetId);
+                if (idx > -1) {
+                    oldDataObj = { ...positionsDb[idx] };
+                    positionsDb[idx].pendingStatus = "Delete Pending";
+                    savePositionsToStorage();
+                }
+            }
+
+            // 1. Push Request to ApproveOffice.html queue (atr_office_approvals)
+            const newReq = {
+                reqId: "OFF-" + Date.now().toString().slice(-5),
+                userId: loggedUserId,
+                userName: loggedUserName,
+                designation: currentPortalMode === 'supervisor' ? "Supervisor" : "Office Staff",
+                module: "EmployeeCategory.html",
+                action: actionLabel,
+                summary: summaryText,
+                oldData: oldDataObj,
+                newData: pendingOfficeNewData,
+                reason: reason,
+                timestamp: new Date().toLocaleString('en-IN'),
+                status: "Pending"
+            };
+
+            const officeQueue = JSON.parse(localStorage.getItem('atr_office_approvals')) || [];
+            officeQueue.unshift(newReq);
+            localStorage.setItem('atr_office_approvals', JSON.stringify(officeQueue));
+            localStorage.setItem('approve_office_requests', JSON.stringify(officeQueue));
+            localStorage.setItem('ApproveOffice_requests', JSON.stringify(officeQueue));
+
+            // 2. Also log in Office Daily Work Report (atr_office_daily_work)
+            const workLogs = JSON.parse(localStorage.getItem('atr_office_daily_work')) || [];
+            const todayStr = new Date().toISOString().split('T')[0];
+            const nowTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+            workLogs.unshift({
+                id: "WRK-" + Date.now().toString().slice(-5),
+                userId: loggedUserId,
+                userName: loggedUserName,
+                date: todayStr,
+                time: nowTime,
+                module: "Position Category (EmployeeCategory.html)",
+                refNo: newReq.reqId,
+                desc: `${actionLabel}: ${summaryText}`,
+                status: "Sent for Approval"
+            });
+            localStorage.setItem('atr_office_daily_work', JSON.stringify(workLogs));
+
+            // 3. Refresh Parent OfficeDashboard.html Notification Bell if inside iframe
+            try {
+                if (window.parent && window.parent !== window && typeof window.parent.refreshNotificationsUI === 'function') {
+                    window.parent.refreshNotificationsUI();
+                }
+            } catch (e) {}
+
+            closeOfficeApprovalModal();
+            renderTable();
+            showToast("📤 Request sent to ApproveOffice.html for Admin Approval!");
+        }
+
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toastMsg');
+            toast.innerText = msg;
+            toast.style.backgroundColor = isError ? "#dc3545" : "var(--theme-color)";
+            toast.classList.add('show');
+            setTimeout(() => { toast.classList.remove('show'); }, 3200);
+        }
+
+        window.onload = function() {
+            checkPortalRole();
+            renderTable();
+        };
+    </script>
+</body>
+</html>

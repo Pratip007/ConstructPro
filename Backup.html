@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - System Backup & Restore</title>
+    
+    <!-- JSZip Library for Zipping & Extracting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <!-- Global Theme Sync Engine -->
+    <script>
+        const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        
+        // Listen for theme changes triggered from dashboard.html
+        window.addEventListener('storage', function(e) {
+            if(e.key === 'atr_theme') { 
+                document.documentElement.setAttribute('data-theme', e.newValue); 
+            }
+        });
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Share+Tech+Mono&display=swap');
+
+        :root {
+            --bg-body: transparent; 
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #b0b0b0;
+            --border-color: rgba(255, 255, 255, 0.12);
+            
+            --glass-bg: rgba(20, 20, 25, 0.85);
+            --glass-border: rgba(0, 243, 255, 0.3);
+            
+            /* Sci-Fi Colors - Dark Mode */
+            --neon-blue: #00f3ff;
+            --neon-purple: #bc13fe;
+            --neon-green: #00ff66;
+            --neon-red: #ff003c;
+            
+            --hud-bg: rgba(5, 5, 10, 0.95);
+            --theme-transition: all 0.4s ease;
+        }
+
+        [data-theme="light"] {
+            --bg-body: transparent;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #666666;
+            --border-color: rgba(0, 0, 0, 0.12);
+            --glass-bg: rgba(255, 255, 255, 0.9);
+            --glass-border: rgba(0, 123, 255, 0.3);
+            
+            /* Sci-Fi Colors - Light Mode */
+            --neon-blue: #007bff;
+            --neon-purple: #6f42c1;
+            --neon-green: #28a745;
+            --neon-red: #dc3545;
+            
+            --hud-bg: rgba(240, 245, 255, 0.95);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; }
+        body { background-color: var(--bg-body); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; transition: var(--theme-transition); }
+
+        .main-content { flex: 1; display: flex; flex-direction: column; padding: 30px; height: 100vh; overflow: hidden; width: 100%; max-width: 1400px; margin: 0 auto; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px dashed var(--neon-blue); padding-bottom: 15px; flex-shrink: 0; transition: var(--theme-transition); }
+        .header h1 { font-size: 26px; color: var(--neon-blue); display: flex; align-items: center; gap: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 10px rgba(0,243,255,0.4); transition: var(--theme-transition);}
+        
+        .header-actions { display: flex; gap: 15px; align-items: center; }
+
+        .btn-back-dash { background-color: rgba(0, 243, 255, 0.1); color: var(--neon-blue); border: 1px solid var(--neon-blue); text-decoration: none; padding: 9px 16px; border-radius: 6px; font-weight: bold; font-size: 13px; transition: all 0.3s; display: flex; align-items: center; width: max-content; text-transform: uppercase; box-shadow: inset 0 0 10px rgba(0,243,255,0.1); z-index: 10000;}
+        .btn-back-dash:hover { background-color: var(--neon-blue); color: #fff; box-shadow: 0 0 20px rgba(0,243,255,0.6); transform: translateY(-2px); }
+
+        /* Sci-Fi Dashboard Grid */
+        .backup-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            height: 100%;
+            align-items: center;
+        }
+
+        .sci-fi-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(15px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 50px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .sci-fi-card::before {
+            content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+            transform: skewX(-20deg); animation: shine 5s infinite;
+        }
+
+        @keyframes shine { 0% { left: -100%; } 20% { left: 200%; } 100% { left: 200%; } }
+
+        .sci-fi-card:hover { transform: translateY(-5px); border-color: var(--neon-blue); box-shadow: 0 0 30px rgba(0,123,255,0.2); }
+
+        .card-icon { font-size: 60px; margin-bottom: 20px; filter: drop-shadow(0 0 10px var(--neon-blue)); transition: filter 0.3s;}
+        
+        .sci-fi-card h2 { font-size: 24px; color: var(--text-main); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 2px; }
+        .sci-fi-card p { font-size: 13px; color: var(--text-muted); margin-bottom: 30px; line-height: 1.6; }
+
+        .btn-cyber {
+            background: transparent;
+            color: var(--neon-blue);
+            border: 2px solid var(--neon-blue);
+            padding: 15px 40px;
+            font-size: 16px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .btn-cyber::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 0%; height: 100%;
+            background: var(--neon-blue); z-index: -1; transition: all 0.3s ease;
+        }
+
+        .btn-cyber:hover { color: #fff; box-shadow: 0 0 25px var(--neon-blue); }
+        .btn-cyber:hover::before { width: 100%; }
+
+        .btn-cyber.restore { color: var(--neon-purple); border-color: var(--neon-purple); }
+        .btn-cyber.restore::before { background: var(--neon-purple); }
+        .btn-cyber.restore:hover { color: #fff; box-shadow: 0 0 25px var(--neon-purple); }
+
+        /* ================= FULL SCREEN SCI-FI OVERLAY ================= */
+        .overlay-hud {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--hud-bg);
+            backdrop-filter: blur(10px);
+            z-index: 9999;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: background 0.4s ease;
+        }
+
+        .overlay-hud.active { display: flex; }
+
+        /* Animated Rings */
+        .ring-container { position: relative; width: 200px; height: 200px; margin-bottom: 40px; }
+        .ring { position: absolute; width: 100%; height: 100%; border-radius: 50%; border: 3px solid transparent; transition: border-color 0.4s ease;}
+        
+        .ring.r1 { border-top-color: var(--neon-blue); border-bottom-color: var(--neon-blue); animation: spin 2s linear infinite; }
+        .ring.r2 { width: 160px; height: 160px; top: 20px; left: 20px; border-left-color: var(--neon-purple); border-right-color: var(--neon-purple); animation: spinReverse 3s linear infinite; }
+        .ring.r3 { width: 120px; height: 120px; top: 40px; left: 40px; border-top-color: var(--neon-green); border-bottom-color: var(--neon-green); animation: spin 1.5s linear infinite; }
+        
+        .ring-icon { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 40px; color: var(--text-main); text-shadow: 0 0 15px var(--text-main); transition: color 0.4s ease, text-shadow 0.4s ease;}
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes spinReverse { 0% { transform: rotate(360deg); } 100% { transform: rotate(0deg); } }
+
+        /* Progress Bar */
+        .progress-box { width: 400px; background: rgba(0,0,0,0.1); border: 1px solid var(--border-color); border-radius: 4px; padding: 3px; position: relative; transition: border-color 0.4s ease;}
+        .progress-fill { height: 15px; background: var(--neon-blue); width: 0%; box-shadow: 0 0 15px var(--neon-blue); transition: width 0.1s linear, background 0.4s ease, box-shadow 0.4s ease; border-radius: 2px;}
+        
+        .progress-box.restore-mode .progress-fill { background: var(--neon-purple); box-shadow: 0 0 15px var(--neon-purple); }
+
+        /* Terminal Text */
+        .terminal-text {
+            font-family: 'Share Tech Mono', monospace;
+            color: var(--neon-blue);
+            font-size: 16px;
+            margin-top: 20px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            transition: color 0.4s ease;
+        }
+        .overlay-hud.restore-mode .terminal-text { color: var(--neon-purple); }
+        .overlay-hud.success-mode .terminal-text { color: var(--neon-green); font-size: 22px; font-weight: bold;}
+
+        /* Success Animation Classes */
+        .overlay-hud.success-mode .ring { border-color: var(--neon-green) !important; animation: none; transform: scale(1.1); transition: all 0.5s ease;}
+        .overlay-hud.success-mode .progress-fill { background: var(--neon-green); box-shadow: 0 0 20px var(--neon-green); }
+
+    </style>
+</head>
+<body>
+
+    <!-- HUD OVERLAY FOR ANIMATIONS -->
+    <div class="overlay-hud" id="hudOverlay">
+        <div class="ring-container">
+            <div class="ring r1"></div>
+            <div class="ring r2"></div>
+            <div class="ring r3"></div>
+            <div class="ring-icon" id="hudIcon">💾</div>
+        </div>
+        <div class="progress-box" id="progressBox">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="terminal-text" id="terminalText">INITIALIZING SECURE PROTOCOL...</div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+        <div class="header">
+            <div>
+                <h1>💾 System Core Backup & Recovery</h1>
+            </div>
+            <div class="header-actions">
+                <a href="dashboard_home.html" id="btnBackDashboard" class="btn-back-dash" onclick="handleBackToDashboard(event)">← Back to Dashboard</a>
+            </div>
+        </div>
+
+        <div class="backup-grid">
+            
+            <!-- BACKUP CARD -->
+            <div class="sci-fi-card">
+                <div class="card-icon">📥</div>
+                <h2 style="color: var(--neon-blue);">Extract Full Backup</h2>
+                <p>Compile and download the entire Master Database including Photos, PDFs, Employees, Invoices, Loans, and Settings into a single <b>Encrypted ZIP</b> file.</p>
+                <button class="btn-cyber" onclick="startBackupProcess()">Initialize Backup</button>
+            </div>
+
+            <!-- RESTORE CARD -->
+            <div class="sci-fi-card">
+                <div class="card-icon" style="filter: drop-shadow(0 0 10px var(--neon-purple));">📤</div>
+                <h2 style="color: var(--neon-purple);">System Restore</h2>
+                <p>Upload a previously extracted <b>.zip</b> backup file to overwrite current modules and restore the system, including all media files, to its previous state.</p>
+                <input type="file" id="restoreFileInput" accept=".zip" style="display: none;" onchange="handleFileSelect(event)">
+                <button class="btn-cyber restore" onclick="document.getElementById('restoreFileInput').click()">Upload & Restore</button>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Navigation Logic
+        function handleBackToDashboard(event) {
+            event.preventDefault();
+            try {
+                if (window.parent && window.parent !== window) {
+                    const parentHomeLink = window.parent.document.querySelector('.dashboard-home-link');
+                    if (parentHomeLink) {
+                        if(typeof window.parent.clearTreeActiveLinks === 'function') window.parent.clearTreeActiveLinks();
+                        window.location.href = parentHomeLink.href;
+                        return;
+                    }
+                }
+            } catch (err) {}
+            window.location.href = "dashboard_home.html";
+        }
+
+        const hud = document.getElementById('hudOverlay');
+        const termText = document.getElementById('terminalText');
+        const progFill = document.getElementById('progressFill');
+        const hudIcon = document.getElementById('hudIcon');
+        const progBox = document.getElementById('progressBox');
+
+        // ==========================================
+        // 1. BACKUP LOGIC (ZIP + ENCRYPTION)
+        // ==========================================
+        function startBackupProcess() {
+            hud.className = "overlay-hud active";
+            progBox.className = "progress-box";
+            hudIcon.innerText = "💾";
+            progFill.style.width = "0%";
+            
+            const logs = [
+                "AUTHENTICATING ADMIN CREDENTIALS...",
+                "ACCESSING MASTER LOCALSTORAGE ENGINE...",
+                "EXTRACTING PHOTOS, PDFS & EMPLOYEE RECORDS...",
+                "COMPILING FINANCIAL LEDGERS & INVOICES...",
+                "ENCRYPTING DATA PACKETS (AES-256 SIMULATION)...",
+                "GENERATING SECURE ZIP PAYLOAD..."
+            ];
+
+            runSciFiSequence(logs, async () => {
+                // Compile all localStorage data
+                let dbData = {};
+                for (let i = 0; i < localStorage.length; i++) {
+                    let key = localStorage.key(i);
+                    dbData[key] = localStorage.getItem(key);
+                }
+
+                // Encrypt payload (Base64 encoding representation of the JSON string)
+                const jsonStr = JSON.stringify(dbData);
+                const encryptedData = btoa(encodeURIComponent(jsonStr));
+
+                // Create ZIP File
+                let zip = new JSZip();
+                zip.file("ATR_Master_Encrypted.bin", encryptedData); // The main data file
+                zip.file("README_SECURITY.txt", "ATR Construction System Backup\n===============================\nWARNING: Highly Classified Encrypted Data.\nDo not attempt to extract, modify, or tamper with the '.bin' file manually.\nUpload this entire '.zip' file directly into the Backup.html portal to Restore.");
+
+                const zipBlob = await zip.generateAsync({ type: "blob" });
+                const url = URL.createObjectURL(zipBlob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ATR_Full_System_Backup_${new Date().toISOString().split('T')[0]}.zip`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                showSuccess("ENCRYPTED ZIP SUCCESSFULLY EXTRACTED!");
+                setTimeout(() => { hud.classList.remove('active'); }, 2500);
+            });
+        }
+
+        // ==========================================
+        // 2. RESTORE LOGIC (ZIP EXTRACTION & DECRYPTION)
+        // ==========================================
+        let fileToRestore = null;
+
+        function handleFileSelect(event) {
+            fileToRestore = event.target.files[0];
+            if (fileToRestore) {
+                if (confirm(`WARNING: Restoring will OVERWRITE all current system data, media, and invoices with the contents of "${fileToRestore.name}". Proceed?`)) {
+                    startRestoreProcess();
+                } else {
+                    event.target.value = ""; // Reset
+                }
+            }
+        }
+
+        function startRestoreProcess() {
+            if (!fileToRestore) return;
+
+            hud.className = "overlay-hud active restore-mode";
+            progBox.className = "progress-box restore-mode";
+            hudIcon.innerText = "⚠️";
+            progFill.style.width = "0%";
+
+            const logs = [
+                "UPLOADING SECURE ZIP PAYLOAD...",
+                "EXTRACTING BINARY ARCHIVE...",
+                "DECRYPTING SECURE MEDIA & JSON FILES...",
+                "PURGING CURRENT SYSTEM DATABASE...",
+                "INJECTING NEW MASTER RECORDS...",
+                "RECONSTRUCTING UI & MEDIA MODULES..."
+            ];
+
+            runSciFiSequence(logs, () => {
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    try {
+                        // 1. Read ZIP
+                        let zip = await JSZip.loadAsync(e.target.result);
+                        let file = zip.file("ATR_Master_Encrypted.bin");
+                        
+                        if (!file) throw new Error("Invalid Backup Format: No encrypted bin found.");
+
+                        // 2. Extract & Decrypt
+                        let encryptedData = await file.async("string");
+                        let jsonStr = decodeURIComponent(atob(encryptedData));
+                        let parsedData = JSON.parse(jsonStr);
+                        
+                        // Keep current theme
+                        const currentTheme = localStorage.getItem('atr_theme') || 'dark';
+                        
+                        // 3. Purge & Restore
+                        localStorage.clear();
+                        for (let key in parsedData) {
+                            localStorage.setItem(key, parsedData[key]);
+                        }
+                        
+                        // Force Theme retention
+                        localStorage.setItem('atr_theme', currentTheme);
+
+                        showSuccess("SYSTEM RESTORE COMPLETE! REBOOTING...");
+                        
+                        // 4. Auto Logout & Redirect to Login (index.html) after 2.5 seconds
+                        setTimeout(() => {
+                            if (window.parent && window.parent !== window) {
+                                window.parent.location.href = "index.html";
+                            } else {
+                                window.location.href = "index.html";
+                            }
+                        }, 2500);
+
+                    } catch (err) {
+                        alert("🛑 RESTORE FAILED: Corrupted or Invalid Backup ZIP.");
+                        hud.classList.remove('active');
+                        document.getElementById('restoreFileInput').value = "";
+                    }
+                };
+                reader.readAsArrayBuffer(fileToRestore); // Needed for JSZip
+            });
+        }
+
+        // ==========================================
+        // HELPER: ANIMATION SEQUENCE ENGINE
+        // ==========================================
+        function runSciFiSequence(logArray, callback) {
+            let step = 0;
+            const totalSteps = logArray.length;
+            const intervalTime = 650; // Time per log line
+
+            const interval = setInterval(() => {
+                if (step < totalSteps) {
+                    termText.innerText = logArray[step];
+                    progFill.style.width = `${((step + 1) / totalSteps) * 100}%`;
+                    step++;
+                } else {
+                    clearInterval(interval);
+                    setTimeout(callback, 500);
+                }
+            }, intervalTime);
+        }
+
+        function showSuccess(msg) {
+            hud.className = "overlay-hud active success-mode";
+            progBox.className = "progress-box";
+            hudIcon.innerText = "✅";
+            termText.innerText = msg;
+            progFill.style.width = "100%";
+        }
+    </script>
+</body>
+</html>

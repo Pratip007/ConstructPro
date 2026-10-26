@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Employee Site Tagging</title>
+    
+    <!-- Sync theme with Master Dashboard -->
+    <script>
+        const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        window.addEventListener('storage', function(e) {
+            if(e.key === 'atr_theme') { document.documentElement.setAttribute('data-theme', e.newValue); }
+        });
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap');
+
+        :root {
+            --bg-body: transparent; 
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.1);
+            
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(0, 0, 0, 0.2);
+            --input-focus-bg: rgba(0, 0, 0, 0.4);
+            
+            --shadow: 0 4px 15px rgba(0,0,0,0.3);
+            
+            --theme-color: #28a745;
+            --theme-glow: rgba(40, 167, 69, 0.4);
+            --theme-transition: all 0.4s ease;
+        }
+
+        [data-theme="light"] {
+            --bg-body: transparent;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #555555;
+            --border-color: rgba(0, 0, 0, 0.1);
+            
+            --glass-bg: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --input-bg: rgba(255, 255, 255, 0.5);
+            --input-focus-bg: #ffffff;
+            
+            --shadow: 0 8px 25px rgba(0,0,0,0.05);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; scroll-behavior: smooth; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(136, 136, 136, 0.3); border-radius: 10px; }
+
+        body { background-color: var(--bg-body); color: var(--text-main); display: flex; min-height: 100vh; transition: var(--theme-transition); }
+        .main-content { flex: 1; padding: 35px 40px; overflow-y: auto; max-width: 1450px; margin: 0 auto; width: 100%; }
+
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid var(--border-color); padding-bottom: 20px; flex-wrap: wrap; gap: 15px; }
+        .header h1 { font-size: 24px; color: var(--text-main); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .header-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+
+        .role-mode-badge {
+            display: none;
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 700;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-records-link {
+            background-color: var(--theme-color); color: #ffffff; text-decoration: none; padding: 9px 16px; border-radius: 6px; font-weight: 700; font-size: 13px; text-transform: uppercase; transition: all 0.3s ease; box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+        .btn-records-link:hover { transform: translateY(-2px); box-shadow: 0 6px 15px var(--theme-glow); }
+
+        .btn-back-dash {
+            background-color: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color); text-decoration: none; padding: 9px 16px; border-radius: 6px; font-weight: 700; font-size: 13px; transition: all 0.3s ease; cursor: pointer;
+        }
+        .btn-back-dash:hover { background-color: var(--theme-color); color: #ffffff; border-color: var(--theme-color); transform: translateY(-2px); box-shadow: 0 4px 10px var(--theme-glow); }
+
+        /* Wide & Proportional Container for Form and Table (Stacking Context Fixed) */
+        .form-section-box {
+            background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--glass-border); border-top: 4px solid var(--theme-color); border-radius: 12px; padding: 30px 35px; box-shadow: var(--shadow); width: 100%; max-width: 1360px; margin: 0 auto 30px auto; transition: var(--theme-transition); position: relative; z-index: 50; overflow: visible;
+        }
+
+        .form-section-box.history-section-box {
+            z-index: 1;
+        }
+
+        .form-section-box h2 { font-size: 20px; margin-bottom: 22px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--theme-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+
+        .site-count-pill {
+            font-size: 12px;
+            background: rgba(40, 167, 69, 0.15);
+            color: var(--theme-color);
+            border: 1px solid rgba(40, 167, 69, 0.4);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: 700;
+            text-transform: none;
+        }
+
+        /* Wide 3-Column Form Grid */
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 22px; margin-bottom: 22px; align-items: end; position: relative; z-index: 20; }
+        .form-group { display: flex; flex-direction: column; gap: 8px; position: relative; z-index: 1; }
+        .form-group.full-width { grid-column: 1 / -1; z-index: 10; }
+        
+        /* Ensures the currently opened dropdown's parent group always stays above sibling inputs & below table */
+        .form-group.dropdown-active-group { z-index: 999 !important; }
+
+        label { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .required-star { color: #ff4d4d; margin-left: 3px; }
+
+        input[type="date"], select, input[type="text"], input[type="password"], textarea, input[type="hidden"] {
+            background-color: var(--input-bg); border: 1px solid var(--border-color); padding: 12px 15px; border-radius: 6px; color: var(--text-main); font-size: 14px; transition: all 0.3s ease; width: 100%; outline: none; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); color-scheme: dark;
+        }
+        [data-theme="light"] input[type="date"] { color-scheme: light; }
+        input:focus, select:focus, textarea:focus { border-color: var(--theme-color); background-color: var(--input-focus-bg); box-shadow: 0 0 10px var(--theme-glow); }
+
+        /* Custom Dropdown Styling */
+        .custom-dropdown { position: relative; width: 100%; }
+        .dropdown-btn {
+            background-color: var(--input-bg); border: 1px solid var(--border-color); padding: 12px 15px; border-radius: 6px; color: var(--text-main); font-size: 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s ease; user-select: none;
+        }
+        .dropdown-btn:hover { border-color: var(--theme-color); }
+        .dropdown-btn::after { content: '▼'; font-size: 10px; color: var(--text-muted); }
+
+        /* Locked state for Supervisor Site From */
+        .dropdown-btn.locked-site-btn {
+            background-color: rgba(255, 193, 7, 0.1);
+            border-color: rgba(255, 193, 7, 0.45);
+            color: #ffc107 !important;
+            font-weight: 700;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        .dropdown-btn.locked-site-btn::after { content: '🔒'; font-size: 12px; }
+
+        .dropdown-content {
+            display: none; position: absolute; top: calc(100% + 5px); left: 0; width: 100%; background-color: var(--bg-card); border: 1px solid var(--theme-color); border-radius: 8px; box-shadow: 0 18px 40px rgba(0, 0, 0, 0.65), 0 0 12px var(--theme-glow); z-index: 1000; overflow: hidden;
+        }
+        .dropdown-content.show { display: block; }
+        .dropdown-search { padding: 10px; border-bottom: 1px solid var(--border-color); background: var(--input-bg); }
+        .dropdown-search input { padding: 10px; font-size: 13px; }
+        .dropdown-list { max-height: 250px; overflow-y: auto; padding: 10px; display: grid; grid-template-columns: 1fr; gap: 6px; background: var(--bg-card); }
+        #siteFromListContainer, #siteToListContainer, #employeeListArea { grid-template-columns: 1fr; }
+
+        .list-item { display: flex; align-items: center; gap: 12px; padding: 8px 10px; background: var(--glass-bg); border-radius: 6px; cursor: pointer; transition: background 0.2s; }
+        .list-item:hover { background: var(--theme-glow); color: var(--theme-color); }
+        .list-item input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--theme-color); cursor: pointer; }
+        .list-item span { font-size: 14px; color: var(--text-main); }
+        .list-item span.emp-id { color: var(--theme-color); font-weight: 600; font-size: 12px; }
+
+        .select-all-wrap { padding: 10px 15px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px; background: var(--glass-bg); cursor: pointer; }
+
+        .btn-submit-form {
+            background-color: var(--theme-color); color: #ffffff; border: 1px solid rgba(255,255,255,0.1); padding: 14px 30px; border-radius: 6px; font-weight: 700; font-size: 14px; cursor: pointer; text-transform: uppercase; transition: all 0.3s; margin-top: 22px; width: 100%; box-shadow: 0 4px 15px rgba(0,0,0,0.2); position: relative; z-index: 1;
+        }
+        .btn-submit-form:hover { transform: translateY(-2px); box-shadow: 0 8px 20px var(--theme-glow); }
+
+        .success-actions-box { display: none; background: rgba(40, 167, 69, 0.1); border: 2px solid var(--theme-color); padding: 20px; border-radius: 10px; margin-top: 20px; text-align: center; animation: fadeIn 0.3s ease-in-out; }
+        .success-actions-box h3 { color: var(--theme-color); margin-bottom: 10px; font-size: 18px; }
+
+        /* ================= TAGGING DETAILS & HISTORY TABLE SECTION ================= */
+        .history-header-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 18px;
+        }
+        .history-search-input {
+            max-width: 320px;
+            padding: 9px 14px !important;
+            font-size: 13px !important;
+        }
+        .table-responsive {
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-card);
+        }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); font-size: 13px; color: var(--text-main); vertical-align: middle; }
+        th { background: var(--input-bg); color: var(--text-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        tbody tr:hover { background: var(--glass-bg); }
+
+        .status-pill {
+            padding: 4px 9px;
+            border-radius: 4px;
+            font-size: 10.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+        .status-completed { background: rgba(40, 167, 69, 0.18); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.4); }
+        .status-pending { background: rgba(255, 193, 7, 0.18); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.4); }
+
+        .tbl-btn {
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            text-transform: uppercase;
+            margin-right: 5px;
+            transition: 0.2s;
+        }
+        .tbl-btn:hover { transform: translateY(-1px); }
+        .tbl-btn-revert { background: #ffc107; color: #121212; }
+        .tbl-btn-delete { background: #dc3545; color: #ffffff; }
+
+        /* ================= MODALS (ADMIN PASSWORD & OFFICE/SUPERVISOR APPROVAL) ================= */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(5px);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-top: 4px solid var(--theme-color);
+            border-radius: 12px;
+            width: 100%;
+            max-width: 480px;
+            padding: 28px;
+            box-shadow: var(--shadow);
+            animation: fadeIn 0.25s ease;
+        }
+        .modal-card h3 { font-size: 18px; margin-bottom: 10px; }
+        .modal-card p { font-size: 12.5px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5; }
+        .modal-btn-row { display: flex; gap: 10px; margin-top: 18px; }
+        .btn-modal { flex: 1; padding: 11px 16px; border-radius: 6px; font-weight: 700; font-size: 12.5px; border: none; cursor: pointer; text-transform: uppercase; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <div class="main-content">
+        <div class="header">
+            <h1>
+                Site Management
+                <span id="roleModeBadge" class="role-mode-badge">🏢 Office Mode</span>
+            </h1>
+            <div class="header-actions">
+                <a href="RegisteredEmployeeRecords.html" id="btnViewRecords" class="btn-records-link">📋 View Records</a>
+                <a href="dashboard_home.html" id="btnBackDashboard" class="btn-back-dash" onclick="handleBackToDashboard(event)">← Back to Dashboard</a>
+            </div>
+        </div>
+
+        <!-- ================= 1. SITE TAGGING & TRANSFER FORM (WIDE LAYOUT) ================= -->
+        <div class="form-section-box">
+            <h2>
+                <span>📍 Employee Site Tagging & Transfer</span>
+                <span class="site-count-pill" id="currentSiteEmpCountBadge">Total Tagged: 0 Employees</span>
+            </h2>
+            
+            <!-- data-office-hooked="true" lets this file manage its own custom Approval Modal cleanly -->
+            <form id="siteTaggingForm" data-office-hooked="true" onsubmit="handleTaggingSubmit(event)">
+                
+                <div class="form-grid">
+                    <!-- Site From -->
+                    <div class="form-group">
+                        <label id="siteFromLabel">Site From (Current Location) <span class="required-star">*</span></label>
+                        <input type="hidden" id="site_from" name="site_from" required>
+                        <div class="custom-dropdown" id="siteFromDropdownWrapper">
+                            <div class="dropdown-btn" onclick="toggleDropdown('siteFromDropdownContent')" id="siteFromBtnText">-- Select Site From --</div>
+                            <div class="dropdown-content" id="siteFromDropdownContent">
+                                <div class="dropdown-search"><input type="text" id="siteFromSearch" placeholder="🔍 Search Site..." oninput="filterDropdown('siteFromSearch', 'site-from-item')"></div>
+                                <div class="dropdown-list" id="siteFromListContainer">
+                                    <!-- Populated dynamically via JS -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Site To -->
+                    <div class="form-group">
+                        <label id="siteToLabel">Site To (Transfer Target) <span class="required-star">*</span></label>
+                        <input type="hidden" id="site_to" name="site_to" required>
+                        <div class="custom-dropdown" id="siteToDropdownWrapper">
+                            <div class="dropdown-btn" onclick="toggleDropdown('siteToDropdownContent')" id="siteToBtnText">-- Select Site To --</div>
+                            <div class="dropdown-content" id="siteToDropdownContent">
+                                <div class="dropdown-search"><input type="text" id="siteToSearch" placeholder="🔍 Search Site..." oninput="filterDropdown('siteToSearch', 'site-to-item')"></div>
+                                <div class="dropdown-list" id="siteToListContainer">
+                                    <!-- Populated dynamically via JS (Excludes Supervisor's own site in Supervisor Mode) -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tagging / Transfer Date (Placed alongside Site From & Site To for a wider, cleaner look) -->
+                    <div class="form-group">
+                        <label for="tagging_date">Tagging / Transfer Date <span class="required-star">*</span></label>
+                        <input type="date" id="tagging_date" name="tagging_date" required>
+                    </div>
+                </div>
+
+                <!-- Dynamic Employee Selection based on Site From -->
+                <div class="form-group full-width">
+                    <label>Select Employees to Transfer <span class="required-star">*</span></label>
+                    <div class="custom-dropdown" id="employeeDropdownWrapper">
+                        <div class="dropdown-btn" onclick="toggleDropdown('employeeDropdownContent')" id="empDropdownBtnText">-- Select Employees --</div>
+                        <div class="dropdown-content" id="employeeDropdownContent">
+                            <div class="dropdown-search"><input type="text" id="empSearchBox" placeholder="🔍 Search Employee..." oninput="filterEmployees()"></div>
+                            <label class="select-all-wrap">
+                                <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)" style="width: 18px; height: 18px; accent-color: var(--theme-color); cursor:pointer;">
+                                <span style="font-weight: 600; font-size: 13px; color: var(--text-main);">Select All Displayed Employees</span>
+                            </label>
+                            <div class="dropdown-list" id="employeeListArea">
+                                <p style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 20px; grid-column: 1 / -1;">Please select 'Site From' first to load employees.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-submit-form" id="btnSubmit">Execute Transfer</button>
+            </form>
+
+            <div class="success-actions-box" id="successBox">
+                <h3 id="successBoxTitle">✅ Transfer Successful!</h3>
+                <p style="font-size: 13px; color: var(--text-muted);" id="successMsgText">Employees have been successfully tagged to the new site.</p>
+                <button type="button" style="background: var(--theme-color); border: none; padding: 10px 20px; border-radius: 6px; color: white; margin-top: 15px; cursor: pointer; font-weight: bold;" onclick="resetForm()">Perform Another Transfer</button>
+            </div>
+        </div>
+
+        <!-- ================= 2. SITE TAGGING & TRANSFER DETAILS TABLE ================= -->
+        <div class="form-section-box history-section-box" style="border-top-color: #007bff;">
+            <h2 style="color: #007bff; margin-bottom: 15px;">
+                <span id="historyTableTitle">📊 Site Tagging & Transfer Details</span>
+                <span class="site-count-pill" style="background: rgba(0,123,255,0.15); color: #4dabf7; border-color: rgba(0,123,255,0.4);" id="historyCountBadge">0 Records</span>
+            </h2>
+
+            <div class="history-header-controls">
+                <p id="historySubDesc" style="font-size: 12.5px; color: var(--text-muted);">
+                    Showing all employee site tagging and transfer records.
+                </p>
+                <input type="text" id="historySearchInput" class="history-search-input" placeholder="🔍 Search site, employee, date..." onkeyup="renderTaggingHistoryTable()">
+            </div>
+
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Site From</th>
+                            <th>Site To</th>
+                            <th>Tagged / Transferred Employees</th>
+                            <th>Count</th>
+                            <th>Status</th>
+                            <th style="text-align: right;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="taggingHistoryTableBody">
+                        <!-- Populated dynamically via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= ADMIN PASSWORD MODAL (FOR ADMIN REVERT / DELETE) ================= -->
+    <div class="modal-overlay" id="adminPassModal">
+        <div class="modal-card" style="border-top-color: #dc3545; text-align: center;">
+            <h3 style="color: #dc3545;">🔒 Admin Authorization Required</h3>
+            <p id="adminPassModalDesc">Please enter the Administrator Password (admin123) to modify or delete this site tagging record.</p>
+            <input type="password" id="adminPassInput" placeholder="Enter Admin Password (admin123)" onkeydown="if(event.key==='Enter') confirmAdminAction()">
+            <div class="modal-btn-row">
+                <button type="button" class="btn-modal" style="background: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color);" onclick="closeAdminPassModal()">Cancel</button>
+                <button type="button" class="btn-modal" style="background: #dc3545; color: #fff;" onclick="confirmAdminAction()">Verify & Proceed</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= OFFICE / SUPERVISOR APPROVAL MODAL ================= -->
+    <div class="modal-overlay" id="roleApprovalModal">
+        <div class="modal-card" style="border-top-color: #ffc107;">
+            <h3 id="roleApprovalTitle" style="color: #ffc107;">🏢 Send Request for Admin Approval</h3>
+            <p id="roleApprovalDesc">
+                এই সাইট ট্যাগিং বা ট্রান্সফার রিকোয়েস্টটি অ্যাডমিনের অ্যাপ্রুভালের জন্য পাঠানো হবে। অ্যাডমিন অ্যাপ্রুভ করলে এটি চূড়ান্ত হবে।
+            </p>
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label>Transfer / Action Summary</label>
+                <input type="text" id="roleApprovalSummary" readonly style="color: #ffc107; font-weight: 700;">
+            </div>
+            <div class="form-group">
+                <label>Reason / Remarks for Approval <span class="required-star">*</span></label>
+                <textarea id="roleApprovalReason" rows="3" placeholder="Explain why these employees are being transferred or modified..." style="resize: none;"></textarea>
+            </div>
+            <div class="modal-btn-row">
+                <button type="button" class="btn-modal" style="background: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color);" onclick="closeRoleApprovalModal()">Cancel</button>
+                <button type="button" class="btn-modal" style="background: #ffc107; color: #121212;" onclick="submitRoleApprovalRequest()">📤 Send for Approval</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================================================
+        // 1. 3-IN-1 SMART PORTAL ROLE ENGINE (ADMIN / OFFICE STAFF / SUPERVISOR)
+        // =========================================================================================
+        let currentPortalMode = "admin"; // 'admin', 'office', or 'supervisor'
+        let loggedUserId = "ADMIN";
+        let loggedUserName = "Super Admin";
+        let assignedSite = "";
+
+        // Master Project Sites List
+        const masterSitesList = [
+            "Salt Lake Sector V",
+            "Kolkata Metro Project - Line 6",
+            "Dum Dum Warehouse Construction",
+            "Howrah Bridge Renovation",
+            "Salt Lake IT Park Extension",
+            "Dum Dum Project",
+            "Barasat Highway"
+        ];
+
+        // Default Employees synced with RegisteredEmployeeRecords.html & Supervisor site
+        const defaultEmployees = [
+            { id: "ATR-EMP-001", name: "Amitabha Roy", designation: "Primary Contractor", current_site: "Kolkata Metro Project - Line 6", status: "Active" },
+            { id: "ATR-EMP-002", name: "Sayan Karmakar", designation: "Quality Supervisor", current_site: "Dum Dum Warehouse Construction", status: "Active" },
+            { id: "EMP-001", name: "Rahul Sk", designation: "Site Engineer", current_site: "Untagged", status: "Active" },
+            { id: "EMP-004", name: "Bikash Saha", designation: "Plumber", current_site: "Dum Dum Warehouse Construction", status: "Active" },
+            { id: "EMP-005", name: "Bikash Roy", designation: "Head Mason", current_site: "Salt Lake Sector V", status: "Active" },
+            { id: "EMP-008", name: "Ratan Das", designation: "Site Helper", current_site: "Salt Lake Sector V", status: "Active" },
+            { id: "EMP-012", name: "Sujoy Halder", designation: "Senior Mason", current_site: "Salt Lake Sector V", status: "Active" },
+            { id: "EMP-019", name: "Koushik Mondal", designation: "Steel Fitter", current_site: "Salt Lake Sector V", status: "Active" },
+            { id: "EMP-006", name: "Sumi Khatun", designation: "Architect", current_site: "Untagged", status: "Active" }
+        ];
+
+        const defaultTaggingLogs = [
+            {
+                id: "TAG-101",
+                date: "2026-09-25",
+                siteFrom: "Untagged",
+                siteTo: "Salt Lake Sector V",
+                employees: [
+                    { id: "EMP-005", name: "Bikash Roy" },
+                    { id: "EMP-008", name: "Ratan Das" },
+                    { id: "EMP-012", name: "Sujoy Halder" }
+                ],
+                byUser: "Admin",
+                status: "Completed"
+            },
+            {
+                id: "TAG-102",
+                date: "2026-09-28",
+                siteFrom: "Untagged",
+                siteTo: "Kolkata Metro Project - Line 6",
+                employees: [
+                    { id: "ATR-EMP-001", name: "Amitabha Roy" }
+                ],
+                byUser: "Admin",
+                status: "Completed"
+            }
+        ];
+
+        let allEmployees = [];
+        let taggingLogs = [];
+
+        // State for Admin & Role Modals
+        let pendingAdminTargetLogId = null;
+        let pendingAdminActionType = null; // 'REVERT' or 'DELETE'
+        let pendingRolePayload = null;
+
+        function loadAndSyncDatabases() {
+            let storedEmps = JSON.parse(localStorage.getItem('atr_employees'));
+            if (!Array.isArray(storedEmps) || storedEmps.length === 0) {
+                storedEmps = defaultEmployees;
+            } else {
+                // Ensure demo Salt Lake Sector V employees exist so Supervisor mode has employees to test immediately
+                defaultEmployees.forEach(defEmp => {
+                    if (!storedEmps.some(e => e.id === defEmp.id)) {
+                        storedEmps.push(defEmp);
+                    }
+                });
+            }
+
+            // Normalize both current_site and currentSite properties
+            allEmployees = storedEmps.map(emp => {
+                const resolvedSite = emp.current_site || emp.currentSite || (emp.site && emp.site !== "Unassigned" ? emp.site : "Untagged");
+                return {
+                    ...emp,
+                    current_site: resolvedSite === "Untagged" ? "" : resolvedSite,
+                    currentSite: resolvedSite || "Untagged",
+                    status: emp.status || "Active"
+                };
+            });
+            localStorage.setItem('atr_employees', JSON.stringify(allEmployees));
+
+            taggingLogs = JSON.parse(localStorage.getItem('atr_site_tagging_logs')) || defaultTaggingLogs;
+            localStorage.setItem('atr_site_tagging_logs', JSON.stringify(taggingLogs));
+        }
+
+        function checkPortalPermissions() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewParam = (urlParams.get('view') || '').toLowerCase();
+            const badge = document.getElementById('roleModeBadge');
+            const backBtn = document.getElementById('btnBackDashboard');
+            const recordsLink = document.getElementById('btnViewRecords');
+            const submitBtn = document.getElementById('btnSubmit');
+            const historyTitle = document.getElementById('historyTableTitle');
+            const historyDesc = document.getElementById('historySubDesc');
+
+            let parentPath = "";
+            try {
+                if (window.parent && window.parent !== window) {
+                    parentPath = (window.parent.location.pathname || '').toLowerCase();
+                }
+            } catch (e) {}
+
+            if (viewParam === 'supervisor' || parentPath.includes('supervisordashboard')) {
+                currentPortalMode = 'supervisor';
+                assignedSite = (urlParams.get('site') || sessionStorage.getItem('atr_supervisor_site') || "Salt Lake Sector V").trim();
+                loggedUserId = urlParams.get('supId') || "SUP-003";
+                loggedUserName = urlParams.get('supName') || "Supervisor";
+
+                if (!masterSitesList.includes(assignedSite)) {
+                    masterSitesList.unshift(assignedSite);
+                }
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🛡️ Supervisor Mode (🔒 Site Locked: ${assignedSite})`;
+                }
+                if (recordsLink) {
+                    recordsLink.href = `RegisteredEmployeeRecords.html?view=supervisor&site=${encodeURIComponent(assignedSite)}`;
+                }
+                if (backBtn) {
+                    backBtn.href = "supervisor/supervisor_dashboard_home.html";
+                }
+                if (submitBtn) {
+                    submitBtn.innerText = "📤 Request Transfer Approval (ApproveSupervisor)";
+                }
+                if (historyTitle) {
+                    historyTitle.innerText = `📊 ${assignedSite} — Tagging & Transfer Details`;
+                }
+                if (historyDesc) {
+                    historyDesc.innerText = `Showing tagging and transfer records exclusively for your site (${assignedSite}).`;
+                }
+
+            } else if (viewParam === 'office' || parentPath.includes('officedashboard')) {
+                currentPortalMode = 'office';
+                loggedUserId = urlParams.get('userId') || sessionStorage.getItem('atr_logged_office_id') || localStorage.getItem('atr_logged_office_id') || "OFF-101";
+                loggedUserName = urlParams.get('userName') || "Office Staff";
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🏢 Office Mode (${loggedUserName}) — Synced with ApproveOffice.html`;
+                }
+                if (recordsLink) {
+                    recordsLink.href = `RegisteredEmployeeRecords.html?view=office&userId=${encodeURIComponent(loggedUserId)}&userName=${encodeURIComponent(loggedUserName)}`;
+                }
+                if (backBtn) {
+                    backBtn.href = "office/office_dashboard_home.html";
+                }
+                if (submitBtn) {
+                    submitBtn.innerText = "📤 Submit Tagging / Transfer for Admin Approval";
+                }
+
+            } else {
+                currentPortalMode = 'admin';
+                if (backBtn) {
+                    backBtn.href = "dashboard_home.html";
+                }
+                if (recordsLink) {
+                    recordsLink.href = "RegisteredEmployeeRecords.html";
+                }
+                if (submitBtn) {
+                    submitBtn.innerText = "Execute Transfer";
+                }
+            }
+        }
+
+        function handleBackToDashboard(event) {
+            if (currentPortalMode === 'office') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.loadOfficeWorkspaceHome === 'function') {
+                        window.parent.loadOfficeWorkspaceHome();
+                        return;
+                    }
+                } catch (e) {}
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "office_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "office/office_dashboard_home.html";
+            } else if (currentPortalMode === 'supervisor') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window) {
+                        const parentHomeLink = window.parent.document.querySelector('.dashboard-home-link');
+                        if (parentHomeLink) {
+                            window.location.href = parentHomeLink.href;
+                            return;
+                        }
+                    }
+                } catch (e) {}
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "supervisor_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "supervisor/supervisor_dashboard_home.html";
+            }
+        }
+
+        // =========================================================================================
+        // 2. INITIALIZE DROPDOWNS & SUPERVISOR SITE LOCK
+        // =========================================================================================
+        window.onload = function() {
+            document.getElementById('tagging_date').value = new Date().toISOString().split('T')[0];
+            checkPortalPermissions();
+            loadAndSyncDatabases();
+            buildSiteDropdowns();
+            applySupervisorSiteLockIfNeeded();
+            updateSiteTaggedCountBadge();
+            renderTaggingHistoryTable();
+        };
+
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'atr_employees' || e.key === 'atr_site_tagging_logs') {
+                loadAndSyncDatabases();
+                buildSiteDropdowns();
+                applySupervisorSiteLockIfNeeded();
+                updateSiteTaggedCountBadge();
+                renderTaggingHistoryTable();
+            }
+        });
+
+        function getDynamicSiteList() {
+            const empSites = allEmployees
+                .map(e => e.currentSite)
+                .filter(s => s && s !== 'Untagged');
+            return [...new Set([...masterSitesList, ...empSites])];
+        }
+
+        function buildSiteDropdowns() {
+            const allSites = getDynamicSiteList();
+            const fromContainer = document.getElementById('siteFromListContainer');
+            const toContainer = document.getElementById('siteToListContainer');
+
+            // 1. Build 'Site From' List
+            fromContainer.innerHTML = `
+                <div class="list-item site-from-item" onclick="selectSiteFrom('Untagged')" style="border-left: 3px solid #ffc107;">
+                    <span style="font-weight: bold; color: #ffc107;">📌 Untagged (Not assigned)</span>
+                </div>
+            `;
+            allSites.forEach(site => {
+                fromContainer.innerHTML += `
+                    <div class="list-item site-from-item" onclick="selectSiteFrom('${site}')">
+                        <span>${site}</span>
+                    </div>
+                `;
+            });
+
+            // 2. Build 'Site To' List (If Supervisor Mode, hide Supervisor's own site so they transfer ONLY to other sites!)
+            toContainer.innerHTML = '';
+            const currentSiteFromVal = document.getElementById('site_from').value;
+
+            allSites.forEach(site => {
+                if (currentPortalMode === 'supervisor' && site === assignedSite) {
+                    return; // Hide Supervisor's own site from 'Site To'
+                }
+                if (currentSiteFromVal && site === currentSiteFromVal) {
+                    return; // Hide currently selected 'Site From' from 'Site To'
+                }
+                toContainer.innerHTML += `
+                    <div class="list-item site-to-item" onclick="selectSiteTo('${site}')">
+                        <span>${site}</span>
+                    </div>
+                `;
+            });
+        }
+
+        function applySupervisorSiteLockIfNeeded() {
+            const siteFromInput = document.getElementById('site_from');
+            const siteFromBtn = document.getElementById('siteFromBtnText');
+            const siteFromLabel = document.getElementById('siteFromLabel');
+
+            if (currentPortalMode === 'supervisor' && assignedSite) {
+                siteFromInput.value = assignedSite;
+                siteFromBtn.innerText = `📍 ${assignedSite}`;
+                siteFromBtn.classList.add('locked-site-btn');
+                if (siteFromLabel) {
+                    siteFromLabel.innerHTML = `Site From (Locked to Your Site) <span class="required-star">*</span>`;
+                }
+                buildSiteDropdowns();
+                loadEmployeesForSite(assignedSite);
+            } else {
+                siteFromBtn.classList.remove('locked-site-btn');
+            }
+        }
+
+        function updateSiteTaggedCountBadge() {
+            const badge = document.getElementById('currentSiteEmpCountBadge');
+            if (!badge) return;
+
+            if (currentPortalMode === 'supervisor' && assignedSite) {
+                const mySiteCount = allEmployees.filter(e => e.currentSite === assignedSite && e.status === 'Active').length;
+                badge.innerText = `📍 Active Tagged in ${assignedSite}: ${mySiteCount} Employee(s)`;
+            } else {
+                const totalTagged = allEmployees.filter(e => e.currentSite && e.currentSite !== 'Untagged' && e.status === 'Active').length;
+                badge.innerText = `🌐 Total Tagged Across Sites: ${totalTagged} Employee(s)`;
+            }
+        }
+
+        // --- Generic Dropdown Toggle (With Active Group z-index Elevation) ---
+        function closeAllDropdowns() {
+            document.querySelectorAll('.dropdown-content').forEach(el => el.classList.remove('show'));
+            document.querySelectorAll('.form-group').forEach(fg => fg.classList.remove('dropdown-active-group'));
+        }
+
+        function toggleDropdown(id) {
+            if (id === 'siteFromDropdownContent' && currentPortalMode === 'supervisor') {
+                return;
+            }
+            const content = document.getElementById(id);
+            const isShowing = content.classList.contains('show');
+            closeAllDropdowns();
+            if (!isShowing) {
+                content.classList.add('show');
+                const parentGroup = content.closest('.form-group');
+                if (parentGroup) parentGroup.classList.add('dropdown-active-group');
+            }
+        }
+
+        window.onclick = function(event) {
+            if (!event.target.closest('.custom-dropdown')) {
+                closeAllDropdowns();
+            }
+        };
+
+        function filterDropdown(inputId, itemClass) {
+            const query = document.getElementById(inputId).value.toLowerCase();
+            document.querySelectorAll(`.${itemClass}`).forEach(item => {
+                item.style.display = item.innerText.toLowerCase().includes(query) ? 'flex' : 'none';
+            });
+        }
+
+        // --- Site Selection Logic ---
+        function selectSiteFrom(siteName) {
+            if (currentPortalMode === 'supervisor') return;
+
+            document.getElementById('site_from').value = siteName;
+            const btn = document.getElementById('siteFromBtnText');
+            btn.innerText = siteName;
+            btn.style.color = siteName === 'Untagged' ? '#ffc107' : 'var(--theme-color)';
+            closeAllDropdowns();
+
+            if (document.getElementById('site_to').value === siteName) {
+                document.getElementById('site_to').value = "";
+                document.getElementById('siteToBtnText').innerText = "-- Select Site To --";
+                document.getElementById('siteToBtnText').style.color = "var(--text-main)";
+            }
+
+            buildSiteDropdowns();
+            loadEmployeesForSite(siteName);
+            
+            document.getElementById('empDropdownBtnText').innerText = "-- Select Employees --";
+            document.getElementById('empDropdownBtnText').style.color = "var(--text-main)";
+            document.getElementById('selectAllCheckbox').checked = false;
+        }
+
+        function selectSiteTo(siteName) {
+            const fromVal = currentPortalMode === 'supervisor' ? assignedSite : document.getElementById('site_from').value;
+            if(siteName === fromVal) {
+                alert("⚠️ 'Site To' cannot be the same as 'Site From'.");
+                return;
+            }
+            document.getElementById('site_to').value = siteName;
+            const btn = document.getElementById('siteToBtnText');
+            btn.innerText = siteName;
+            btn.style.color = 'var(--theme-color)';
+            closeAllDropdowns();
+        }
+
+        // --- Employee Loading Logic ---
+        function loadEmployeesForSite(siteName) {
+            const listArea = document.getElementById('employeeListArea');
+            listArea.innerHTML = '';
+            
+            const filteredEmps = allEmployees.filter(emp =>
+                emp.status === 'Active' &&
+                (emp.currentSite === siteName || (siteName === 'Untagged' && (!emp.currentSite || emp.currentSite === 'Untagged')))
+            );
+
+            if (filteredEmps.length === 0) {
+                listArea.innerHTML = `<p style="color: #ff6b6b; font-size: 13px; text-align: center; padding: 20px; grid-column: 1 / -1;">No active employees found in '${siteName}'.</p>`;
+                return;
+            }
+
+            filteredEmps.forEach(emp => {
+                const label = document.createElement('label');
+                label.className = 'list-item emp-list-item';
+                label.innerHTML = `
+                    <input type="checkbox" class="emp-checkbox" value="${emp.id}" data-name="${emp.name}" onchange="checkSelectAllStatus()">
+                    <span><span class="emp-id">[${emp.id}]</span> ${emp.name} - <small style="color:var(--text-muted);">${emp.designation}</small></span>
+                `;
+                listArea.appendChild(label);
+            });
+        }
+
+        function filterEmployees() {
+            const query = document.getElementById('empSearchBox').value.toLowerCase();
+            document.querySelectorAll('.emp-list-item').forEach(item => {
+                item.style.display = item.innerText.toLowerCase().includes(query) ? 'flex' : 'none';
+            });
+        }
+
+        function updateEmpDropdownBtnText() {
+            const count = document.querySelectorAll('.emp-checkbox:checked').length;
+            const btn = document.getElementById('empDropdownBtnText');
+            if(count === 0) {
+                btn.innerHTML = '-- Select Employees --';
+                btn.style.color = 'var(--text-main)';
+            } else {
+                btn.innerHTML = `${count} Employee(s) Selected`;
+                btn.style.color = 'var(--theme-color)'; 
+            }
+        }
+
+        function toggleSelectAll(selectAllCheckbox) {
+            document.querySelectorAll('.emp-checkbox').forEach(cb => {
+                if(cb.closest('.list-item').style.display !== 'none') cb.checked = selectAllCheckbox.checked;
+            });
+            updateEmpDropdownBtnText();
+        }
+
+        function checkSelectAllStatus() {
+            const visibleCbs = Array.from(document.querySelectorAll('.emp-checkbox')).filter(cb => cb.closest('.list-item').style.display !== 'none');
+            document.getElementById('selectAllCheckbox').checked = visibleCbs.length > 0 && visibleCbs.every(cb => cb.checked);
+            updateEmpDropdownBtnText();
+        }
+
+        // =========================================================================================
+        // 3. FORM SUBMISSION & ROLE-BASED APPROVAL ROUTING
+        // =========================================================================================
+        function handleTaggingSubmit(event) {
+            event.preventDefault();
+
+            const siteFrom = currentPortalMode === 'supervisor' ? assignedSite : document.getElementById('site_from').value;
+            const siteTo = document.getElementById('site_to').value;
+            const date = document.getElementById('tagging_date').value;
+            
+            if(!siteFrom) return alert("⚠️ Please select 'Site From'.");
+            if(!siteTo) return alert("⚠️ Please select 'Site To'.");
+            if(siteFrom === siteTo) return alert("⚠️ 'Site To' cannot be the same as 'Site From'.");
+
+            const selectedCbs = document.querySelectorAll('.emp-checkbox:checked');
+            if (selectedCbs.length === 0) return alert("⚠️ Please select at least one employee to transfer.");
+
+            const selectedEmpList = Array.from(selectedCbs).map(cb => ({
+                id: cb.value,
+                name: cb.getAttribute('data-name')
+            }));
+
+            // IF OFFICE OR SUPERVISOR: Open Approval Modal instead of direct unapproved transfer
+            if (currentPortalMode !== 'admin') {
+                pendingRolePayload = {
+                    actionType: "SITE TAGGING / TRANSFER",
+                    date: date,
+                    siteFrom: siteFrom,
+                    siteTo: siteTo,
+                    employees: selectedEmpList,
+                    summary: `Transfer ${selectedEmpList.length} Emp(s) [${selectedEmpList.map(e => e.id).join(', ')}] from '${siteFrom}' to '${siteTo}'`
+                };
+                openRoleApprovalModal(pendingRolePayload);
+                return;
+            }
+
+            // ADMIN DIRECT EXECUTION
+            executeDirectTaggingTransfer(date, siteFrom, siteTo, selectedEmpList);
+        }
+
+        function executeDirectTaggingTransfer(date, siteFrom, siteTo, selectedEmpList) {
+            selectedEmpList.forEach(sel => {
+                const emp = allEmployees.find(e => e.id === sel.id);
+                if (emp) {
+                    emp.currentSite = siteTo;
+                    emp.current_site = siteTo === 'Untagged' ? '' : siteTo;
+                    emp.pendingStatus = null;
+                }
+            });
+            localStorage.setItem('atr_employees', JSON.stringify(allEmployees));
+
+            taggingLogs.unshift({
+                id: "TAG-" + Date.now().toString().slice(-5),
+                date: date,
+                siteFrom: siteFrom,
+                siteTo: siteTo,
+                employees: selectedEmpList,
+                byUser: loggedUserName,
+                status: "Completed"
+            });
+            localStorage.setItem('atr_site_tagging_logs', JSON.stringify(taggingLogs));
+
+            updateSiteTaggedCountBadge();
+            renderTaggingHistoryTable();
+
+            document.getElementById('successBoxTitle').innerText = "✅ Transfer Successful!";
+            document.getElementById('successMsgText').innerText = `Successfully transferred ${selectedEmpList.length} employee(s) from '${siteFrom}' to '${siteTo}'.`;
+            document.getElementById('siteTaggingForm').style.display = 'none';
+            document.getElementById('successBox').style.display = 'block';
+        }
+
+        // =========================================================================================
+        // 4. RENDER TAGGING DETAILS / HISTORY TABLE (Site-Filtered for Supervisor, Global for Admin/Office)
+        // =========================================================================================
+        function renderTaggingHistoryTable() {
+            const tbody = document.getElementById('taggingHistoryTableBody');
+            const searchVal = (document.getElementById('historySearchInput').value || '').toLowerCase();
+            tbody.innerHTML = '';
+
+            // Filter strictly for Supervisor's site if in Supervisor Mode
+            let relevantLogs = (currentPortalMode === 'supervisor' && assignedSite)
+                ? taggingLogs.filter(log => log.siteFrom === assignedSite || log.siteTo === assignedSite)
+                : taggingLogs;
+
+            if (searchVal) {
+                relevantLogs = relevantLogs.filter(log => {
+                    const empStr = (log.employees || []).map(e => `${e.id} ${e.name}`).join(' ').toLowerCase();
+                    return (
+                        (log.date || '').toLowerCase().includes(searchVal) ||
+                        (log.siteFrom || '').toLowerCase().includes(searchVal) ||
+                        (log.siteTo || '').toLowerCase().includes(searchVal) ||
+                        empStr.includes(searchVal)
+                    );
+                });
+            }
+
+            document.getElementById('historyCountBadge').innerText = `${relevantLogs.length} Record(s)`;
+
+            if (relevantLogs.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 25px; color: var(--text-muted);">No site tagging records found${currentPortalMode === 'supervisor' ? ' for ' + assignedSite : ''}.</td></tr>`;
+                return;
+            }
+
+            relevantLogs.forEach(log => {
+                const empBadges = (log.employees || []).map(e => `<span style="display:inline-block; background:var(--input-bg); border:1px solid var(--border-color); padding:2px 7px; border-radius:4px; font-size:11.5px; margin:2px;"><strong>${e.id}</strong> - ${e.name}</span>`).join(' ');
+                const isPending = log.status !== 'Completed';
+                const statusCls = isPending ? 'status-pending' : 'status-completed';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${log.date}</strong><br><small style="color:var(--text-muted);">${log.id}</small></td>
+                    <td style="color:#ffc107; font-weight:600;">${log.siteFrom}</td>
+                    <td style="color:var(--theme-color); font-weight:700;">📍 ${log.siteTo}</td>
+                    <td>${empBadges}</td>
+                    <td><strong>${(log.employees || []).length} Emp(s)</strong></td>
+                    <td><span class="status-pill ${statusCls}">${log.status}</span></td>
+                    <td style="text-align: right; white-space: nowrap;">
+                        <button class="tbl-btn tbl-btn-revert" onclick="handleRevertTagging('${log.id}')" title="Revert / Edit Transfer">↩️ Revert</button>
+                        <button class="tbl-btn tbl-btn-delete" onclick="handleDeleteTagging('${log.id}')" title="Delete Log">🗑️ Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- Admin Password Protected Revert & Delete vs Office/Supervisor Approval ---
+        function handleRevertTagging(logId) {
+            const log = taggingLogs.find(l => l.id === logId);
+            if (!log) return;
+
+            if (currentPortalMode === 'admin') {
+                pendingAdminTargetLogId = logId;
+                pendingAdminActionType = 'REVERT';
+                document.getElementById('adminPassModalDesc').innerText = `Enter Admin Password (admin123) to revert ${log.employees.length} employee(s) back from '${log.siteTo}' to '${log.siteFrom}'.`;
+                openAdminPassModal();
+            } else {
+                pendingRolePayload = {
+                    actionType: "REVERT SITE TRANSFER",
+                    targetLogId: logId,
+                    date: log.date,
+                    siteFrom: log.siteTo,
+                    siteTo: log.siteFrom,
+                    employees: log.employees,
+                    summary: `Revert Transfer (${log.id}): Move ${log.employees.length} Emp(s) back from '${log.siteTo}' to '${log.siteFrom}'`
+                };
+                openRoleApprovalModal(pendingRolePayload);
+            }
+        }
+
+        function handleDeleteTagging(logId) {
+            const log = taggingLogs.find(l => l.id === logId);
+            if (!log) return;
+
+            if (currentPortalMode === 'admin') {
+                pendingAdminTargetLogId = logId;
+                pendingAdminActionType = 'DELETE';
+                document.getElementById('adminPassModalDesc').innerText = `Enter Admin Password (admin123) to permanently delete tagging record ${log.id}.`;
+                openAdminPassModal();
+            } else {
+                pendingRolePayload = {
+                    actionType: "DELETE TAGGING RECORD",
+                    targetLogId: logId,
+                    date: log.date,
+                    siteFrom: log.siteFrom,
+                    siteTo: log.siteTo,
+                    employees: log.employees,
+                    summary: `Delete Tagging Record (${log.id}): ${log.siteFrom} → ${log.siteTo} (${log.employees.length} Emp)`
+                };
+                openRoleApprovalModal(pendingRolePayload);
+            }
+        }
+
+        function openAdminPassModal() {
+            document.getElementById('adminPassInput').value = '';
+            document.getElementById('adminPassModal').classList.add('active');
+            setTimeout(() => document.getElementById('adminPassInput').focus(), 50);
+        }
+
+        function closeAdminPassModal() {
+            document.getElementById('adminPassModal').classList.remove('active');
+            pendingAdminTargetLogId = null;
+            pendingAdminActionType = null;
+        }
+
+        function confirmAdminAction() {
+            const pass = document.getElementById('adminPassInput').value;
+            if (pass !== 'admin123') {
+                alert("❌ Incorrect Admin Password! Access Denied.");
+                return;
+            }
+
+            const logIndex = taggingLogs.findIndex(l => l.id === pendingAdminTargetLogId);
+            if (logIndex === -1) {
+                closeAdminPassModal();
+                return;
+            }
+
+            const log = taggingLogs[logIndex];
+
+            if (pendingAdminActionType === 'REVERT') {
+                (log.employees || []).forEach(sel => {
+                    const emp = allEmployees.find(e => e.id === sel.id);
+                    if (emp) {
+                        emp.currentSite = log.siteFrom;
+                        emp.current_site = log.siteFrom === 'Untagged' ? '' : log.siteFrom;
+                    }
+                });
+                localStorage.setItem('atr_employees', JSON.stringify(allEmployees));
+                taggingLogs.splice(logIndex, 1);
+                localStorage.setItem('atr_site_tagging_logs', JSON.stringify(taggingLogs));
+                alert(`✅ Reverted! Employees moved back to '${log.siteFrom}'.`);
+            } else if (pendingAdminActionType === 'DELETE') {
+                taggingLogs.splice(logIndex, 1);
+                localStorage.setItem('atr_site_tagging_logs', JSON.stringify(taggingLogs));
+                alert(`🗑️ Tagging record ${log.id} deleted.`);
+            }
+
+            closeAdminPassModal();
+            const currentFrom = document.getElementById('site_from').value;
+            if (currentFrom) loadEmployeesForSite(currentFrom);
+            updateSiteTaggedCountBadge();
+            renderTaggingHistoryTable();
+        }
+
+        // =========================================================================================
+        // 5. OFFICE & SUPERVISOR APPROVAL MODAL FUNCTIONS
+        // =========================================================================================
+        function openRoleApprovalModal(payload) {
+            const titleEl = document.getElementById('roleApprovalTitle');
+            const descEl = document.getElementById('roleApprovalDesc');
+            document.getElementById('roleApprovalSummary').value = payload.summary;
+            document.getElementById('roleApprovalReason').value = '';
+
+            if (currentPortalMode === 'supervisor') {
+                titleEl.innerText = "🛡️ Send Transfer Request to ApproveSupervisor.html";
+                descEl.innerHTML = `সুপারভাইজার পোর্টাল (<strong>${assignedSite}</strong>) থেকে এমপ্লয়ি অন্য সাইটে ট্রান্সফার বা পরিবর্তন করার রিকোয়েস্টটি অ্যাডমিনের <strong>ApproveSupervisor.html</strong>-এ পাঠানো হবে।`;
+            } else {
+                titleEl.innerText = "🏢 Send Transfer Request to ApproveOffice.html";
+                descEl.innerHTML = "অফিস পোর্টাল থেকে সাইট ট্যাগিং বা ট্রান্সফার রিকোয়েস্টটি অ্যাডমিনের <strong>ApproveOffice.html</strong>-এ পাঠানো হবে। অ্যাডমিন অ্যাপ্রুভ করলেই এটি চূড়ান্ত হবে।";
+            }
+
+            document.getElementById('roleApprovalModal').classList.add('active');
+            setTimeout(() => document.getElementById('roleApprovalReason').focus(), 50);
+        }
+
+        function closeRoleApprovalModal() {
+            document.getElementById('roleApprovalModal').classList.remove('active');
+            pendingRolePayload = null;
+        }
+
+        function submitRoleApprovalRequest() {
+            const reason = document.getElementById('roleApprovalReason').value.trim();
+            if (!reason) {
+                alert("⚠️ Please enter a valid reason for Admin Approval.");
+                return;
+            }
+            if (!pendingRolePayload) return;
+
+            const targetApprovalPage = currentPortalMode === 'supervisor' ? 'ApproveSupervisor.html' : 'ApproveOffice.html';
+
+            if (pendingRolePayload.targetLogId) {
+                const idx = taggingLogs.findIndex(l => l.id === pendingRolePayload.targetLogId);
+                if (idx > -1) {
+                    taggingLogs[idx].status = `⏳ ${pendingRolePayload.actionType === 'REVERT SITE TRANSFER' ? 'Revert' : 'Delete'} Pending`;
+                    localStorage.setItem('atr_site_tagging_logs', JSON.stringify(taggingLogs));
+                }
+            } else {
+                (pendingRolePayload.employees || []).forEach(sel => {
+                    const emp = allEmployees.find(e => e.id === sel.id);
+                    if (emp) {
+                        emp.pendingStatus = `Transfer to ${pendingRolePayload.siteTo} Pending`;
+                    }
+                });
+                localStorage.setItem('atr_employees', JSON.stringify(allEmployees));
+
+                taggingLogs.unshift({
+                    id: "TAG-" + Date.now().toString().slice(-5),
+                    date: pendingRolePayload.date,
+                    siteFrom: pendingRolePayload.siteFrom,
+                    siteTo: pendingRolePayload.siteTo,
+                    employees: pendingRolePayload.employees,
+                    byUser: loggedUserName,
+                    status: `⏳ Pending in ${targetApprovalPage}`
+                });
+                localStorage.setItem('atr_site_tagging_logs', JSON.stringify(taggingLogs));
+            }
+
+            if (currentPortalMode === 'supervisor') {
+                const supQueue = JSON.parse(localStorage.getItem('atr_supervisor_approvals')) || [];
+                supQueue.unshift({
+                    id: "SUP-TAG-" + Date.now().toString().slice(-5),
+                    module: "SiteTagging.html",
+                    action: pendingRolePayload.actionType,
+                    site: assignedSite,
+                    requestedBy: loggedUserName,
+                    reason: reason,
+                    summary: pendingRolePayload.summary,
+                    requestedAt: new Date().toISOString(),
+                    status: "Pending",
+                    oldData: { siteFrom: pendingRolePayload.siteFrom, employees: pendingRolePayload.employees },
+                    newData: { siteTo: pendingRolePayload.siteTo, date: pendingRolePayload.date, employees: pendingRolePayload.employees }
+                });
+                localStorage.setItem('atr_supervisor_approvals', JSON.stringify(supQueue));
+            } else {
+                const newReq = {
+                    reqId: "OFF-TAG-" + Date.now().toString().slice(-5),
+                    userId: loggedUserId,
+                    userName: loggedUserName,
+                    designation: "Office Staff",
+                    module: "SiteTagging.html",
+                    action: pendingRolePayload.actionType,
+                    summary: pendingRolePayload.summary,
+                    oldData: { siteFrom: pendingRolePayload.siteFrom, employees: pendingRolePayload.employees },
+                    newData: { siteTo: pendingRolePayload.siteTo, date: pendingRolePayload.date, employees: pendingRolePayload.employees },
+                    reason: reason,
+                    timestamp: new Date().toLocaleString('en-IN'),
+                    status: "Pending"
+                };
+
+                const officeQueue = JSON.parse(localStorage.getItem('atr_office_approvals')) || [];
+                officeQueue.unshift(newReq);
+                localStorage.setItem('atr_office_approvals', JSON.stringify(officeQueue));
+                localStorage.setItem('approve_office_requests', JSON.stringify(officeQueue));
+                localStorage.setItem('ApproveOffice_requests', JSON.stringify(officeQueue));
+
+                const workLogs = JSON.parse(localStorage.getItem('atr_office_daily_work')) || [];
+                const todayStr = new Date().toISOString().split('T')[0];
+                const nowTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+                workLogs.unshift({
+                    id: "WRK-" + Date.now().toString().slice(-5),
+                    userId: loggedUserId,
+                    userName: loggedUserName,
+                    date: todayStr,
+                    time: nowTime,
+                    module: "Site Tagging (SiteTagging.html)",
+                    refNo: newReq.reqId,
+                    desc: pendingRolePayload.summary,
+                    status: "Sent for Approval"
+                });
+                localStorage.setItem('atr_office_daily_work', JSON.stringify(workLogs));
+
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.refreshNotificationsUI === 'function') {
+                        window.parent.refreshNotificationsUI();
+                    }
+                } catch (e) {}
+            }
+
+            const wasFormTransfer = !pendingRolePayload.targetLogId;
+            const summaryMsg = pendingRolePayload.summary;
+            closeRoleApprovalModal();
+            updateSiteTaggedCountBadge();
+            renderTaggingHistoryTable();
+
+            if (wasFormTransfer) {
+                document.getElementById('successBoxTitle').innerText = `📤 Request Sent to ${targetApprovalPage}!`;
+                document.getElementById('successMsgText').innerText = `${summaryMsg} — Sent for Admin Approval.`;
+                document.getElementById('siteTaggingForm').style.display = 'none';
+                document.getElementById('successBox').style.display = 'block';
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('siteTaggingForm').reset();
+            document.getElementById('tagging_date').value = new Date().toISOString().split('T')[0];
+
+            document.getElementById('site_to').value = "";
+            document.getElementById('siteToBtnText').innerText = "-- Select Site To --";
+            document.getElementById('siteToBtnText').style.color = "var(--text-main)";
+
+            if (currentPortalMode === 'supervisor' && assignedSite) {
+                applySupervisorSiteLockIfNeeded();
+            } else {
+                document.getElementById('site_from').value = "";
+                document.getElementById('siteFromBtnText').innerText = "-- Select Site From --";
+                document.getElementById('siteFromBtnText').style.color = "var(--text-main)";
+                document.getElementById('employeeListArea').innerHTML = `<p style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 20px; grid-column: 1 / -1;">Please select 'Site From' first to load employees.</p>`;
+            }
+
+            document.getElementById('empDropdownBtnText').innerText = "-- Select Employees --";
+            document.getElementById('empDropdownBtnText').style.color = "var(--text-main)";
+            document.getElementById('selectAllCheckbox').checked = false;
+
+            document.getElementById('successBox').style.display = 'none';
+            document.getElementById('siteTaggingForm').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

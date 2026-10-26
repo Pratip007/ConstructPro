@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Supervisor Site Overview</title>
+    
+    <!-- Load FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- GLOBAL THEME MEMORY SYNC -->
+    <script>
+        const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        window.addEventListener('storage', function(e) {
+            if(e.key === 'atr_theme') { document.documentElement.setAttribute('data-theme', e.newValue); }
+        });
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
+
+        :root {
+            --bg-body: #121212;
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --hover-bg: rgba(255, 255, 255, 0.06);
+            --shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+            --accent: #ffc107;
+            --green: #28a745;
+            --cyan: #17a2b8;
+            --pink: #e83e8c;
+            --orange: #fd7e14;
+            --danger: #ff6b6b;
+        }
+
+        [data-theme="light"] {
+            --bg-body: #f0f2f5;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #666666;
+            --border-color: rgba(0, 0, 0, 0.08);
+            --glass-bg: rgba(0, 0, 0, 0.02);
+            --hover-bg: rgba(0, 0, 0, 0.04);
+            --shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+            --accent: #e0a800;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; }
+        
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(136, 136, 136, 0.3); border-radius: 10px; }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            padding: 25px 30px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .dashboard-wrapper {
+            max-width: 1450px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* ================= TOP WELCOME BANNER ================= */
+        .welcome-banner {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-left: 5px solid var(--accent);
+            border-radius: 14px;
+            padding: 20px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .welcome-left h2 {
+            font-size: 20px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .welcome-left p {
+            font-size: 12.5px;
+            color: var(--text-muted);
+            margin-top: 5px;
+        }
+
+        .banner-badges {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .info-pill {
+            background: var(--glass-bg);
+            border: 1px solid var(--border-color);
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .info-pill.site-locked {
+            background: rgba(255, 193, 7, 0.12);
+            border-color: rgba(255, 193, 7, 0.35);
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        /* ================= KPI SUMMARY CARDS ================= */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 20px;
+        }
+
+        .kpi-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 22px;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .kpi-card:hover { transform: translateY(-4px); }
+
+        .kpi-card.wallet { border-top: 4px solid var(--orange); }
+        .kpi-card.attendance { border-top: 4px solid var(--green); }
+        .kpi-card.retail { border-top: 4px solid var(--cyan); }
+        .kpi-card.approvals { border-top: 4px solid var(--pink); }
+
+        .kpi-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .kpi-title {
+            font-size: 11.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+        }
+
+        .kpi-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 18px;
+        }
+
+        .kpi-value {
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .kpi-sub {
+            font-size: 11.5px;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            padding-top: 10px;
+            border-top: 1px dashed var(--border-color);
+        }
+
+        /* ================= QUICK ACTIONS BAR ================= */
+        .section-heading {
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 0.6px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .quick-actions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .action-tile {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px 18px;
+            text-decoration: none;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            box-shadow: var(--shadow);
+            transition: all 0.25s ease;
+        }
+
+        .action-tile:hover {
+            background: var(--hover-bg);
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .action-tile i {
+            font-size: 20px;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .action-tile-text strong {
+            display: block;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .action-tile-text span {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        /* ================= LOWER SPLIT TABLES ================= */
+        .split-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 1024px) {
+            .split-grid { grid-template-columns: 1fr; }
+        }
+
+        .panel-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--glass-bg);
+        }
+
+        .panel-header h3 {
+            font-size: 14px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-link {
+            font-size: 11.5px;
+            font-weight: 700;
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .panel-link:hover { text-decoration: underline; }
+
+        .table-responsive { overflow-x: auto; }
+
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th {
+            padding: 12px 16px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-color);
+            background: var(--glass-bg);
+        }
+        td {
+            padding: 12px 16px;
+            font-size: 12.5px;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
+        }
+        tbody tr:hover { background: var(--hover-bg); }
+
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .badge-hold { background: rgba(255, 193, 7, 0.15); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.4); }
+        .badge-cleared { background: rgba(40, 167, 69, 0.15); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.4); }
+        .badge-present { background: rgba(40, 167, 69, 0.15); color: #28a745; }
+        .badge-absent { background: rgba(220, 53, 69, 0.15); color: #ff6b6b; }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-wrapper">
+
+        <!-- ================= 1. TOP BANNER ================= -->
+        <div class="welcome-banner">
+            <div class="welcome-left">
+                <h2>👷‍♂️ Welcome back, <span id="supDisplayName" style="color: var(--accent);">Subrata Roy</span></h2>
+                <p>Manage daily attendance, retail site bills, and employee payments for your assigned project site.</p>
+            </div>
+            <div class="banner-badges">
+                <div class="info-pill site-locked">
+                    <i class="fas fa-lock"></i> Site Locked: <span id="siteDisplayName">Salt Lake Sector V</span>
+                </div>
+                <div class="info-pill">
+                    <i class="fas fa-id-badge" style="color: var(--cyan);"></i> ID: <span id="supDisplayId">SUP-003</span>
+                </div>
+                <div class="info-pill">
+                    <i class="far fa-calendar-alt" style="color: var(--green);"></i> <span id="currentDateDisplay"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= 2. KPI SUMMARY CARDS ================= -->
+        <div class="kpi-grid">
+            
+            <!-- Supervisor Wallet Card -->
+            <div class="kpi-card wallet">
+                <div class="kpi-top">
+                    <div>
+                        <div class="kpi-title">My Supervisor Fund</div>
+                        <div class="kpi-value" style="color: var(--orange);">₹1,73,000</div>
+                    </div>
+                    <div class="kpi-icon" style="background: rgba(253, 126, 20, 0.15); color: var(--orange);">
+                        <i class="fas fa-wallet"></i>
+                    </div>
+                </div>
+                <div class="kpi-sub">
+                    <span>Total Cr: <strong style="color: var(--green);">₹2,40,000</strong></span>
+                    <span>Spent Dr: <strong style="color: var(--danger);">₹67,000</strong></span>
+                </div>
+            </div>
+
+            <!-- Site Attendance Card -->
+            <div class="kpi-card attendance">
+                <div class="kpi-top">
+                    <div>
+                        <div class="kpi-title">Today's Site Attendance</div>
+                        <div class="kpi-value" style="color: var(--green);">14 / 16 <span style="font-size: 13px; font-weight: 600; color: var(--text-muted);">Present</span></div>
+                    </div>
+                    <div class="kpi-icon" style="background: rgba(40, 167, 69, 0.15); color: var(--green);">
+                        <i class="fas fa-users-check"></i>
+                    </div>
+                </div>
+                <div class="kpi-sub">
+                    <span>Tagged Staff: <strong>16</strong></span>
+                    <span>Today's OT: <strong style="color: var(--accent);">18 Hrs</strong></span>
+                </div>
+            </div>
+
+            <!-- Retail / Purchase Card -->
+            <div class="kpi-card retail">
+                <div class="kpi-top">
+                    <div>
+                        <div class="kpi-title">Site Retailer Due</div>
+                        <div class="kpi-value" style="color: var(--cyan);">₹1,50,000</div>
+                    </div>
+                    <div class="kpi-icon" style="background: rgba(23, 162, 184, 0.15); color: var(--cyan);">
+                        <i class="fas fa-store"></i>
+                    </div>
+                </div>
+                <div class="kpi-sub">
+                    <span>Active Retailers: <strong>4</strong></span>
+                    <span>This Month Bills: <strong>7</strong></span>
+                </div>
+            </div>
+
+            <!-- Pending Approvals Card -->
+            <div class="kpi-card approvals">
+                <div class="kpi-top">
+                    <div>
+                        <div class="kpi-title">On Hold (Admin Approval)</div>
+                        <div class="kpi-value" style="color: var(--pink);">03 <span style="font-size: 13px; font-weight: 600; color: var(--text-muted);">Requests</span></div>
+                    </div>
+                    <div class="kpi-icon" style="background: rgba(232, 62, 140, 0.15); color: var(--pink);">
+                        <i class="fas fa-hourglass-half"></i>
+                    </div>
+                </div>
+                <div class="kpi-sub">
+                    <span>New Payments: <strong style="color: var(--accent);">2</strong></span>
+                    <span>Edit/Delete Req: <strong>1</strong></span>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ================= 3. QUICK SHORTCUTS ================= -->
+        <div>
+            <div class="section-heading"><i class="fas fa-bolt" style="color: var(--accent);"></i> Quick Site Operations</div>
+            <div class="quick-actions-grid">
+                
+                <a href="../EmployeeAttendance.html?view=supervisor&site=Salt%20Lake%20Sector%20V" class="action-tile">
+                    <i class="fas fa-calendar-check" style="background: rgba(40, 167, 69, 0.15); color: var(--green);"></i>
+                    <div class="action-tile-text">
+                        <strong>Mark Attendance</strong>
+                        <span>Daily P/A & OT Entry</span>
+                    </div>
+                </a>
+
+                <a href="../AllTypePayment.html?view=supervisor&site=Salt%20Lake%20Sector%20V" class="action-tile">
+                    <i class="fas fa-hand-holding-usd" style="background: rgba(232, 62, 140, 0.15); color: var(--pink);"></i>
+                    <div class="action-tile-text">
+                        <strong>Site / Emp Payment</strong>
+                        <span>Pay from Supervisor Fund</span>
+                    </div>
+                </a>
+
+                <a href="../RetailSiteInvoice.html?view=supervisor&site=Salt%20Lake%20Sector%20V" class="action-tile">
+                    <i class="fas fa-file-invoice" style="background: rgba(23, 162, 184, 0.15); color: var(--cyan);"></i>
+                    <div class="action-tile-text">
+                        <strong>New Retail Invoice</strong>
+                        <span>Log Site Material Bills</span>
+                    </div>
+                </a>
+
+                <a href="../AddRetailer.html?view=supervisor&site=Salt%20Lake%20Sector%20V" class="action-tile">
+                    <i class="fas fa-store-alt" style="background: rgba(0, 123, 255, 0.15); color: #007bff;"></i>
+                    <div class="action-tile-text">
+                        <strong>Add Site Retailer</strong>
+                        <span>Register Local Hardware/Vendor</span>
+                    </div>
+                </a>
+
+                <a href="../SupervisorLedger.html?view=supervisor&supId=SUP-003&site=Salt%20Lake%20Sector%20V" class="action-tile">
+                    <i class="fas fa-book-open" style="background: rgba(253, 126, 20, 0.15); color: var(--orange);"></i>
+                    <div class="action-tile-text">
+                        <strong>My Personal Ledger</strong>
+                        <span>A4 Report & Monthly Summary</span>
+                    </div>
+                </a>
+
+            </div>
+        </div>
+
+        <!-- ================= 4. SPLIT TABLES (RECENT PAYMENTS & TAGGED EMPLOYEES) ================= -->
+        <div class="split-grid">
+            
+            <!-- Left Panel: Recent Payments & Approval Status -->
+            <div class="panel-card">
+                <div class="panel-header">
+                    <h3><i class="fas fa-history" style="color: var(--pink);"></i> Recent Site Payments & Approval Status</h3>
+                    <a href="../AllTypePayment.html?view=supervisor&site=Salt%20Lake%20Sector%20V" class="panel-link">Go to Payment Hub →</a>
+                </div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Category</th>
+                                <th>Party / Employee</th>
+                                <th style="text-align: right;">Amount (₹)</th>
+                                <th style="text-align: center;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>28 Sep 2026</td>
+                                <td>Employee Payment</td>
+                                <td><strong>Bikash Roy</strong> (EMP-005)</td>
+                                <td style="text-align: right; font-weight: 700;">₹4,500</td>
+                                <td style="text-align: center;"><span class="badge badge-hold">⏳ On Hold</span></td>
+                            </tr>
+                            <tr>
+                                <td>27 Sep 2026</td>
+                                <td>Retailer Payment</td>
+                                <td><strong>BuildTech Supplies</strong></td>
+                                <td style="text-align: right; font-weight: 700;">₹15,000</td>
+                                <td style="text-align: center;"><span class="badge badge-cleared">✔️ Cleared</span></td>
+                            </tr>
+                            <tr>
+                                <td>25 Sep 2026</td>
+                                <td>Site Expense</td>
+                                <td><strong>Concrete Mixer Rent</strong></td>
+                                <td style="text-align: right; font-weight: 700;">₹12,000</td>
+                                <td style="text-align: center;"><span class="badge badge-cleared">✔️ Cleared</span></td>
+                            </tr>
+                            <tr>
+                                <td>20 Sep 2026</td>
+                                <td>Employee Payment</td>
+                                <td><strong>Sujoy Halder</strong> (EMP-012)</td>
+                                <td style="text-align: right; font-weight: 700;">₹14,500</td>
+                                <td style="text-align: center;"><span class="badge badge-hold">⏳ Edit Pending</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Right Panel: Site Tagged Employees -->
+            <div class="panel-card">
+                <div class="panel-header">
+                    <h3><i class="fas fa-user-hard-hat" style="color: var(--green);"></i> Site Tagged Employees</h3>
+                    <a href="../EmployeeLedger.html?view=supervisor&site=Salt%20Lake%20Sector%20V" class="panel-link">View Ledger →</a>
+                </div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th style="text-align: center;">Today</th>
+                                <th style="text-align: center;">This Month P / OT</th>
+                                <th style="text-align: right;">Net Due (₹)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Bikash Roy</strong><br><small style="color: var(--text-muted);">EMP-005 | Mason</small></td>
+                                <td style="text-align: center;"><span class="badge badge-present">Present</span></td>
+                                <td style="text-align: center; font-weight: 600;">22 D / 10 Hr</td>
+                                <td style="text-align: right; font-weight: 700; color: var(--danger);">₹8,500</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Ratan Das</strong><br><small style="color: var(--text-muted);">EMP-008 | Helper</small></td>
+                                <td style="text-align: center;"><span class="badge badge-present">Present</span></td>
+                                <td style="text-align: center; font-weight: 600;">24 D / 04 Hr</td>
+                                <td style="text-align: right; font-weight: 700; color: var(--danger);">₹4,200</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Sujoy Halder</strong><br><small style="color: var(--text-muted);">EMP-012 | Mason</small></td>
+                                <td style="text-align: center;"><span class="badge badge-absent">Absent</span></td>
+                                <td style="text-align: center; font-weight: 600;">19 D / 08 Hr</td>
+                                <td style="text-align: right; font-weight: 700; color: var(--danger);">₹6,100</td>
+                            </tr>
+                            <tr>
+                                <td><strong>koushik Mondal</strong><br><small style="color: var(--text-muted);">EMP-019 | Fitter</small></td>
+                                <td style="text-align: center;"><span class="badge badge-present">Present</span></td>
+                                <td style="text-align: center; font-weight: 600;">25 D / 12 Hr</td>
+                                <td style="text-align: right; font-weight: 700; color: var(--danger);">₹9,800</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        // Display current formatted date
+        const today = new Date();
+        const options = { day: '2-digit', month: 'short', year: 'numeric' };
+        document.getElementById('currentDateDisplay').innerText = today.toLocaleDateString('en-IN', options);
+    </script>
+</body>
+</html>

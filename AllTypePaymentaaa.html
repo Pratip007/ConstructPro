@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Type Payment Entry</title>
+    <!-- Load FontAwesome for modern icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- MASTER THEME MEMORY INTEGRATION -->
+    <script>
+        const savedTheme = localStorage.getItem('atr_theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        window.addEventListener('storage', function(e) {
+            if(e.key === 'atr_theme') { document.documentElement.setAttribute('data-theme', e.newValue); }
+        });
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
+
+        /* ================= THEME VARIABLES ================= */
+        :root {
+            --bg-page: #f0f2f5;
+            --bg-card: #ffffff;
+            --text-main: #2c3e50;
+            --text-muted: #6c757d;
+            --border-color: #e0e0e0;
+            --input-bg: #ffffff;
+            --input-border: #ced4da;
+            --primary: #007bff;
+            --primary-hover: #0056b3;
+            --success: #28a745;
+            --readonly-bg: #e9ecef;
+            --shadow: 0 8px 30px rgba(0,0,0,0.05);
+            --header-bg: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            --settle-bg: #e8f5e9;
+            --settle-border: #28a745;
+            --tds-bg: #fff3cd;
+            --tds-border: #ffc107;
+            --tds-text: #856404;
+        }
+
+        [data-theme="dark"] {
+            --bg-page: #121212;
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --input-bg: #2b2b2b;
+            --input-border: #444;
+            --primary: #ffc107;
+            --primary-hover: #e0a800;
+            --success: #28a745;
+            --readonly-bg: #333333;
+            --shadow: 0 8px 30px rgba(0,0,0,0.4);
+            --header-bg: linear-gradient(135deg, #2b2b2b 0%, #1a1a1a 100%);
+            --settle-bg: rgba(40, 167, 69, 0.1);
+            --settle-border: #28a745;
+            --tds-bg: rgba(255, 193, 7, 0.1);
+            --tds-border: #ffc107;
+            --tds-text: #ffc107;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Montserrat', sans-serif; transition: background-color 0.3s ease, color 0.3s ease; }
+        body { background-color: var(--bg-page); color: var(--text-main); padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+
+        /* Action Bar */
+        .action-bar { display: flex; justify-content: flex-end; margin-bottom: 15px; }
+        .btn-view { background-color: #17a2b8; color: white; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(23, 162, 184, 0.3); transition: all 0.3s; }
+        .btn-view:hover { background-color: #138496; transform: translateY(-2px); color: white; }
+        [data-theme="dark"] .btn-view { background-color: #3f51b5; box-shadow: 0 4px 10px rgba(63, 81, 181, 0.3);}
+        [data-theme="dark"] .btn-view:hover { background-color: #303f9f; }
+
+        /* Card Design */
+        .modern-card { background-color: var(--bg-card); border-radius: 16px; box-shadow: var(--shadow); border: 1px solid var(--border-color); overflow: hidden; }
+        .card-header { background: var(--header-bg); color: white; padding: 20px 25px; display: flex; justify-content: space-between; align-items: center; border-bottom: none; }
+        .card-header h2 { font-size: 1.25rem; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+        .header-date-input { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 8px 15px; border-radius: 8px; font-weight: 500; outline: none; color-scheme: dark; }
+        .card-body { padding: 30px; }
+
+        /* Forms */
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 25px; }
+        .full-width { grid-column: 1 / -1; }
+        .input-group { display: flex; flex-direction: column; gap: 8px; position: relative; }
+        .input-group label { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        .modern-input { width: 100%; padding: 12px 15px; border: 1.5px solid var(--input-border); border-radius: 8px; background-color: var(--input-bg); color: var(--text-main); font-size: 0.95rem; transition: all 0.3s; outline: none; }
+        .modern-input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.1); }
+        [data-theme="dark"] .modern-input:focus { box-shadow: 0 0 0 4px rgba(255, 193, 7, 0.1); }
+        .readonly-field { background-color: var(--readonly-bg); cursor: not-allowed; color: var(--text-muted); font-weight: 600; }
+
+        /* Animations & Blocks */
+        .settlement-block, .tds-block { display: none; padding: 15px; border-radius: 8px; animation: slideDown 0.3s ease forwards; }
+        .settlement-block { background-color: var(--settle-bg); border: 1px dashed var(--settle-border); }
+        .tds-block { background-color: var(--tds-bg); border: 1px dashed var(--tds-border); padding: 20px; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Text Highlights */
+        .due-amount { color: #dc3545 !important; font-weight: 700; font-size: 1.1rem; }
+        .paid-amount { color: #28a745 !important; font-weight: 700; font-size: 1.1rem; }
+        [data-theme="dark"] .due-amount { color: #ff6b6b !important; }
+        [data-theme="dark"] .paid-amount { color: #20c997 !important; }
+
+        /* Form Sections */
+        .form-section { display: none; padding: 25px; background: var(--bg-page); border-radius: 12px; border: 1px solid var(--border-color); margin-top: 20px; animation: slideUp 0.5s ease forwards; }
+        .active-section { display: block; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .section-title { font-size: 1.1rem; color: var(--primary); margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid var(--border-color); display: flex; align-items: center; gap: 10px; }
+
+        /* Buttons & Checkboxes */
+        .custom-checkbox { display: flex; align-items: center; gap: 10px; margin-top: 8px; cursor: pointer; }
+        .custom-checkbox input { width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer; }
+        .custom-checkbox span { font-size: 0.9rem; font-weight: 600; color: var(--success); }
+
+        .submit-btn { background-color: var(--primary); color: #fff; border: none; padding: 14px 30px; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; width: 100%; transition: all 0.3s; display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 20px; }
+        .submit-btn:hover { background-color: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        [data-theme="dark"] .submit-btn { color: #121212; }
+        .btn-cancel { background-color: #dc3545; color: #fff; padding: 12px 20px; border-radius: 8px; font-weight: 600; border: none; cursor: pointer; transition: 0.3s; }
+        .btn-cancel:hover { background-color: #c82333; }
+
+        /* ================= CUSTOM DROPDOWN STYLES ================= */
+        .custom-select-wrapper { position: relative; width: 100%; user-select: none; }
+        .custom-select { background-color: var(--input-bg); border: 1.5px solid var(--input-border); color: var(--text-main); padding: 12px 15px; border-radius: 8px; font-size: 0.95rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s; }
+        .custom-select:hover { border-color: var(--primary); }
+        .custom-options { position: absolute; top: 100%; left: 0; right: 0; background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: var(--shadow); z-index: 100; display: none; max-height: 220px; overflow-y: auto; margin-top: 5px; }
+        .custom-options.show { display: block; animation: slideDown 0.2s ease; }
+        .search-box { padding: 8px; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; background: var(--bg-card); z-index: 2; }
+        .search-box input { width: 100%; background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 8px 10px; border-radius: 6px; outline: none; font-size: 0.9rem; transition: 0.3s; }
+        .search-box input:focus { border-color: var(--primary); }
+        .dropdown-item { padding: 10px 15px; font-size: 0.9rem; color: var(--text-main); cursor: pointer; border-bottom: 1px solid var(--border-color); transition: background 0.2s; display: flex; justify-content: space-between; align-items: center;}
+        .dropdown-item:hover { background-color: var(--primary); color: #fff; }
+        
+        /* Modal Styles */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+        .modal-box { background: var(--bg-card); padding: 30px; border-radius: 12px; border-top: 4px solid var(--primary); width: 100%; max-width: 400px; box-shadow: var(--shadow); border: 1px solid var(--border-color); }
+        .modal-box h3 { color: var(--primary); margin-bottom: 20px; font-size: 18px; text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
+
+        /* Badges */
+        .badge-gst { background: #17a2b8; color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+        .badge-nongst { background: #6c757d; color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+        .badge-tds { background: #ffc107; color: #121212; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-left: 5px;}
+
+    </style>
+</head>
+<body>
+
+<!-- GLOBAL PAYMENT MODE ADD MODAL (ADMIN SECURED) -->
+<div class="modal-overlay" id="modeModal">
+    <div class="modal-box">
+        <h3>➕ Add New Payment Mode</h3>
+        <div class="input-group" style="margin-bottom: 15px;">
+            <label>Admin Password <span style="color:#dc3545">*</span></label>
+            <input type="password" class="modern-input" id="modeAdminPass" placeholder="Enter admin password">
+        </div>
+        <div class="input-group" style="margin-bottom: 25px;">
+            <label>New Payment Mode Name <span style="color:#dc3545">*</span></label>
+            <input type="text" class="modern-input" id="modeName" placeholder="e.g. Demand Draft, RTGS">
+        </div>
+        <div style="display:flex; gap: 10px;">
+            <button type="button" class="submit-btn" style="margin-top:0; flex: 1;" onclick="submitModeModal()">✅ Save Mode</button>
+            <button type="button" class="btn-cancel" style="flex: 1;" onclick="closeModeModal()">❌ Cancel</button>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    
+    <div class="action-bar">
+         <a href="paymentview.html" class="btn-view"><i class="fas fa-list"></i> View Report</a>
+    </div>
+
+    <div class="modern-card">
+        <div class="card-header">
+            <h2><i class="fas fa-wallet"></i> Central Payment Hub</h2>
+            <div>
+                <input type="date" id="globalDate" class="header-date-input" required>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <form id="paymentForm" onsubmit="submitPayment(event)">
+                
+                <div class="form-grid" style="grid-template-columns: 1fr;">
+                    <div class="input-group" style="max-width: 400px;">
+                        <label style="color: var(--primary); font-size: 1rem;"><i class="fas fa-hand-holding-usd"></i> Select Payment Type</label>
+                        <select class="modern-input" id="payeeType" onchange="toggleSections()" style="border-width: 2px; font-weight: bold;" required>
+                            <option value="">-- Choose Category --</option>
+                            <option value="employee">👨‍🔧 Employee Payment</option>
+                            <option value="contractor">🏗️ Contractor Payment</option> 
+                            <option value="mobilization">🚜 Mobilization Payment</option>
+                            <option value="retailer">🏪 Retailer Payment</option>
+                            <option value="supervisor" selected>🛡️ Supervisor Payment</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- ================= 1. EMPLOYEE SECTION (FULLY RESTORED) ================= -->
+                <div id="employeeSection" class="form-section">
+                    <h3 class="section-title"><i class="fas fa-user-tie"></i> Employee Payment Details</h3>
+                    <div class="form-grid">
+                        <div class="input-group">
+                            <label>Select Site</label>
+                            <select class="modern-input" id="empSite">
+                                <option value="untag">Untag (Office)</option>
+                                <option value="site1">Dum Dum Project</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Employee Name</label>
+                            <select class="modern-input" id="empName" onchange="autoFillSubId()">
+                                <option value="">Search Employee</option>
+                                <option value="e1" data-sub="SUB-2026-01">Rahul (Emp-101)</option>
+                                <option value="e2" data-sub="SUB-2026-02">Sumi (Emp-102)</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Allotted Sub ID</label>
+                            <select class="modern-input" id="empSubId">
+                                <option value="">Select Sub ID</option>
+                                <option value="SUB-2026-01">SUB-2026-01 (Rahul)</option>
+                                <option value="SUB-2026-02">SUB-2026-02 (Sumi)</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Company Account</label>
+                            <select class="modern-input" id="empCompanyAccount">
+                                <option value="">Select Account</option>
+                                <option value="acc1">HDFC Bank (ATR)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>Current Due Balance</label>
+                            <input type="text" class="modern-input readonly-field due-amount" id="empDue" value="8500.00" readonly>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>Entering Amount (₹)</label>
+                            <input type="number" class="modern-input" id="empPayAmount" step="0.01" placeholder="Enter Amount">
+                            <label class="custom-checkbox">
+                                <input type="checkbox" class="settlement-check" 
+                                    data-target-block="empSettleBlock" 
+                                    data-target-input="empSettleAmount" 
+                                    data-due="empDue" 
+                                    data-pay="empPayAmount">
+                                <span>Do Settlement?</span>
+                            </label>
+                        </div>
+
+                        <div class="input-group settlement-block" id="empSettleBlock">
+                            <label style="color: var(--success); font-weight: 700;">Remaining Settlement Amount (₹)</label>
+                            <input type="number" class="modern-input" id="empSettleAmount" step="0.01" style="border-color: var(--success);" placeholder="Edit Settlement Amount">
+                        </div>
+
+                        <!-- Employee Payment Mode (Dynamic) -->
+                        <div class="input-group">
+                            <label>Payment Mode</label>
+                            <div class="custom-select-wrapper">
+                                <div class="custom-select" onclick="toggleDropdown('empMode')"><span id="empModeText">-- Select Mode --</span> <i class="fas fa-chevron-down"></i></div>
+                                <div class="custom-options" id="empModeOptions">
+                                    <div class="search-box"><input type="text" placeholder="Search..." onkeyup="filterCustomList('empMode', this.value)"></div>
+                                    <div id="empModeList"></div>
+                                    <div class="dropdown-item" style="color:var(--success); font-weight:bold; justify-content:center; border-top:1px dashed var(--success);" onclick="openModeModal()">+ Add New Mode (Admin)</div>
+                                </div><input type="hidden" id="empMode" required>
+                            </div>
+                        </div>
+
+                        <div class="input-group full-width">
+                            <label>Remarks / Note</label>
+                            <input type="text" class="modern-input" placeholder="Type specific details...">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ================= 2. CONTRACTOR SECTION (FULLY RESTORED) ================= -->
+                <div id="contractorSection" class="form-section">
+                    <h3 class="section-title"><i class="fas fa-hard-hat"></i> Contractor Payment Details</h3>
+                    
+                    <div id="contStatusInfo" style="display:none; background: rgba(23, 162, 184, 0.1); border-left: 4px solid #17a2b8; padding: 12px 20px; margin-bottom: 20px; border-radius: 4px; font-weight: 600; align-items: center; justify-content: space-between;">
+                        <span id="contStatusText" style="color: var(--text-main);">Contractor Status</span>
+                        <div id="contBadges"></div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="input-group">
+                            <label>Select Site</label>
+                            <div class="custom-select-wrapper">
+                                <div class="custom-select" onclick="toggleDropdown('contSite')"><span id="contSiteText">-- Select Site --</span> <i class="fas fa-chevron-down"></i></div>
+                                <div class="custom-options" id="contSiteOptions">
+                                    <div class="search-box"><input type="text" placeholder="Search site..." onkeyup="filterCustomList('contSite', this.value)"></div>
+                                    <div id="contSiteList">
+                                        <div class="dropdown-item" onclick="selectCustomValue('contSite', 'Dum Dum Project', 'Dum Dum Project')">Dum Dum Project</div>
+                                    </div>
+                                </div><input type="hidden" id="contSite" required>
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label>Contractor Name</label>
+                            <div class="custom-select-wrapper">
+                                <div class="custom-select" onclick="toggleDropdown('contName')"><span id="contNameText">-- Select Contractor --</span> <i class="fas fa-chevron-down"></i></div>
+                                <div class="custom-options" id="contNameOptions">
+                                    <div class="search-box"><input type="text" placeholder="Search contractor..." onkeyup="filterCustomList('contName', this.value)"></div>
+                                    <div id="contNameList">
+                                        <div class="dropdown-item" onclick="selectContractor('Amitabha Roy', true, 2.0, 50000)">
+                                            <span>Amitabha Roy</span> <div><span class="badge-gst">GST</span><span class="badge-tds">TDS: 2%</span></div>
+                                        </div>
+                                    </div>
+                                </div><input type="hidden" id="contName" required>
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label>Company Bank Account</label>
+                            <div class="custom-select-wrapper">
+                                <div class="custom-select" onclick="toggleDropdown('contBank')"><span id="contBankText">-- Select Account --</span> <i class="fas fa-chevron-down"></i></div>
+                                <div class="custom-options" id="contBankOptions">
+                                    <div class="search-box"><input type="text" placeholder="Search account..." onkeyup="filterCustomList('contBank', this.value)"></div>
+                                    <div id="contBankList"><div class="dropdown-item" onclick="selectCustomValue('contBank', 'HDFC Bank (ATR)', 'HDFC Bank (ATR)')">HDFC Bank (ATR)</div></div>
+                                </div><input type="hidden" id="contBank" required>
+                            </div>
+                        </div>
+
+                        <div class="input-group full-width" id="gstInvoiceBlock" style="display: none; background: rgba(23, 162, 184, 0.05); padding: 20px; border-radius: 8px; border: 1px dashed #17a2b8;">
+                            <label style="color: #17a2b8; font-size: 1rem; margin-bottom: 10px;"><i class="fas fa-file-invoice"></i> GST Invoice Details</label>
+                            <div class="form-grid" style="margin-bottom: 0;">
+                                <div class="input-group"><label>Enter Invoice Number</label><input type="text" class="modern-input" id="contInvoiceManual" placeholder="e.g. INV-2026-001"></div>
+                                <div class="input-group"><label>Upload Invoice Document</label><input type="file" class="modern-input" id="contInvoiceFile" accept=".pdf, .jpg, .jpeg, .png" style="padding: 9px 15px;"></div>
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label id="dueLabelText">Total Net Due (After TDS)</label>
+                            <input type="text" class="modern-input readonly-field due-amount" id="contDue" value="0.00" readonly>
+                            <small id="dueHelperText" style="color: var(--text-muted); font-size: 0.75rem; font-weight:bold; margin-top: 4px;"></small>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>Payment Amount (₹)</label>
+                            <input type="number" class="modern-input" id="contPayAmount" step="0.01" placeholder="Enter Net Payment">
+                            <label class="custom-checkbox">
+                                <input type="checkbox" class="settlement-check" id="contSettleCheck" data-target-block="contSettleBlock" data-target-input="contSettleAmount" data-due="contDue" data-pay="contPayAmount">
+                                <span>Do Settlement?</span>
+                            </label>
+                        </div>
+                        
+                        <div class="input-group settlement-block" id="contSettleBlock">
+                            <label style="color: var(--success); font-weight: 700;">Remaining Settlement Amount (₹)</label>
+                            <input type="number" class="modern-input" id="contSettleAmount" step="0.01" style="border-color: var(--success);" placeholder="Auto Calculated Balance">
+                        </div>
+
+                        <div class="input-group full-width" style="margin-top: 10px;">
+                            <label class="custom-checkbox" style="display: inline-flex; background: var(--glass-bg); padding: 10px 15px; border-radius: 6px; border: 1px solid var(--border-color);">
+                                <input type="checkbox" id="contTdsPayCheck" onchange="toggleTdsPayBlock('cont')">
+                                <span style="color: var(--text-main);">🏛️ Pay Pending TDS to Government?</span>
+                            </label>
+                        </div>
+
+                        <div class="input-group full-width tds-block" id="contTdsPayBlock">
+                            <h4 style="color: var(--tds-text); margin-bottom: 15px; font-size: 1rem;"><i class="fas fa-university"></i> TDS Clearance Payment</h4>
+                            <div class="form-grid" style="margin-bottom: 0;">
+                                <div class="input-group"><label style="color: var(--tds-text);">Total Pending TDS (₹)</label><input type="text" class="modern-input readonly-field" id="contPendingTdsAmount" value="0.00" readonly style="color: #dc3545; font-weight: bold;"></div>
+                                <div class="input-group"><label style="color: var(--tds-text);">Enter Amount to Pay (₹)</label><input type="number" class="modern-input" id="contPayTdsAmount" step="0.01" style="border-color: var(--tds-border);"></div>
+                            </div>
+                        </div>
+
+                        <!-- Contractor Payment Mode (Dynamic) -->
+                        <div class="input-group">
+                            <label>Payment Mode</label>
+                            <div class="custom-select-wrapper">
+                                <div class="custom-select" onclick="toggleDropdown('contMode')"><span id="contModeText">-- Select Mode --</span> <i class="fas fa-chevron-down"></i></div>
+                                <div class="custom-options" id="contModeOptions">
+                                    <div class="search-box"><input type="text" placeholder="Search..." onkeyup="filterCustomList('contMode', this.value)"></div>
+                                    <div id="contModeList"></div>
+                                    <div class="dropdown-item" style="color:var(--success); font-weight:bold; justify-content:center; border-top:1px dashed var(--success);" onclick="openModeModal()">+ Add New Mode (Admin)</div>
+                                </div><input type="hidden" id="contMode" required>
+                            </div>
+                        </div>
+
+                        <div class="input-group full-width"><label>Remarks / Note</label><input type="text" class="modern-input" placeholder="Type specific details..."></div>
+                    </div>
+                </div>
+
+                <!-- ================= 3. MOBILIZATION SECTION (FULLY RESTORED) ================= -->
+                <div id="mobilizationSection" class="form-section">
+                    <h3 class="section-title"><i class="fas fa-truck-loading"></i> Mobilization / Vendor Payment</h3>
+                    <div class="form-grid">
+                        <div class="input-group">
+                            <label>Select Project Site</label>
+                            <div class="custom-select-wrapper">
+                                <div class="custom-select" onclick="toggleDropdown('mobSite')"><span id="mobSiteText">-- Select Site --</span> <i class="fas fa-chevron-down"></i></div>
+                                <div class="custom-options" id="mobSiteOptions"><div id="mobSiteList"><div class="dropdown-item" onclick="selectCustomValue('mobSite', 'Dum Dum', 'Dum Dum')">Dum Dum Project</div></div></div><input type="hidden" id="mobSite">
+                            </div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>Mobilization / Party Name</label>
+                            <div class="custom-select-wrapper">
+                                <div class="custom-select" onclick="toggleDropdown('mobParty')"><span id="mobPartyText">-- Select Party --</span> <i class="fas fa-chevron-down"></i></div>
+                                <div class="custom-options" id="mobPartyOptions">
+                                    <div id="mobPartyList"><div class="dropdown-item" onclick="selectMobParty('JCB Earthmovers')">JCB Earthmovers</div></div>
+                                </div><input type="hidden" id="mobParty">
+                            </div>
+                        </div>
+
+                        <div class="input-group full-width" id="mobInvoiceBlock" style="display: none; background: rgba(0, 123, 255, 0.05); padding: 15px; border-radius: 8px; border: 1px dashed var(--primary);">
+                            <label style="color: var(--primary);"><i class="fas fa-file-invoice-dollar"></i> Select Pending Invoice</label>
+                            <div class="custom-select-wrapper">
+                                <div class="custom-select" onclick="toggleDropdown('mobInvoice')" style="border-color: var(--primary);"><span id="mobInvoiceText">-- Select Invoice --</span> <i class="fas fa-chevron-down"></i></div>
+                                <div class="custom-options" id="mobInvoiceOptions"><div id="mobInvoiceList"></div></div><input type="hidden" id="mobInvoice">
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label>Total Net Due (After TDS)</label>
+                            <input type="text" class="modern-input readonly-field due-amount" id="mobDue" value="0.00" readonly>
+                        </div>
+                        <div class="input-group">
+                            <label>Entering Amount (₹)</label>
+                            <input type="number" class="modern-input" id="mobPayAmount" step="0.01">
+                            <label class="custom-checkbox"><input type="checkbox" class="settlement-check" data-target-block="mobSettleBlock" data-target-input="mobSettleAmount" data-due="mobDue" data-pay="mobPayAmount"><span>Do Settlement?</span></label>
+                        </div>
+                        <div class="input-group settlement-block" id="mobSettleBlock">
+                            <label style="color: var(--success); font-weight: 700;">Settlement Amount (₹)</label>
+                            <input type="number" class="modern-input" id="mobSettleAmount" step="0.01" style="border-color: var(--success);">
+                        </div>
+                        
+                        <!-- Mobilization Payment Mode (Dynamic) -->
+                        <div class="input-group">
+                            <label>Payment Mode</label>
+                            <div class="custom-select-wrapper">
+                                <div class="custom-select" onclick="toggleDropdown('mobMode')"><span id="mobModeText">-- Select Mode --</span> <i class="fas fa-chevron-down"></i></div>
+                                <div class="custom-options" id="mobModeOptions">
+                                    <div class="search-box"><input type="text" placeholder="Search..." onkeyup="filterCustomList('mobMode', this.value)"></div>
+                                    <div id="mobModeList"></div>
+                                    <div class="dropdown-item" style="color:var(--success); font-weight:bold; justify-content:center; border-top:1px dashed var(--success);" onclick="openModeModal()">+ Add New Mode (Admin)</div>
+                                </div><input type="hidden" id="mobMode" required>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ================= 4. RETAILER SECTION (FULLY RESTORED) ================= -->
+                <div id="retailerSection" class="form-section">
+                    <h3 class="section-title"><i class="fas fa-store"></i> Retailer / Purchase Payment</h3>
+                    <div class="form-grid">
+                        
+                        <div class="input-group">
+                            <label>Select Project Site</label>
+                            <div class="custom-select-wrapper">
+                                <div class="custom-select" onclick="toggleDropdown('retSite')">
+                                    <span id="retSiteText">-- Select Site --</span> <i class="fas fa-chevron-down"></i>
+                                </div>
+                                <div class="custom-options" id="retSiteOptions">
+                                    <div class="search-box"><input type="text" placeholder="Search site..." onkeyup="filterCustomList('retSite', this.value)"></div>
+                                    <div id="retSiteList">
+                                        <div class="dropdown-item" onclick="selectCustomValue('retSite', 'Dum Dum Project', 'Dum Dum Project')">Dum Dum Project</div>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="retSite" required>
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label>Retailer / Party Name</label>
+                            <div class="custom-select-wrapper">
+                                <div class="custom-select" onclick="toggleDropdown('retName')">
+                                    <span id="retNameText">-- Select Retailer --</span> <i class="fas fa-chevron-down"></i>
+                                </div>
+                                <div class="custom-options" id="retNameOptions">
+                                    <div class="search-box"><input type="text" placeholder="Search retailer..." onkeyup="filterCustomList('retName', this.value)"></div>
+                                    <div id="retNameList">
+                                        <div class="dropdown-item" onclick="selectRetailer('BuildTech Supplies', 150000)">BuildTech Supplies</div>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="retName" required>
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label>Company Bank Account</label>
+                            <div class="custom-select-wrapper">
+                                <div class="custom-select" onclick="toggleDropdown('retBank')">
+                                    <span id="retBankText">-- Select Account --</span> <i class="fas fa-chevron-down"></i>
+                                </div>
+                                <div class="custom-options" id="retBankOptions">
+                                    <div class="search-box"><input type="text" placeholder="Search account..." onkeyup="filterCustomList('retBank', this.value)"></div>
+                                    <div id="retBankList">
+                                        <div class="dropdown-item" onclick="selectCustomValue('retBank', 'HDFC Bank (ATR)', 'HDFC Bank (ATR)')">HDFC Bank (ATR)</div>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="retBank" required>
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label>Total Outstanding Due (₹)</label>
+                            <input type="text" class="modern-input readonly-field due-amount" id="retDue" value="0.00" readonly>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>Payment Amount (₹)</label>
+                            <input type="number" class="modern-input" id="retPayAmount" step="0.01" placeholder="Enter Payment Amount">
+                            <label class="custom-checkbox">
+                                <input type="checkbox" class="settlement-check" id="retSettleCheck"
+                                    data-target-block="retSettleBlock" 
+                                    data-target-input="retSettleAmount" 
+                                    data-due="retDue" 
+                                    data-pay="retPayAmount">
+                                <span>Do Settlement?</span>
+                            </label>
+                        </div>
+                        
+                        <div class="input-group settlement-block" id="retSettleBlock">
+                            <label style="color: var(--success); font-weight: 700;">Remaining Settlement Amount (₹)</label>
+                            <input type="number" class="modern-input" id="retSettleAmount" step="0.01" style="border-color: var(--success);" placeholder="Auto Calculated Balance">
+                        </div>
+
+                        <!-- Retailer Payment Mode (Dynamic) -->
+                        <div class="input-group">
+                            <label>Payment Mode</label>
+                            <div class="custom-select-wrapper">
+                                <div class="custom-select" onclick="toggleDropdown('retMode')">
+                                    <span id="retModeText">-- Select Mode --</span> <i class="fas fa-chevron-down"></i>
+                                </div>
+                                <div class="custom-options" id="retModeOptions">
+                                    <div class="search-box"><input type="text" placeholder="Search..." onkeyup="filterCustomList('retMode', this.value)"></div>
+                                    <div id="retModeList"></div>
+                                    <div class="dropdown-item" style="color:var(--success); font-weight:bold; justify-content:center; border-top:1px dashed var(--success);" onclick="openModeModal()">+ Add New Mode (Admin)</div>
+                                </div>
+                                <input type="hidden" id="retMode" required>
+                            </div>
+                        </div>
+
+                        <div class="input-group full-width">
+                            <label>Remarks / Note</label>
+                            <input type="text" class="modern-input" placeholder="Type specific details...">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ================= 5. SUPERVISOR SECTION (NEW) ================= -->
+                <div id="supervisorSection" class="form-section active-section">
+                    <h3 class="section-title"><i class="fas fa-user-shield"></i> Supervisor Fund Allocation</h3>
+                    <div class="form-grid">
+                        
+                        <!-- Site Dropdown -->
+                        <div class="input-group">
+                            <label>Select Project Site</label>
+                            <div class="custom-select-wrapper">
+                                <div class="custom-select" onclick="toggleDropdown('supSite')">
+                                    <span id="supSiteText">-- Select Site --</span> <i class="fas fa-chevron-down"></i>
+                                </div>
+                                <div class="custom-options" id="supSiteOptions">
+                                    <div class="search-box"><input type="text" placeholder="Search site..." onkeyup="filterCustomList('supSite', this.value)"></div>
+                                    <div id="supSiteList">
+                                        <div class="dropdown-item" onclick="selectCustomValue('supSite', 'Dum Dum Project', 'Dum Dum Project')">Dum Dum Project</div>
+                                        <div class="dropdown-item" onclick="selectCustomValue('supSite', 'Salt Lake IT Park', 'Salt Lake IT Park')">Salt Lake IT Park</div>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="supSite" required>
+                            </div>
+                        </div>
+
+                        <!-- Supervisor Name Dropdown -->
+                        <div class="input-group">
+                            <label>Assign Supervisor</label>
+                            <div class="custom-select-wrapper">
+                                <div class="custom-select" onclick="toggleDropdown('supName')">
+                                    <span id="supNameText">-- Select Supervisor --</span> <i class="fas fa-chevron-down"></i>
+                                </div>
+                                <div class="custom-options" id="supNameOptions">
+                                    <div class="search-box"><input type="text" placeholder="Search supervisor..." onkeyup="filterCustomList('supName', this.value)"></div>
+                                    <div id="supNameList">
+                                        <!-- Mocking Supervisor selection with available balance -->
+                                        <div class="dropdown-item" onclick="selectSupervisor('Bikram Saha', 12500)">Bikram Saha</div>
+                                        <div class="dropdown-item" onclick="selectSupervisor('Arjun Das', 4500)">Arjun Das</div>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="supName" required>
+                            </div>
+                        </div>
+
+                        <!-- Available Balance (Read-only) -->
+                        <div class="input-group">
+                            <label>Current Available Balance (₹)</label>
+                            <input type="text" class="modern-input readonly-field" id="supBalance" value="0.00" readonly style="color: var(--primary); font-weight: bold; font-size: 1.1rem;">
+                            <small style="color: var(--text-muted); font-size: 0.75rem; margin-top: 4px;">* Funds currently held by supervisor.</small>
+                        </div>
+
+                        <!-- Company Bank Account Dropdown -->
+                        <div class="input-group">
+                            <label>Company Bank Account</label>
+                            <div class="custom-select-wrapper">
+                                <div class="custom-select" onclick="toggleDropdown('supBank')">
+                                    <span id="supBankText">-- Select Account --</span> <i class="fas fa-chevron-down"></i>
+                                </div>
+                                <div class="custom-options" id="supBankOptions">
+                                    <div class="search-box"><input type="text" placeholder="Search account..." onkeyup="filterCustomList('supBank', this.value)"></div>
+                                    <div id="supBankList">
+                                        <div class="dropdown-item" onclick="selectCustomValue('supBank', 'HDFC Bank (ATR)', 'HDFC Bank (ATR)')">HDFC Bank (ATR)</div>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="supBank" required>
+                            </div>
+                        </div>
+                        
+                        <!-- Fund Transfer Amount -->
+                        <div class="input-group">
+                            <label>Fund Transfer Amount (₹)</label>
+                            <input type="number" class="modern-input" id="supPayAmount" step="0.01" placeholder="Enter amount to transfer" required>
+                        </div>
+
+                        <!-- Supervisor Payment Mode (Dynamic) -->
+                        <div class="input-group">
+                            <label>Payment Mode</label>
+                            <div class="custom-select-wrapper">
+                                <div class="custom-select" onclick="toggleDropdown('supMode')">
+                                    <span id="supModeText">-- Select Mode --</span> <i class="fas fa-chevron-down"></i>
+                                </div>
+                                <div class="custom-options" id="supModeOptions">
+                                    <div class="search-box"><input type="text" placeholder="Search..." onkeyup="filterCustomList('supMode', this.value)"></div>
+                                    
+                                    <div id="supModeList">
+                                        <!-- Dynamically populated by renderPaymentModes() -->
+                                    </div>
+                                    
+                                    <!-- Global Add New Mode Trigger -->
+                                    <div class="dropdown-item" style="color:var(--success); font-weight:bold; justify-content:center; border-top:1px dashed var(--success);" onclick="openModeModal()">+ Add New Mode (Admin)</div>
+                                </div>
+                                <input type="hidden" id="supMode" required>
+                            </div>
+                        </div>
+
+                        <!-- Remarks -->
+                        <div class="input-group full-width">
+                            <label>Remarks / Allocation Note</label>
+                            <input type="text" class="modern-input" placeholder="Type reason for fund transfer...">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="submitBlock" style="display:block;">
+                    <button type="submit" class="submit-btn"><i class="fas fa-save"></i> Save Payment Entry</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 1. SET GLOBAL DATE & INITIAL RENDER
+    const dateField = document.getElementById('globalDate');
+    if(!dateField.value) dateField.value = new Date().toISOString().split('T')[0];
+
+    // ================= GLOBAL PAYMENT MODE ENGINE (ADMIN) =================
+    // Local storage fetch for Payment Modes
+    let globalPaymentModes = JSON.parse(localStorage.getItem('atr_payment_modes')) || ['Bank Transfer (NEFT/RTGS)', 'Cheque', 'UPI', 'Cash'];
+
+    function renderPaymentModes() {
+        // Sections that require the mode list (added 'sup' for supervisor)
+        const prefixes = ['emp', 'cont', 'mob', 'ret', 'sup'];
+        
+        prefixes.forEach(prefix => {
+            const listContainer = document.getElementById(`${prefix}ModeList`);
+            if(listContainer) {
+                listContainer.innerHTML = '';
+                globalPaymentModes.forEach(mode => {
+                    const div = document.createElement('div');
+                    div.className = 'dropdown-item';
+                    div.innerText = mode;
+                    // Fix click event to close dropdown automatically
+                    div.onclick = function() { selectCustomValue(`${prefix}Mode`, mode, mode); };
+                    listContainer.appendChild(div);
+                });
+            }
+        });
+    }
+
+    // Call on load
+    window.onload = function() {
+        renderPaymentModes();
+        toggleSections(); // Ensure correct section is visible on load
+    };
+
+    // Modal Controls
+    function openModeModal() {
+        document.getElementById('modeModal').style.display = 'flex';
+        // Close all dropdowns
+        document.querySelectorAll('.custom-options').forEach(o => o.classList.remove('show'));
+    }
+    
+    function closeModeModal() {
+        document.getElementById('modeModal').style.display = 'none';
+        document.getElementById('modeAdminPass').value = "";
+        document.getElementById('modeName').value = "";
+    }
+
+    function submitModeModal() {
+        const pass = document.getElementById('modeAdminPass').value;
+        const newMode = document.getElementById('modeName').value.trim();
+        
+        if(pass !== 'admin') {
+            alert("❌ Incorrect Admin Password!");
+            return;
+        }
+        if(!newMode) {
+            alert("⚠️ Please enter a Mode Name.");
+            return;
+        }
+        
+        // Add to array and save
+        if(!globalPaymentModes.includes(newMode)) {
+            globalPaymentModes.push(newMode);
+            localStorage.setItem('atr_payment_modes', JSON.stringify(globalPaymentModes));
+            renderPaymentModes(); // Re-render all dropdowns
+            alert(`✅ '${newMode}' successfully added to all Payment Mode lists.`);
+        } else {
+            alert("⚠️ This mode already exists.");
+        }
+        
+        closeModeModal();
+    }
+
+    // 2. TOGGLE MASTER SECTIONS
+    function toggleSections() {
+        const type = document.getElementById('payeeType').value;
+        document.querySelectorAll('.form-section').forEach(el => el.classList.remove('active-section'));
+        document.getElementById('submitBlock').style.display = type ? 'block' : 'none';
+
+        if(type === 'employee') document.getElementById('employeeSection').classList.add('active-section');
+        else if(type === 'contractor') document.getElementById('contractorSection').classList.add('active-section');
+        else if(type === 'mobilization') document.getElementById('mobilizationSection').classList.add('active-section');
+        else if(type === 'retailer') document.getElementById('retailerSection').classList.add('active-section');
+        else if(type === 'supervisor') document.getElementById('supervisorSection').classList.add('active-section'); // New Logic
+    }
+
+    // ================= CUSTOM DROPDOWN ENGINE =================
+    function toggleDropdown(fieldId) {
+        document.querySelectorAll('.custom-options').forEach(el => {
+            if(el.id !== fieldId + 'Options') el.classList.remove('show');
+        });
+        document.getElementById(fieldId + 'Options').classList.toggle('show');
+    }
+
+    function selectCustomValue(fieldId, text, value) {
+        document.getElementById(fieldId + 'Text').innerText = text;
+        document.getElementById(fieldId).value = value;
+        document.getElementById(fieldId + 'Options').classList.remove('show');
+    }
+
+    function filterCustomList(fieldId, query) {
+        query = query.toLowerCase();
+        document.querySelectorAll(`#${fieldId}List .dropdown-item`).forEach(item => {
+            item.style.display = item.innerText.toLowerCase().includes(query) ? "flex" : "none";
+        });
+    }
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.custom-select-wrapper') && !e.target.closest('.modal-box')) {
+            document.querySelectorAll('.custom-options').forEach(o => o.classList.remove('show'));
+        }
+    });
+
+    // ================= SPECIFIC LOGICS (RETAINED) =================
+    function autoFillSubId() {
+        const empSelect = document.getElementById("empName");
+        const subIdValue = empSelect.options[empSelect.selectedIndex].getAttribute("data-sub");
+        document.getElementById("empSubId").value = subIdValue ? subIdValue : "";
+    }
+
+    function selectContractor(name, isGst, tdsPercentage, baseGrossDue) {
+        // Kept exactly as previous
+        document.getElementById('contNameText').innerText = name;
+        document.getElementById('contName').value = name;
+        document.getElementById('contNameOptions').classList.remove('show');
+        const statusBox = document.getElementById('contStatusInfo');
+        const badgesContainer = document.getElementById('contBadges');
+        statusBox.style.display = 'flex';
+        let badgesHTML = '';
+        if(isGst) { badgesHTML += '<span class="badge-gst">GST Applicable</span>'; document.getElementById('gstInvoiceBlock').style.display = 'block'; } 
+        else { badgesHTML += '<span class="badge-nongst">NON-GST</span>'; document.getElementById('gstInvoiceBlock').style.display = 'none'; }
+        if(tdsPercentage > 0) { badgesHTML += `<span class="badge-tds" style="margin-left:8px;">TDS Applicable (${tdsPercentage}%)</span>`; } 
+        else { badgesHTML += `<span class="badge-nongst" style="margin-left:8px;">NO TDS</span>`; }
+        badgesContainer.innerHTML = badgesHTML;
+        let totalNetDue = baseGrossDue;
+        let tdsAmountDeducted = 0;
+        if(tdsPercentage > 0) {
+            tdsAmountDeducted = (baseGrossDue * tdsPercentage) / 100;
+            totalNetDue = baseGrossDue - tdsAmountDeducted;
+            document.getElementById('contPendingTdsAmount').value = tdsAmountDeducted.toFixed(2);
+            document.getElementById('dueHelperText').innerText = `Gross: ₹${baseGrossDue} | TDS Deducted: ₹${tdsAmountDeducted}`;
+        } else {
+            document.getElementById('contPendingTdsAmount').value = "0.00";
+            document.getElementById('dueHelperText').innerText = "Gross equals Net (No TDS)";
+        }
+        document.getElementById('contDue').value = totalNetDue.toFixed(2);
+        resetSettlementCheck('cont');
+    }
+
+    const mobInvoicesData = { "JCB Earthmovers": [ { invNo: "MOB-INV-001", grossAmount: 25500, tdsAmount: 500, netDue: 25000 } ] };
+    function selectMobParty(name) {
+        document.getElementById('mobPartyText').innerText = name;
+        document.getElementById('mobParty').value = name;
+        document.getElementById('mobPartyOptions').classList.remove('show');
+        resetSettlementCheck('mob');
+        
+        const invoiceBlock = document.getElementById('mobInvoiceBlock');
+        const invListDiv = document.getElementById('mobInvoiceList');
+        invListDiv.innerHTML = "";
+        let invoices = mobInvoicesData[name] || [];
+        let validInvoices = invoices.filter(inv => inv.netDue > 0);
+        if(validInvoices.length > 0) {
+            invoiceBlock.style.display = 'block';
+            validInvoices.forEach(inv => {
+                let div = document.createElement('div');
+                div.className = 'dropdown-item';
+                div.innerHTML = `<span><i class="fas fa-file-alt text-primary"></i> ${inv.invNo}</span> <span style="color:#dc3545; font-weight:bold;">Due: ₹${inv.netDue}</span>`;
+                div.onclick = function() { selectMobInvoice(inv.invNo, inv.netDue, inv.tdsAmount, inv.grossAmount); };
+                invListDiv.appendChild(div);
+            });
+        }
+    }
+    function selectMobInvoice(invNo, netDue, tdsAmount, grossAmount) {
+        document.getElementById('mobInvoiceText').innerText = invNo;
+        document.getElementById('mobInvoice').value = invNo;
+        document.getElementById('mobInvoiceOptions').classList.remove('show');
+        document.getElementById('mobDue').value = netDue.toFixed(2);
+        resetSettlementCheck('mob');
+    }
+    function toggleTdsPayBlock(prefix) {
+        const isChecked = document.getElementById(prefix + 'TdsPayCheck').checked;
+        document.getElementById(prefix + 'TdsPayBlock').style.display = isChecked ? 'block' : 'none';
+    }
+
+    function selectRetailer(name, dueAmount) {
+        document.getElementById('retNameText').innerText = name;
+        document.getElementById('retName').value = name;
+        document.getElementById('retNameOptions').classList.remove('show');
+        document.getElementById('retDue').value = dueAmount.toFixed(2);
+        resetSettlementCheck('ret');
+    }
+
+    // ================= SUPERVISOR LOGIC (NEW) =================
+    function selectSupervisor(name, availableBalance) {
+        document.getElementById('supNameText').innerText = name;
+        document.getElementById('supName').value = name;
+        document.getElementById('supNameOptions').classList.remove('show');
+        
+        // Show Available Balance
+        document.getElementById('supBalance').value = availableBalance.toFixed(2);
+    }
+
+    // ================= SETTLEMENT CALCULATION TRIGGER =================
+    function resetSettlementCheck(prefix) {
+        let chk = document.getElementById(prefix + 'SettleCheck');
+        if(chk) {
+            chk.checked = false;
+            document.getElementById(chk.getAttribute('data-target-block')).style.display = 'none';
+            document.getElementById(chk.getAttribute('data-target-input')).value = "";
+            document.getElementById(chk.getAttribute('data-pay')).value = "";
+        }
+    }
+
+    document.querySelectorAll('.settlement-check').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            let blockId = this.getAttribute('data-target-block');
+            let inputId = this.getAttribute('data-target-input');
+            let dueId = this.getAttribute('data-due');
+            let payId = this.getAttribute('data-pay');
+            
+            let settleBlock = document.getElementById(blockId);
+            let settleInput = document.getElementById(inputId);
+            
+            let totalDue = parseFloat(document.getElementById(dueId).value) || 0;
+            let currentPaying = parseFloat(document.getElementById(payId).value) || 0;
+
+            if(this.checked) {
+                settleBlock.style.display = 'flex';
+                let balance = totalDue - currentPaying;
+                settleInput.value = balance > 0 ? balance.toFixed(2) : "0.00";
+            } else {
+                settleBlock.style.display = 'none';
+                settleInput.value = '';
+            }
+        });
+    });
+
+    // ================= FORM SUBMISSION =================
+    function submitPayment(e) {
+        e.preventDefault(); 
+        alert("✅ Payment Entry Saved Successfully!");
+        
+        const currentType = document.getElementById('payeeType').value;
+        const currentDate = dateField.value;
+        e.target.reset(); 
+        
+        // Reset custom dropdown UI texts based on section
+        if(currentType === 'contractor') {
+            document.getElementById('contSiteText').innerText = "-- Select Site --";
+            document.getElementById('contNameText').innerText = "-- Select Contractor --";
+            document.getElementById('contBankText').innerText = "-- Select Account --";
+            document.getElementById('contModeText').innerText = "-- Select Mode --";
+        } else if (currentType === 'retailer') {
+            document.getElementById('retSiteText').innerText = "-- Select Site --";
+            document.getElementById('retNameText').innerText = "-- Select Retailer --";
+            document.getElementById('retBankText').innerText = "-- Select Account --";
+            document.getElementById('retModeText').innerText = "-- Select Mode --";
+            document.getElementById('retDue').value = "0.00";
+            resetSettlementCheck('ret');
+        } else if (currentType === 'supervisor') {
+            document.getElementById('supSiteText').innerText = "-- Select Site --";
+            document.getElementById('supNameText').innerText = "-- Select Supervisor --";
+            document.getElementById('supBankText').innerText = "-- Select Account --";
+            document.getElementById('supModeText').innerText = "-- Select Mode --";
+            document.getElementById('supBalance').value = "0.00";
+        }
+
+        document.getElementById('payeeType').value = currentType;
+        dateField.value = currentDate;
+    }
+</script>
+</body>
+</html>

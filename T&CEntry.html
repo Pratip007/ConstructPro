@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Terms & Conditions Entry</title>
+    
+    <!-- Sync theme with Master Dashboard -->
+    <script>
+        function applyDashboardTheme() {
+            const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        }
+        applyDashboardTheme();
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'atr_theme' || !e.key) {
+                applyDashboardTheme();
+            }
+        });
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap');
+
+        :root {
+            --bg-body: transparent; 
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.12);
+            
+            /* Dynamic Glass & Input Variables */
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(0, 0, 0, 0.2);
+            --input-focus-bg: rgba(0, 0, 0, 0.4);
+            
+            --shadow: 0 4px 15px rgba(0,0,0,0.3);
+            
+            /* Theme Color */
+            --theme-color: #007bff;
+            --theme-glow: rgba(0, 123, 255, 0.4);
+            --theme-transition: all 0.4s ease;
+        }
+
+        [data-theme="light"] {
+            --bg-body: transparent;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #555555;
+            --border-color: rgba(0, 0, 0, 0.15);
+            
+            --glass-bg: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --input-bg: rgba(255, 255, 255, 0.5);
+            --input-focus-bg: #ffffff;
+            
+            --shadow: 0 8px 25px rgba(0,0,0,0.05);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(136, 136, 136, 0.3); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(136, 136, 136, 0.6); }
+
+        body { background-color: var(--bg-body); color: var(--text-main); padding: 40px; transition: var(--theme-transition); min-height: 100vh; }
+
+        .header-section { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid var(--border-color); padding-bottom: 20px; transition: var(--theme-transition); flex-wrap: wrap; gap: 15px;}
+        .header-section h1 { font-size: 24px; color: var(--text-main); transition: var(--theme-transition); display: flex; align-items: center; gap: 10px; flex-wrap: wrap;}
+
+        .role-mode-badge {
+            display: none;
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 700;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-back {
+            background-color: var(--glass-bg);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.3s;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+        }
+        .btn-back:hover { background-color: var(--theme-color); color: #fff; border-color: var(--theme-color); transform: translateY(-2px); }
+
+        /* Glassy Neo Form Style */
+        .glassy-form-wrapper {
+            background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border); border-top: 4px solid var(--theme-color);
+            border-radius: 12px; padding: 30px; box-shadow: var(--shadow); margin-bottom: 40px;
+            transition: var(--theme-transition);
+        }
+
+        .form-group { display: flex; flex-direction: column; margin-bottom: 20px; position: relative; }
+        .form-group label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; font-weight: 600; transition: color 0.3s;}
+        
+        .form-group textarea { 
+            padding: 15px; background: var(--input-bg); border: 1px solid var(--border-color); 
+            border-radius: 8px; color: var(--text-main); font-size: 14px; outline: none; resize: vertical; min-height: 100px;
+            transition: all 0.3s ease; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); color-scheme: dark;
+        }
+        [data-theme="light"] .form-group textarea { color-scheme: light; }
+        
+        .form-group textarea:focus { border-color: var(--theme-color); background: var(--input-focus-bg); box-shadow: 0 0 10px var(--theme-glow), inset 0 2px 4px rgba(0,0,0,0.05); }
+        .form-group textarea:focus + label, .form-group:focus-within label { color: var(--theme-color); }
+
+        .btn-submit {
+            width: 100%; padding: 15px; background: var(--theme-color); color: #ffffff; 
+            border: none; font-weight: 700; text-transform: uppercase; 
+            letter-spacing: 1px; border-radius: 8px; cursor: pointer; font-size: 14px; box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3); transition: all 0.3s ease;
+        }
+        .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 8px 20px var(--theme-glow); filter: brightness(1.1); }
+        .btn-submit:active { transform: translateY(1px); }
+
+        /* Table Components Layout */
+        .table-container { background-color: var(--bg-card); padding: 25px; border-radius: 10px; box-shadow: var(--shadow); transition: var(--theme-transition); overflow-x: auto;}
+        .table-container h3 { margin-bottom: 20px; color: var(--theme-color); }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 15px; border-bottom: 1px solid var(--border-color); font-size: 14px; color: var(--text-main); vertical-align: middle; transition: var(--theme-transition); }
+        th { color: var(--text-muted); text-transform: uppercase; font-size: 12px; }
+
+        .bullet-point-text { display: flex; align-items: flex-start; gap: 10px; font-weight: 500; line-height: 1.5; }
+        .bullet-dot { color: #ffc107; font-size: 20px; user-select: none; line-height: 1; margin-top: -3px;}
+        .clause-content { flex: 1; }
+
+        .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+        .status-active { background: rgba(40, 167, 69, 0.2); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.4); }
+        .status-disabled { background: rgba(220, 53, 69, 0.2); color: #ff6b6b; border: 1px solid rgba(220, 53, 69, 0.4); }
+
+        .pending-status-pill {
+            display: inline-block;
+            background: rgba(255, 193, 7, 0.16);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.45);
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            margin-top: 5px;
+            text-transform: uppercase;
+        }
+
+        .btn-mini { padding: 6px 12px; font-size: 11px; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; margin-right: 5px; text-transform: uppercase; transition: all 0.2s;}
+        .btn-mini:hover { transform: translateY(-1px); filter: brightness(1.1); }
+        .btn-disable { background: #ffc107; color: #121212; }
+        .btn-edit { background: #007bff; color: white; }
+        .btn-save { background: #28a745; color: white; }
+        .btn-cancel { background: #6c757d; color: white; }
+
+        .row-disabled { opacity: 0.4; }
+        
+        .edit-textarea { 
+            width: 100%; padding: 10px; background: var(--input-bg); border: 1px solid var(--theme-color); 
+            color: var(--text-main); border-radius: 4px; font-size: 14px; outline: none; resize: vertical; min-height: 60px;
+            transition: var(--theme-transition); box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); color-scheme: dark;
+        }
+        [data-theme="light"] .edit-textarea { color-scheme: light; }
+        .edit-textarea:focus { background: var(--input-focus-bg); box-shadow: 0 0 8px var(--theme-glow); }
+
+        /* Approval Modal Styling */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 1000; display: none; justify-content: center; align-items: center; padding: 20px; opacity: 0; transition: opacity 0.3s ease; }
+        .modal-overlay.show { display: flex; opacity: 1; }
+        .modal-container { background: var(--bg-card); width: 100%; max-width: 500px; border-radius: 12px; border: 1px solid var(--border-color); border-top: 4px solid #ffc107; box-shadow: 0 15px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column; transform: translateY(-20px); transition: all 0.3s ease; }
+        .modal-overlay.show .modal-container { transform: translateY(0); }
+        .modal-header { padding: 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        .close-btn { background: none; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; transition: 0.2s;}
+        .close-btn:hover { color: #dc3545; }
+        .modal-body { padding: 20px; }
+        
+        .approval-form-group { margin-bottom: 15px; }
+        .approval-form-group label { display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; }
+        .approval-input { width: 100%; padding: 11px 14px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-main); font-size: 13px; outline: none; transition: border-color 0.3s; }
+        .approval-input:focus { border-color: #ffc107; }
+
+        #toastPopup {
+            visibility: hidden; min-width: 260px; background-color: var(--theme-color); color: #fff;
+            text-align: center; border-radius: 8px; padding: 14px 20px; position: fixed; z-index: 3000;
+            right: 25px; bottom: 25px; font-size: 13px; font-weight: 700; box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+            opacity: 0; transition: opacity 0.3s, bottom 0.3s;
+        }
+        #toastPopup.show { visibility: visible; opacity: 1; bottom: 35px; }
+    </style>
+</head>
+<body>
+
+    <div class="header-section">
+        <h1>
+            📜 Terms & Conditions Entry
+            <span id="roleModeBadge" class="role-mode-badge">🏢 Office Mode (Requires Admin Approval)</span>
+        </h1>
+        <a href="dashboard_home.html" id="btnBackDashboard" class="btn-back" onclick="handleBackToDashboard(event)">← Back to Dashboard</a>
+    </div>
+
+    <!-- GLASSY NEO FORM -->
+    <div class="glassy-form-wrapper">
+        <form id="tcForm" onsubmit="addTcRow(event)">
+            <div class="form-group">
+                <label>Enter Terms & Conditions Statement</label>
+                <textarea id="tcStatement" placeholder="e.g., 50% Advance payment must be cleared before construction setup startup phases." required></textarea>
+            </div>
+            <button type="submit" id="btnSubmitTc" class="btn-submit">Add Clause Statement</button>
+        </form>
+    </div>
+
+    <!-- TABLE CONTAINER -->
+    <div class="table-container">
+        <h3>📜 Registered Clause Guidelines</h3>
+        <table id="tcTable">
+            <thead>
+                <tr>
+                    <th style="width: 65%;">Terms & Condition Statement</th>
+                    <th style="width: 15%;">Status</th>
+                    <th style="width: 20%;">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="tcTableBody">
+                <!-- Populated dynamically via JS -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Office Approval Request Modal (Routes to ApproveOffice.html) -->
+    <div id="roleApprovalModal" class="modal-overlay" style="z-index: 1200;">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2 id="approvalModalTitle" style="color: #ffc107; font-size: 18px; margin: 0;">🏢 Send Request to ApproveOffice.html</h2>
+                <button class="close-btn" onclick="closeRoleApprovalModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">
+                    অফিস পোর্টাল থেকে কোনো নতুন T&C তৈরি, এডিট বা স্ট্যাটাস পরিবর্তন করতে চাইলে তা অ্যাডমিনের <strong>ApproveOffice.html</strong>-এ পাঠানো হবে।
+                </p>
+                <div class="approval-form-group">
+                    <label>Action & Target T&C</label>
+                    <input type="text" id="approvalTargetSummary" class="approval-input" readonly style="color: #ffc107; font-weight: 700;">
+                </div>
+                <div class="approval-form-group">
+                    <label>Reason / Remarks for Admin Approval <span style="color: #ff4d4d;">*</span></label>
+                    <textarea id="approvalReasonInput" class="approval-input" rows="3" placeholder="Explain clearly why this action is needed..." style="resize: none;"></textarea>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 18px;">
+                    <button type="button" class="btn-submit" style="flex: 1; margin: 0; background: #ffc107; color: #121212; font-size: 12.5px;" onclick="confirmRoleApprovalSubmit()">📤 Send for Approval</button>
+                    <button type="button" class="btn-submit" style="flex: none; width: auto; margin: 0; background: #dc3545; box-shadow: none; font-size: 12.5px;" onclick="closeRoleApprovalModal()">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastPopup">Message</div>
+
+    <script>
+        // =========================================================================================
+        // 1. PORTAL ROLE DETECTION (ADMIN vs OFFICE STAFF) & NAVIGATION
+        // =========================================================================================
+        let currentPortalMode = "admin";
+        let loggedUserId = "ADMIN";
+        let loggedUserName = "Super Admin";
+        let pendingActionObj = null;
+
+        function checkPortalPermissions() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewParam = (urlParams.get('view') || '').toLowerCase();
+
+            let parentPath = "";
+            try {
+                if (window.parent && window.parent !== window) {
+                    parentPath = (window.parent.location.pathname || '').toLowerCase();
+                }
+            } catch (e) {}
+
+            const badge = document.getElementById('roleModeBadge');
+            const backBtn = document.getElementById('btnBackDashboard');
+            const submitBtn = document.getElementById('btnSubmitTc');
+
+            if (viewParam === 'office' || parentPath.includes('officedashboard')) {
+                currentPortalMode = 'office';
+                loggedUserId = urlParams.get('userId') || sessionStorage.getItem('atr_logged_office_id') || localStorage.getItem('atr_logged_office_id') || "OFF-101";
+                loggedUserName = urlParams.get('userName') || "Office Staff";
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🏢 Office Mode (${loggedUserName}) - Requires Approval`;
+                }
+                if (submitBtn) {
+                    submitBtn.innerText = "📤 Request New Clause Approval";
+                }
+                if (backBtn) backBtn.href = "office/office_dashboard_home.html";
+
+            } else if (viewParam === 'supervisor' || parentPath.includes('supervisordashboard')) {
+                currentPortalMode = 'supervisor';
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🛡️ Supervisor Mode - View Only`;
+                }
+                if (submitBtn) submitBtn.style.display = 'none';
+                if (backBtn) backBtn.href = "supervisor/supervisor_dashboard_home.html";
+            } else {
+                currentPortalMode = 'admin';
+                if (backBtn) backBtn.href = "dashboard_home.html";
+            }
+        }
+
+        function handleBackToDashboard(event) {
+            if (currentPortalMode === 'office') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.loadOfficeWorkspaceHome === 'function') {
+                        window.parent.loadOfficeWorkspaceHome();
+                        return;
+                    }
+                } catch (e) {}
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "office_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "office/office_dashboard_home.html";
+            } else if (currentPortalMode === 'supervisor') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window) {
+                        const parentHomeLink = window.parent.document.querySelector('.dashboard-home-link');
+                        if (parentHomeLink) {
+                            window.location.href = parentHomeLink.href;
+                            return;
+                        }
+                    }
+                } catch (e) {}
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "supervisor_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "supervisor/supervisor_dashboard_home.html";
+            }
+        }
+
+        // =========================================================================================
+        // 2. T&C DATABASE SYNC (LOCALSTORAGE) & RENDER LOGIC
+        // =========================================================================================
+        const DEFAULT_TC = [
+            { id: "TC-1001", statement: "Raw materials inspection matrix must be certified by assigned structural site supervisors.", status: "Active" },
+            { id: "TC-1002", statement: "50% Advance payment must be cleared before construction setup startup phases.", status: "Active" }
+        ];
+
+        let tcList = [];
+        let currentlyEditingId = null;
+
+        function loadTcDatabase() {
+            const stored = JSON.parse(localStorage.getItem('atr_terms_conditions_db'));
+            if (Array.isArray(stored) && stored.length > 0) {
+                tcList = stored;
+            } else {
+                tcList = JSON.parse(JSON.stringify(DEFAULT_TC));
+                saveTcDatabase();
+            }
+        }
+
+        function saveTcDatabase() {
+            localStorage.setItem('atr_terms_conditions_db', JSON.stringify(tcList));
+        }
+
+        window.onload = () => {
+            checkPortalPermissions();
+            loadTcDatabase();
+            renderTable();
+        };
+
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'atr_terms_conditions_db') {
+                loadTcDatabase();
+                renderTable();
+            }
+        });
+
+        function renderTable() {
+            const tbody = document.getElementById('tcTableBody');
+            tbody.innerHTML = '';
+
+            if (tcList.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 25px;">No Terms & Conditions registered.</td></tr>`;
+                return;
+            }
+
+            [...tcList].reverse().forEach(tc => {
+                if (currentlyEditingId === tc.id) {
+                    renderEditRow(tbody, tc);
+                } else {
+                    renderNormalRow(tbody, tc);
+                }
+            });
+        }
+
+        function renderNormalRow(tbody, tc) {
+            const tr = document.createElement('tr');
+            if (tc.status !== 'Active') tr.classList.add('row-disabled');
+
+            const statusClass = tc.status === 'Active' ? 'status-active' : 'status-disabled';
+            const toggleBtnText = tc.status === 'Active' ? 'Disable' : 'Enable';
+            const pendingBadge = tc.pendingStatus ? `<br><span class="pending-status-pill">⏳ ${tc.pendingStatus}</span>` : '';
+
+            let actionsHtml = '';
+            if (currentPortalMode !== 'supervisor') {
+                actionsHtml = `
+                    <button class="btn-mini btn-disable" onclick="toggleTcStatus('${tc.id}')">${toggleBtnText}</button>
+                    <button class="btn-mini btn-edit" onclick="startEditTc('${tc.id}')">Edit</button>
+                `;
+            }
+
+            tr.innerHTML = `
+                <td>
+                    <div class="bullet-point-text">
+                        <span class="bullet-dot">•</span>
+                        <span class="clause-content">${tc.statement}</span>
+                    </div>
+                </td>
+                <td>
+                    <span class="status-badge ${statusClass}">${tc.status}</span>
+                    ${pendingBadge}
+                </td>
+                <td>${actionsHtml}</td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        function renderEditRow(tbody, tc) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>
+                    <div class="bullet-point-text">
+                        <span class="bullet-dot">•</span>
+                        <textarea id="editStatement_${tc.id}" class="edit-textarea">${tc.statement}</textarea>
+                    </div>
+                </td>
+                <td><span class="status-badge status-active">Editing...</span></td>
+                <td>
+                    <button class="btn-mini btn-save" onclick="saveEditTc('${tc.id}')">Save</button>
+                    <button class="btn-mini btn-cancel" onclick="cancelEditTc()">Cancel</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        // =========================================================================================
+        // 3. ACTION HANDLERS (ADD, EDIT, STATUS TOGGLE) WITH APPROVAL ROUTING
+        // =========================================================================================
+        function addTcRow(event) {
+            event.preventDefault();
+            if (currentPortalMode === 'supervisor') return;
+
+            const statement = document.getElementById('tcStatement').value.trim();
+
+            if (!statement) {
+                alert("Statement field cannot be empty!");
+                return;
+            }
+
+            const newTcId = "TC-" + Math.floor(1000 + Math.random() * 9000);
+
+            // Office Portal: Route to Approval
+            if (currentPortalMode === 'office') {
+                const payload = {
+                    type: 'TC_ADD',
+                    actionLabel: "NEW T&C CLAUSE ENTRY",
+                    summary: `${statement.substring(0, 50)}...`,
+                    oldData: null,
+                    newData: { id: newTcId, statement, status: "Active" }
+                };
+                openRoleApprovalModal(payload);
+                return;
+            }
+
+            // Admin Portal: Direct Save
+            tcList.push({ id: newTcId, statement, status: "Active" });
+            saveTcDatabase();
+            document.getElementById('tcForm').reset();
+            renderTable();
+            showToast("✅ Terms & Conditions Added Successfully!");
+        }
+
+        function toggleTcStatus(id) {
+            if (currentPortalMode === 'supervisor') return;
+            const tc = tcList.find(t => t.id === id);
+            if (!tc) return;
+
+            const newStatus = tc.status === 'Active' ? 'Disabled' : 'Active';
+
+            // Office Portal: Route to Approval
+            if (currentPortalMode === 'office') {
+                openRoleApprovalModal({
+                    type: 'TC_STATUS_TOGGLE',
+                    actionLabel: `${newStatus === 'Active' ? 'ENABLE' : 'DISABLE'} T&C CLAUSE`,
+                    summary: `${tc.id} -> ${newStatus} (${tc.statement.substring(0, 40)}...)`,
+                    oldData: { ...tc },
+                    newData: { ...tc, status: newStatus }
+                });
+                return;
+            }
+
+            // Admin Portal: Direct Status Toggle
+            tc.status = newStatus;
+            tc.pendingStatus = null;
+            saveTcDatabase();
+            renderTable();
+            showToast(`✅ Clause status changed to ${newStatus}!`);
+        }
+
+        function startEditTc(id) {
+            if (currentPortalMode === 'supervisor') return;
+            currentlyEditingId = id;
+            renderTable();
+        }
+
+        function cancelEditTc() {
+            currentlyEditingId = null;
+            renderTable();
+        }
+
+        function saveEditTc(id) {
+            const newStatement = document.getElementById(`editStatement_${id}`).value.trim();
+
+            if (!newStatement) {
+                alert("Statement field cannot be empty!");
+                return;
+            }
+
+            const tc = tcList.find(t => t.id === id);
+            if (!tc) return;
+
+            // Office Portal: Route to Approval
+            if (currentPortalMode === 'office') {
+                currentlyEditingId = null;
+                renderTable(); // Revert row to normal before showing modal
+                openRoleApprovalModal({
+                    type: 'TC_EDIT',
+                    actionLabel: "EDIT T&C CLAUSE",
+                    summary: `${tc.id} updated to: ${newStatement.substring(0, 40)}...`,
+                    oldData: { ...tc },
+                    newData: { ...tc, statement: newStatement }
+                });
+                return;
+            }
+
+            // Admin Portal: Direct Save
+            tc.statement = newStatement;
+            tc.pendingStatus = null;
+
+            currentlyEditingId = null;
+            saveTcDatabase();
+            renderTable();
+            showToast("✅ Clause updated successfully!");
+        }
+
+        // =========================================================================================
+        // 4. OFFICE APPROVAL MODAL ENGINE
+        // =========================================================================================
+        function openRoleApprovalModal(actionPayload) {
+            pendingActionObj = actionPayload;
+            document.getElementById('approvalTargetSummary').value = `${actionPayload.actionLabel} — ${actionPayload.summary}`;
+            document.getElementById('approvalReasonInput').value = '';
+            document.getElementById('roleApprovalModal').classList.add('show');
+            setTimeout(() => document.getElementById('approvalReasonInput').focus(), 50);
+        }
+
+        function closeRoleApprovalModal() {
+            document.getElementById('roleApprovalModal').classList.remove('show');
+            pendingActionObj = null;
+        }
+
+        function confirmRoleApprovalSubmit() {
+            const reason = document.getElementById('approvalReasonInput').value.trim();
+            if (!reason) {
+                alert("⚠️ Please enter a valid reason for Admin Approval.");
+                return;
+            }
+            if (!pendingActionObj) return;
+
+            // Mark existing clause as pending if it's an edit or status toggle
+            if (pendingActionObj.type === 'TC_STATUS_TOGGLE' || pendingActionObj.type === 'TC_EDIT') {
+                const targetId = pendingActionObj.oldData.id;
+                const idx = tcList.findIndex(t => t.id === targetId);
+                if (idx > -1) {
+                    tcList[idx].pendingStatus = pendingActionObj.type === 'TC_STATUS_TOGGLE' ? 'Status Pending' : 'Edit Pending';
+                    saveTcDatabase();
+                    renderTable();
+                }
+            }
+
+            const newReq = {
+                reqId: "OFF-TC-" + Date.now().toString().slice(-5),
+                userId: loggedUserId,
+                userName: loggedUserName,
+                designation: "Office Staff",
+                module: "T&CEntry.html",
+                action: pendingActionObj.actionLabel,
+                summary: pendingActionObj.summary,
+                oldData: pendingActionObj.oldData,
+                newData: pendingActionObj.newData,
+                reason: reason,
+                timestamp: new Date().toLocaleString('en-IN'),
+                status: "Pending"
+            };
+
+            const officeQueue = JSON.parse(localStorage.getItem('atr_office_approvals')) || [];
+            officeQueue.unshift(newReq);
+            localStorage.setItem('atr_office_approvals', JSON.stringify(officeQueue));
+            localStorage.setItem('approve_office_requests', JSON.stringify(officeQueue));
+            localStorage.setItem('ApproveOffice_requests', JSON.stringify(officeQueue));
+
+            const workLogs = JSON.parse(localStorage.getItem('atr_office_daily_work')) || [];
+            const todayStr = new Date().toISOString().split('T')[0];
+            const nowTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+            workLogs.unshift({
+                id: "WRK-" + Date.now().toString().slice(-5),
+                userId: loggedUserId,
+                userName: loggedUserName,
+                date: todayStr,
+                time: nowTime,
+                module: "T&C Entry (T&CEntry.html)",
+                refNo: newReq.reqId,
+                desc: `${pendingActionObj.actionLabel}: ${pendingActionObj.summary}`,
+                status: "Sent for Approval"
+            });
+            localStorage.setItem('atr_office_daily_work', JSON.stringify(workLogs));
+
+            try {
+                if (window.parent && window.parent !== window && typeof window.parent.refreshNotificationsUI === 'function') {
+                    window.parent.refreshNotificationsUI();
+                }
+            } catch (e) {}
+
+            document.getElementById('tcForm').reset();
+            
+            closeRoleApprovalModal();
+            showToast(`📤 Request sent to ApproveOffice.html for Admin Approval!`);
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toastPopup');
+            toast.innerText = msg;
+            toast.classList.add('show');
+            setTimeout(() => { toast.classList.remove('show'); }, 3500);
+        }
+    </script>
+</body>
+</html>

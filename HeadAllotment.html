@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Head Allotment Child</title>
+    
+    <script>
+        function applyDashboardTheme() {
+            const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        }
+        applyDashboardTheme();
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'atr_theme' || !e.key) {
+                applyDashboardTheme();
+            }
+        });
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap');
+
+        :root {
+            color-scheme: dark;
+            --bg-body: transparent; 
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.12);
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(0, 0, 0, 0.2);
+            --input-focus-bg: rgba(0, 0, 0, 0.4);
+            --shadow: 0 4px 15px rgba(0,0,0,0.3);
+            --theme-color: #007bff;
+            --theme-glow: rgba(0, 123, 255, 0.4);
+            --theme-transition: all 0.4s ease;
+        }
+
+        [data-theme="light"] {
+            color-scheme: light;
+            --bg-body: transparent;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #555555;
+            --border-color: rgba(0, 0, 0, 0.15);
+            --glass-bg: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --input-bg: rgba(255, 255, 255, 0.5);
+            --input-focus-bg: #ffffff;
+            --shadow: 0 8px 25px rgba(0,0,0,0.05);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(136, 136, 136, 0.3); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(136, 136, 136, 0.6); }
+
+        body { background-color: var(--bg-body); color: var(--text-main); padding: 30px 40px; transition: var(--theme-transition); min-height: 100vh; }
+
+        .header-section { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; flex-wrap: wrap; gap: 15px; transition: var(--theme-transition); }
+        .header-section h1 { font-size: 22px; color: var(--text-main); transition: var(--theme-transition); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+        .role-mode-badge {
+            display: none;
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 700;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-back {
+            background-color: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color);
+            text-decoration: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; font-size: 13px;
+            transition: all 0.3s; cursor: pointer; display: inline-flex; align-items: center;
+        }
+        .btn-back:hover { background-color: var(--theme-color); color: #fff; border-color: var(--theme-color); transform: translateY(-2px); }
+
+        .glassy-form-wrapper {
+            background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border); border-top: 4px solid var(--theme-color);
+            border-radius: 12px; padding: 25px; box-shadow: var(--shadow); margin-bottom: 30px;
+            transition: var(--theme-transition);
+        }
+
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+
+        .form-group { display: flex; flex-direction: column; position: relative; }
+        .form-group label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; font-weight: 600; transition: color 0.3s; }
+        
+        .form-group input { 
+            padding: 12px 14px; background: var(--input-bg); border: 1px solid var(--border-color); 
+            border-radius: 8px; color: var(--text-main); font-size: 14px; outline: none; transition: all 0.3s ease; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); color-scheme: dark;
+        }
+        [data-theme="light"] .form-group input { color-scheme: light; }
+        .form-group input:focus { border-color: var(--theme-color); background: var(--input-focus-bg); box-shadow: 0 0 10px var(--theme-glow), inset 0 2px 4px rgba(0,0,0,0.05); }
+        .form-group input:focus + label, .form-group:focus-within label { color: var(--theme-color); }
+
+        .btn-submit {
+            grid-column: 1 / -1; padding: 14px; background: var(--theme-color); color: #ffffff; 
+            border: none; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; border-radius: 8px; 
+            cursor: pointer; font-size: 13.5px; box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3); transition: all 0.3s ease; margin-top: 5px;
+        }
+        .btn-submit:hover { transform: translateY(-2px); filter: brightness(1.1); box-shadow: 0 8px 20px var(--theme-glow); }
+
+        .table-container { background-color: var(--bg-card); padding: 25px; border-radius: 10px; box-shadow: var(--shadow); transition: var(--theme-transition); overflow-x: auto; }
+        .table-container h3 { margin-bottom: 15px; color: var(--theme-color); font-size: 18px; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 14px 15px; border-bottom: 1px solid var(--border-color); font-size: 13.5px; color: var(--text-main); transition: var(--theme-transition); white-space: nowrap; }
+        th { color: var(--text-muted); text-transform: uppercase; font-size: 11.5px; }
+
+        .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+        .status-active { background: rgba(40, 167, 69, 0.2); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.4); }
+        .status-disabled { background: rgba(220, 53, 69, 0.2); color: #ff6b6b; border: 1px solid rgba(220, 53, 69, 0.4); }
+
+        .pending-status-pill {
+            display: inline-block;
+            background: rgba(255, 193, 7, 0.16);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.45);
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            margin-top: 5px;
+            text-transform: uppercase;
+        }
+
+        .btn-mini { padding: 6px 12px; font-size: 11px; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; margin-right: 5px; text-transform: uppercase; transition: all 0.2s;}
+        .btn-mini:hover { transform: translateY(-1px); filter: brightness(1.1); }
+        .btn-disable { background: #ffc107; color: #121212; }
+        .btn-edit { background: var(--theme-color); color: white; }
+        .btn-save { background: #28a745; color: white; }
+        .btn-cancel { background: #6c757d; color: white; }
+        
+        .row-disabled { opacity: 0.4; }
+        .edit-input { width: 100%; padding: 8px 12px; background: var(--input-bg); border: 1px solid var(--theme-color); color: var(--text-main); border-radius: 6px; font-size: 13px; outline: none; transition: var(--theme-transition); color-scheme: dark;}
+        [data-theme="light"] .edit-input { color-scheme: light; }
+        .edit-input:focus { background: var(--input-focus-bg); box-shadow: 0 0 8px var(--theme-glow); }
+
+        /* Approval Modal Styling */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 1000; display: none; justify-content: center; align-items: center; padding: 20px; opacity: 0; transition: opacity 0.3s ease; }
+        .modal-overlay.show { display: flex; opacity: 1; }
+        .modal-container { background: var(--bg-card); width: 100%; max-width: 500px; border-radius: 12px; border: 1px solid var(--border-color); border-top: 4px solid #ffc107; box-shadow: 0 15px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column; transform: translateY(-20px); transition: all 0.3s ease; }
+        .modal-overlay.show .modal-container { transform: translateY(0); }
+        .modal-header { padding: 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        .close-btn { background: none; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; transition: 0.2s;}
+        .close-btn:hover { color: #dc3545; }
+        .modal-body { padding: 20px; }
+        
+        .approval-form-group { margin-bottom: 15px; }
+        .approval-form-group label { display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; }
+        .approval-input { width: 100%; padding: 11px 14px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-main); font-size: 13px; outline: none; transition: border-color 0.3s; }
+        .approval-input:focus { border-color: #ffc107; }
+
+        #toastPopup {
+            visibility: hidden; min-width: 260px; background-color: var(--theme-color); color: #fff;
+            text-align: center; border-radius: 8px; padding: 14px 20px; position: fixed; z-index: 3000;
+            right: 25px; bottom: 25px; font-size: 13px; font-weight: 700; box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+            opacity: 0; transition: opacity 0.3s, bottom 0.3s;
+        }
+        #toastPopup.show { visibility: visible; opacity: 1; bottom: 35px; }
+    </style>
+</head>
+<body>
+
+    <div class="header-section">
+        <h1>
+            🏷️ Head Entry Allotment
+            <span id="roleModeBadge" class="role-mode-badge">🏢 Office Mode (Requires Admin Approval)</span>
+        </h1>
+        <a href="dashboard_home.html" id="btnBackDashboard" class="btn-back" onclick="handleBackToDashboard(event)">← Back to Dashboard</a>
+    </div>
+
+    <!-- GLASSY NEO FORM -->
+    <div class="glassy-form-wrapper">
+        <form id="headForm" onsubmit="addHeadRow(event)">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Head Name</label>
+                    <input type="text" id="hName" placeholder="e.g., Cement Supply / Labor Cost" required>
+                </div>
+                <div class="form-group">
+                    <label>Opening Balance (₹)</label>
+                    <input type="number" id="hBalance" placeholder="e.g., 50000" min="0" step="any" required>
+                </div>
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="hDate" required>
+                </div>
+                <button type="submit" id="btnSubmitHead" class="btn-submit">Allot & Register Head</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- TABLE CONTAINER -->
+    <div class="table-container">
+        <h3>🏷️ Registered Account Heads</h3>
+        <table id="headTable">
+            <thead>
+                <tr>
+                    <th>Head Name</th>
+                    <th>Opening Balance</th>
+                    <th>Allotment Date</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="headTableBody">
+                <!-- Data populated dynamically via JS -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Office Approval Request Modal (Routes to ApproveOffice.html) -->
+    <div id="roleApprovalModal" class="modal-overlay" style="z-index: 1200;">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2 id="approvalModalTitle" style="color: #ffc107; font-size: 18px; margin: 0;">🏢 Send Request to ApproveOffice.html</h2>
+                <button class="close-btn" onclick="closeRoleApprovalModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">
+                    অফিস পোর্টাল থেকে কোনো নতুন হেড তৈরি, এডিট বা স্ট্যাটাস পরিবর্তন করতে চাইলে তা অ্যাডমিনের <strong>ApproveOffice.html</strong>-এ পাঠানো হবে।
+                </p>
+                <div class="approval-form-group">
+                    <label>Action & Target Head</label>
+                    <input type="text" id="approvalTargetSummary" class="approval-input" readonly style="color: #ffc107; font-weight: 700;">
+                </div>
+                <div class="approval-form-group">
+                    <label>Reason / Remarks for Admin Approval <span style="color: #ff4d4d;">*</span></label>
+                    <textarea id="approvalReasonInput" class="approval-input" rows="3" placeholder="Explain clearly why this action is needed..." style="resize: none;"></textarea>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 18px;">
+                    <button type="button" class="btn-submit" style="flex: 1; margin: 0; background: #ffc107; color: #121212; font-size: 12.5px;" onclick="confirmRoleApprovalSubmit()">📤 Send for Approval</button>
+                    <button type="button" class="btn-submit" style="flex: none; width: auto; margin: 0; background: #dc3545; box-shadow: none; font-size: 12.5px;" onclick="closeRoleApprovalModal()">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastPopup">Message</div>
+
+    <script>
+        // =========================================================================================
+        // 1. PORTAL ROLE DETECTION (ADMIN vs OFFICE STAFF) & NAVIGATION
+        // =========================================================================================
+        let currentPortalMode = "admin";
+        let loggedUserId = "ADMIN";
+        let loggedUserName = "Super Admin";
+        let pendingActionObj = null;
+
+        function checkPortalPermissions() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewParam = (urlParams.get('view') || '').toLowerCase();
+
+            let parentPath = "";
+            try {
+                if (window.parent && window.parent !== window) {
+                    parentPath = (window.parent.location.pathname || '').toLowerCase();
+                }
+            } catch (e) {}
+
+            const badge = document.getElementById('roleModeBadge');
+            const backBtn = document.getElementById('btnBackDashboard');
+            const submitBtn = document.getElementById('btnSubmitHead');
+
+            if (viewParam === 'office' || parentPath.includes('officedashboard')) {
+                currentPortalMode = 'office';
+                loggedUserId = urlParams.get('userId') || sessionStorage.getItem('atr_logged_office_id') || localStorage.getItem('atr_logged_office_id') || "OFF-101";
+                loggedUserName = urlParams.get('userName') || "Office Staff";
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🏢 Office Mode (${loggedUserName}) - Requires Approval`;
+                }
+                if (submitBtn) {
+                    submitBtn.innerText = "📤 Request New Head Approval";
+                }
+                if (backBtn) backBtn.href = "office/office_dashboard_home.html";
+
+            } else if (viewParam === 'supervisor' || parentPath.includes('supervisordashboard')) {
+                currentPortalMode = 'supervisor';
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🛡️ Supervisor Mode - View Only`;
+                }
+                if (submitBtn) submitBtn.style.display = 'none';
+                if (backBtn) backBtn.href = "supervisor/supervisor_dashboard_home.html";
+            } else {
+                currentPortalMode = 'admin';
+                if (backBtn) backBtn.href = "dashboard_home.html";
+            }
+        }
+
+        function handleBackToDashboard(event) {
+            if (currentPortalMode === 'office') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.loadOfficeWorkspaceHome === 'function') {
+                        window.parent.loadOfficeWorkspaceHome();
+                        return;
+                    }
+                } catch (e) {}
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "office_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "office/office_dashboard_home.html";
+            } else if (currentPortalMode === 'supervisor') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window) {
+                        const parentHomeLink = window.parent.document.querySelector('.dashboard-home-link');
+                        if (parentHomeLink) {
+                            window.location.href = parentHomeLink.href;
+                            return;
+                        }
+                    }
+                } catch (e) {}
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "supervisor_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "supervisor/supervisor_dashboard_home.html";
+            }
+        }
+
+        // =========================================================================================
+        // 2. HEAD ALLOTMENT DATABASE SYNC (LOCALSTORAGE) & RENDER LOGIC
+        // =========================================================================================
+        const DEFAULT_HEADS = [
+            { id: "HD-1001", name: "Bricks Procurement", balance: 75000, date: "2026-07-01", status: "Active" },
+            { id: "HD-1002", name: "Cement Supply", balance: 150000, date: "2026-07-15", status: "Active" }
+        ];
+
+        let headList = [];
+        let currentlyEditingId = null;
+
+        function loadHeadDatabase() {
+            const stored = JSON.parse(localStorage.getItem('atr_head_allotment_db'));
+            if (Array.isArray(stored) && stored.length > 0) {
+                headList = stored;
+            } else {
+                headList = JSON.parse(JSON.stringify(DEFAULT_HEADS));
+                saveHeadDatabase();
+            }
+        }
+
+        function saveHeadDatabase() {
+            localStorage.setItem('atr_head_allotment_db', JSON.stringify(headList));
+        }
+
+        window.onload = () => {
+            checkPortalPermissions();
+            document.getElementById('hDate').value = new Date().toISOString().split('T')[0];
+            loadHeadDatabase();
+            renderTable();
+        };
+
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'atr_head_allotment_db') {
+                loadHeadDatabase();
+                renderTable();
+            }
+        });
+
+        function renderTable() {
+            const tbody = document.getElementById('headTableBody');
+            tbody.innerHTML = '';
+
+            if (headList.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 25px;">No heads registered.</td></tr>`;
+                return;
+            }
+
+            [...headList].reverse().forEach(head => {
+                if (currentlyEditingId === head.id) {
+                    renderEditRow(tbody, head);
+                } else {
+                    renderNormalRow(tbody, head);
+                }
+            });
+        }
+
+        function renderNormalRow(tbody, head) {
+            const tr = document.createElement('tr');
+            if (head.status !== 'Active') tr.classList.add('row-disabled');
+
+            const formattedBalance = Number(head.balance).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+            const statusClass = head.status === 'Active' ? 'status-active' : 'status-disabled';
+            const toggleBtnText = head.status === 'Active' ? 'Disable' : 'Enable';
+            const pendingBadge = head.pendingStatus ? `<br><span class="pending-status-pill">⏳ ${head.pendingStatus}</span>` : '';
+
+            let actionsHtml = '';
+            if (currentPortalMode !== 'supervisor') {
+                actionsHtml = `
+                    <button class="btn-mini btn-disable" onclick="toggleHeadStatus('${head.id}')">${toggleBtnText}</button>
+                    <button class="btn-mini btn-edit" onclick="startEditHead('${head.id}')">Edit</button>
+                `;
+            }
+
+            tr.innerHTML = `
+                <td style="font-weight: 700; color: var(--theme-color);">${head.name}</td>
+                <td style="font-weight: 600;">₹${formattedBalance}</td>
+                <td>${head.date}</td>
+                <td>
+                    <span class="status-badge ${statusClass}">${head.status}</span>
+                    ${pendingBadge}
+                </td>
+                <td>${actionsHtml}</td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        function renderEditRow(tbody, head) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><input type="text" id="editName_${head.id}" class="edit-input" value="${head.name}"></td>
+                <td><input type="number" id="editBalance_${head.id}" class="edit-input" value="${head.balance}" step="any"></td>
+                <td><input type="date" id="editDate_${head.id}" class="edit-input" value="${head.date}"></td>
+                <td><span class="status-badge status-active">Editing...</span></td>
+                <td>
+                    <button class="btn-mini btn-save" onclick="saveEditHead('${head.id}')">Save</button>
+                    <button class="btn-mini btn-cancel" onclick="cancelEditHead()">Cancel</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        // =========================================================================================
+        // 3. ACTION HANDLERS (ADD, EDIT, STATUS TOGGLE) WITH APPROVAL ROUTING
+        // =========================================================================================
+        function addHeadRow(event) {
+            event.preventDefault();
+            if (currentPortalMode === 'supervisor') return;
+
+            const name = document.getElementById('hName').value.trim();
+            const balance = parseFloat(document.getElementById('hBalance').value);
+            const date = document.getElementById('hDate').value;
+
+            if (!name || isNaN(balance) || !date) {
+                alert("All fields are required!");
+                return;
+            }
+
+            const newHeadId = "HD-" + Math.floor(1000 + Math.random() * 9000);
+
+            // Office Portal: Route to Approval
+            if (currentPortalMode === 'office') {
+                const payload = {
+                    type: 'HEAD_ADD',
+                    actionLabel: "NEW ACCOUNT HEAD ALLOTMENT",
+                    summary: `${name} — Opening Bal: ₹${balance.toLocaleString('en-IN')}`,
+                    oldData: null,
+                    newData: { id: newHeadId, name, balance, date, status: "Active" }
+                };
+                openRoleApprovalModal(payload);
+                return;
+            }
+
+            // Admin Portal: Direct Save
+            headList.push({ id: newHeadId, name, balance, date, status: "Active" });
+            saveHeadDatabase();
+            document.getElementById('headForm').reset();
+            document.getElementById('hDate').value = new Date().toISOString().split('T')[0];
+            renderTable();
+            showToast("✅ Head Allotment Registered Successfully!");
+        }
+
+        function toggleHeadStatus(id) {
+            if (currentPortalMode === 'supervisor') return;
+            const head = headList.find(h => h.id === id);
+            if (!head) return;
+
+            const newStatus = head.status === 'Active' ? 'Disabled' : 'Active';
+
+            if (currentPortalMode === 'office') {
+                openRoleApprovalModal({
+                    type: 'HEAD_STATUS_TOGGLE',
+                    actionLabel: `${newStatus === 'Active' ? 'ENABLE' : 'DISABLE'} ACCOUNT HEAD`,
+                    summary: `${head.name} (${head.id}) -> ${newStatus}`,
+                    oldData: { ...head },
+                    newData: { ...head, status: newStatus }
+                });
+                return;
+            }
+
+            head.status = newStatus;
+            head.pendingStatus = null;
+            saveHeadDatabase();
+            renderTable();
+            showToast(`✅ Head status changed to ${newStatus}!`);
+        }
+
+        function startEditHead(id) {
+            if (currentPortalMode === 'supervisor') return;
+            currentlyEditingId = id;
+            renderTable();
+        }
+
+        function cancelEditHead() {
+            currentlyEditingId = null;
+            renderTable();
+        }
+
+        function saveEditHead(id) {
+            const newName = document.getElementById(`editName_${id}`).value.trim();
+            const newBalance = parseFloat(document.getElementById(`editBalance_${id}`).value);
+            const newDate = document.getElementById(`editDate_${id}`).value;
+
+            if (!newName || isNaN(newBalance) || !newDate) {
+                alert("All fields are required!");
+                return;
+            }
+
+            const head = headList.find(h => h.id === id);
+            if (!head) return;
+
+            if (currentPortalMode === 'office') {
+                currentlyEditingId = null;
+                renderTable(); // Revert row to normal before showing modal
+                openRoleApprovalModal({
+                    type: 'HEAD_EDIT',
+                    actionLabel: "EDIT ACCOUNT HEAD",
+                    summary: `${head.id} | ${head.name} → ${newName} (₹${newBalance.toLocaleString('en-IN')})`,
+                    oldData: { ...head },
+                    newData: { ...head, name: newName, balance: newBalance, date: newDate }
+                });
+                return;
+            }
+
+            head.name = newName;
+            head.balance = newBalance;
+            head.date = newDate;
+            head.pendingStatus = null;
+
+            currentlyEditingId = null;
+            saveHeadDatabase();
+            renderTable();
+            showToast("✅ Head details updated successfully!");
+        }
+
+        // =========================================================================================
+        // 4. OFFICE APPROVAL MODAL ENGINE
+        // =========================================================================================
+        function openRoleApprovalModal(actionPayload) {
+            pendingActionObj = actionPayload;
+            document.getElementById('approvalTargetSummary').value = `${actionPayload.actionLabel} — ${actionPayload.summary}`;
+            document.getElementById('approvalReasonInput').value = '';
+            document.getElementById('roleApprovalModal').classList.add('show');
+            setTimeout(() => document.getElementById('approvalReasonInput').focus(), 50);
+        }
+
+        function closeRoleApprovalModal() {
+            document.getElementById('roleApprovalModal').classList.remove('show');
+            pendingActionObj = null;
+        }
+
+        function confirmRoleApprovalSubmit() {
+            const reason = document.getElementById('approvalReasonInput').value.trim();
+            if (!reason) {
+                alert("⚠️ Please enter a valid reason for Admin Approval.");
+                return;
+            }
+            if (!pendingActionObj) return;
+
+            // Mark existing head as pending if it's an edit or status toggle
+            if (pendingActionObj.type === 'HEAD_STATUS_TOGGLE' || pendingActionObj.type === 'HEAD_EDIT') {
+                const targetId = pendingActionObj.oldData.id;
+                const idx = headList.findIndex(h => h.id === targetId);
+                if (idx > -1) {
+                    headList[idx].pendingStatus = pendingActionObj.type === 'HEAD_STATUS_TOGGLE' ? 'Status Pending' : 'Edit Pending';
+                    saveHeadDatabase();
+                    renderTable();
+                }
+            }
+
+            const newReq = {
+                reqId: "OFF-HD-" + Date.now().toString().slice(-5),
+                userId: loggedUserId,
+                userName: loggedUserName,
+                designation: "Office Staff",
+                module: "HeadAllotment.html",
+                action: pendingActionObj.actionLabel,
+                summary: pendingActionObj.summary,
+                oldData: pendingActionObj.oldData,
+                newData: pendingActionObj.newData,
+                reason: reason,
+                timestamp: new Date().toLocaleString('en-IN'),
+                status: "Pending"
+            };
+
+            const officeQueue = JSON.parse(localStorage.getItem('atr_office_approvals')) || [];
+            officeQueue.unshift(newReq);
+            localStorage.setItem('atr_office_approvals', JSON.stringify(officeQueue));
+            localStorage.setItem('approve_office_requests', JSON.stringify(officeQueue));
+            localStorage.setItem('ApproveOffice_requests', JSON.stringify(officeQueue));
+
+            const workLogs = JSON.parse(localStorage.getItem('atr_office_daily_work')) || [];
+            const todayStr = new Date().toISOString().split('T')[0];
+            const nowTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+            workLogs.unshift({
+                id: "WRK-" + Date.now().toString().slice(-5),
+                userId: loggedUserId,
+                userName: loggedUserName,
+                date: todayStr,
+                time: nowTime,
+                module: "Head Entry Allotment (HeadAllotment.html)",
+                refNo: newReq.reqId,
+                desc: `${pendingActionObj.actionLabel}: ${pendingActionObj.summary}`,
+                status: "Sent for Approval"
+            });
+            localStorage.setItem('atr_office_daily_work', JSON.stringify(workLogs));
+
+            try {
+                if (window.parent && window.parent !== window && typeof window.parent.refreshNotificationsUI === 'function') {
+                    window.parent.refreshNotificationsUI();
+                }
+            } catch (e) {}
+
+            document.getElementById('headForm').reset();
+            document.getElementById('hDate').value = new Date().toISOString().split('T')[0];
+            
+            closeRoleApprovalModal();
+            showToast(`📤 Request sent to ApproveOffice.html for Admin Approval!`);
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toastPopup');
+            toast.innerText = msg;
+            toast.classList.add('show');
+            setTimeout(() => { toast.classList.remove('show'); }, 3500);
+        }
+    </script>
+</body>
+</html>

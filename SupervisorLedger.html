@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Supervisor Ledger</title>
+    
+    <!-- Sync theme with Master Dashboard -->
+    <script>
+        const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        window.addEventListener('storage', function(e) {
+            if(e.key === 'atr_theme') { document.documentElement.setAttribute('data-theme', e.newValue); }
+        });
+    </script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Include SheetJS (XLSX) Library for real Excel Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --bg-body: transparent; 
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.1);
+            
+            /* Dynamic Glass & Input Variables */
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(0, 0, 0, 0.2);
+            --input-focus-bg: rgba(0, 0, 0, 0.4);
+            
+            --shadow: 0 4px 15px rgba(0,0,0,0.3);
+            
+            /* Primary Theme Color (Purple #6f42c1) */
+            --theme-color: #6f42c1;
+            --theme-glow: rgba(111, 66, 193, 0.4);
+            --theme-transition: all 0.4s ease;
+        }
+
+        [data-theme="light"] {
+            --bg-body: transparent;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #555555;
+            --border-color: rgba(0, 0, 0, 0.1);
+            
+            --glass-bg: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --input-bg: rgba(255, 255, 255, 0.5);
+            --input-focus-bg: #ffffff;
+            
+            --shadow: 0 8px 25px rgba(0,0,0,0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Montserrat', sans-serif;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden; 
+            transition: var(--theme-transition);
+        }
+
+        /* ================= MAIN CONTENT (STABLE LAYOUT) ================= */
+        .main-content {
+            flex: 1; display: flex; flex-direction: column; padding: 30px; 
+            height: 100vh; overflow: hidden; width: 100%; max-width: 1500px; margin: 0 auto;
+        }
+
+        .header {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;
+            border-bottom: 1px solid var(--border-color); padding-bottom: 15px; flex-shrink: 0; 
+            transition: var(--theme-transition); flex-wrap: wrap; gap: 15px;
+        }
+
+        .header h1 { font-size: 26px; color: var(--text-main); display: flex; align-items: center; gap: 12px; margin-top: 8px;}
+
+        .btn-back-dash { 
+            background-color: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color); 
+            text-decoration: none; padding: 9px 16px; border-radius: 6px; font-weight: bold; font-size: 13px; 
+            transition: all 0.3s; display: flex; align-items: center; width: max-content; cursor: pointer;
+        }
+        .btn-back-dash:hover { background-color: var(--theme-color); color: #fff; border-color: var(--theme-color); transform: translateY(-2px); box-shadow: 0 4px 10px var(--theme-glow); }
+        
+        #supervisorNotice { display: none; background: rgba(255, 193, 7, 0.15); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.4); padding: 8px 15px; border-radius: 8px; font-size: 13px; font-weight: 700; align-items: center; gap: 8px; }
+
+        .user-info { background: var(--input-bg); padding: 8px 15px; border-radius: 20px; font-size: 13px; font-weight: bold; color: var(--theme-color); border: 1px solid var(--border-color); }
+
+        /* Filter Panel Form */
+        .filter-panel {
+            background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            padding: 22px; border-radius: 12px; border: 1px solid var(--glass-border); border-top: 4px solid var(--theme-color);
+            box-shadow: var(--shadow); margin-bottom: 20px; flex-shrink: 0; transition: var(--theme-transition); position: relative; z-index: 100;
+        }
+
+        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; align-items: end; }
+
+        .form-group { display: flex; flex-direction: column; gap: 8px; position: relative; }
+        .form-group label { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; transition: 0.3s; }
+        .form-group:focus-within label { color: var(--theme-color); }
+
+        .form-control {
+            background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main);
+            padding: 12px 14px; border-radius: 8px; font-size: 13px; outline: none; transition: all 0.3s; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .form-control:focus { border-color: var(--theme-color); background: var(--input-focus-bg); box-shadow: 0 0 10px var(--theme-glow); }
+        .form-control::-webkit-calendar-picker-indicator { filter: var(--calendar-filter, invert(1)); cursor: pointer; }
+        [data-theme="light"] .form-control::-webkit-calendar-picker-indicator { --calendar-filter: invert(0); }
+
+        /* 3D Custom Searchable Dropdown Layouts */
+        .custom-dropdown-container { position: relative; width: 100%; perspective: 1000px; }
+        .dropdown-selected { cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; }
+        .dropdown-selected.disabled { opacity: 0.5; cursor: not-allowed; background: var(--readonly-bg, rgba(0,0,0,0.5)); pointer-events: none; }
+        
+        .dropdown-menu-custom {
+            position: absolute; top: calc(100% + 8px); left: 0; right: 0; background: var(--bg-card);
+            border: 1px solid var(--theme-color); border-radius: 10px; box-shadow: 0 20px 45px rgba(0,0,0,0.6), 0 0 15px var(--theme-glow);
+            z-index: 1000; overflow: hidden; display: block; visibility: hidden; opacity: 0; 
+            transform: translateY(-15px) scale(0.95) rotateX(-10deg); transform-origin: top center;
+            transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); pointer-events: none;
+        }
+        .dropdown-menu-custom.show { visibility: visible; opacity: 1; transform: translateY(0) scale(1) rotateX(0deg); pointer-events: auto; }
+        
+        .dropdown-search-input { width: 100%; padding: 12px 14px; background: var(--input-bg); border: none; border-bottom: 1px solid var(--border-color); color: var(--text-main); font-size: 13px; outline: none; }
+        .dropdown-list { max-height: 180px; overflow-y: auto; list-style: none; }
+        .dropdown-list li { padding: 12px 14px; font-size: 13px; cursor: pointer; display: flex; justify-content: space-between; color: var(--text-main); transition: background 0.2s;}
+        .dropdown-list li:hover { background: rgba(111, 66, 193, 0.15); color: var(--theme-color); }
+
+        /* Action Buttons Grid */
+        .btn-group-custom { display: flex; gap: 8px; }
+        .btn-custom { padding: 12px 14px; border: none; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.3s ease; flex: 1; text-align: center; }
+        .btn-search { background-color: var(--theme-color); color: white; box-shadow: 0 4px 10px var(--theme-glow); }
+        .btn-search:hover { filter: brightness(1.1); transform: translateY(-2px); }
+        .btn-all { background-color: var(--input-bg); color: var(--text-main); border: 1px solid var(--border-color); }
+        .btn-all:hover { background-color: var(--glass-bg); transform: translateY(-2px); border-color: var(--text-muted); }
+
+        /* Toolbar Actions Bar */
+        .action-toolbar {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-shrink: 0;
+            background: var(--glass-bg); padding: 12px 20px; border-radius: 10px; border: 1px solid var(--border-color);
+            transition: var(--theme-transition); position: relative; z-index: 10;
+        }
+        .toolbar-info { font-size: 14px; color: var(--text-muted); }
+        .toolbar-info span { color: var(--theme-color); font-weight: 700; }
+        .export-buttons { display: flex; gap: 10px; }
+        
+        .btn-export { padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s; }
+        .btn-excel { background: rgba(40, 167, 69, 0.15); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.4); }
+        .btn-excel:hover { background: #28a745; color: white; box-shadow: 0 4px 10px rgba(40,167,69,0.3);}
+        .btn-pdf { background: rgba(220, 53, 69, 0.15); color: #dc3545; border: 1px solid rgba(220, 53, 69, 0.4); }
+        .btn-pdf:hover { background: #dc3545; color: white; box-shadow: 0 4px 10px rgba(220,53,69,0.3);}
+        .btn-print { background: rgba(0, 123, 255, 0.15); color: #007bff; border: 1px solid rgba(0, 123, 255, 0.4); }
+        .btn-print:hover { background: #007bff; color: white; box-shadow: 0 4px 10px rgba(0,123,255,0.3);}
+
+        /* ================= TABLE SCROLL CONTAINER ================= */
+        .table-container-box {
+            background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border-radius: 12px; box-shadow: var(--shadow); flex: 1; min-height: 0; display: flex; flex-direction: column;
+            border: 1px solid var(--glass-border); overflow: hidden; transition: var(--theme-transition); position: relative; z-index: 1;
+        }
+
+        .table-scroll-area { flex: 1; overflow-y: auto; position: relative; }
+        .table-scroll-area::-webkit-scrollbar { width: 8px; height: 8px; }
+        .table-scroll-area::-webkit-scrollbar-track { background: transparent; }
+        .table-scroll-area::-webkit-scrollbar-thumb { background: rgba(111, 66, 193, 0.3); border-radius: 4px; }
+        .table-scroll-area::-webkit-scrollbar-thumb:hover { background: var(--theme-color); }
+
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        thead { position: sticky; top: 0; background-color: var(--input-bg); z-index: 10; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        th { padding: 16px; color: var(--theme-color); font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: 0.8px; border-bottom: 2px solid var(--theme-color); }
+        td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); font-size: 13px; color: var(--text-main); vertical-align: middle; transition: var(--theme-transition);}
+        tbody tr { transition: background 0.2s; }
+        tbody tr:hover { background: var(--glass-bg); }
+
+        .type-dr { color: #ff6b6b; font-weight: bold; }
+        .type-cr { color: #28a745; font-weight: bold; }
+        
+        .month-header-row { background: var(--input-bg) !important; }
+        .month-header-row td { text-align: center; font-weight: 800; color: var(--theme-color); text-transform: uppercase; letter-spacing: 1px; font-size: 14px; padding: 12px; }
+
+        /* STRICT FIXED FOOTER AT BOTTOM */
+        .table-footer-summary {
+            flex-shrink: 0; background: var(--input-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; border-top: 2px solid var(--theme-color);
+            font-size: 13px; z-index: 20; transition: var(--theme-transition); flex-wrap: wrap; gap: 10px;
+        }
+        .summary-item { display: flex; gap: 8px; align-items: center; }
+        .summary-label { color: var(--text-muted); text-transform: uppercase; font-size: 11px; font-weight: bold; }
+        .summary-val { font-weight: 700; font-size: 15px; color: var(--text-main); }
+
+        /* ================= A4 PRINT REPORT STYLES ================= */
+        #printReportContainer { display: none; }
+
+        @media print {
+            @page { size: A4 portrait; margin: 10mm; }
+            html, body {
+                height: auto !important;
+                overflow: visible !important;
+                background: white !important;
+                color: black !important;
+                display: block !important;
+            }
+            .main-content { display: none !important; }
+            #printReportContainer, #printReportContainer * { visibility: visible; }
+            #printReportContainer { 
+                display: block !important; position: static !important; width: 100% !important; 
+                background: white; color: black; font-family: 'Montserrat', sans-serif;
+            }
+            .print-page { 
+                page-break-after: auto; padding: 10px; box-sizing: border-box; 
+                width: 100%; 
+            }
+            .print-header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
+            .print-header h1 { font-size: 22px; margin-bottom: 5px; color: #333; }
+            .print-header p { font-size: 12px; color: #666; margin: 2px; }
+            
+            .print-section { margin-bottom: 25px; page-break-inside: auto; }
+            .print-section-title { font-size: 16px; font-weight: bold; background: #f0f0f0 !important; padding: 8px 12px; border-left: 4px solid #6f42c1; margin-bottom: 10px; page-break-after: avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            
+            .print-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 12px; page-break-inside: auto; }
+            .print-table tr { page-break-inside: avoid; page-break-after: auto; }
+            .print-table th { background-color: #333 !important; color: white !important; padding: 8px; border: 1px solid #ddd; font-weight: bold; text-align: left; position: static !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .print-table td { padding: 8px; border: 1px solid #ddd; color: #000; }
+            .print-table .amount-col { text-align: right; font-weight: bold; }
+            .print-table .center-col { text-align: center; font-weight: bold; }
+            
+            .print-month-header { background: #e9ecef !important; text-align: center; font-weight: bold; font-size: 13px; text-transform: uppercase; color: #333 !important; border: 1px solid #ccc; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .print-subtotal-row { background: #fdfdfd !important; font-weight: bold; color: #dc3545 !important; }
+            .print-subtotal-row.cr { color: #28a745 !important; }
+            
+            .print-summary-box { 
+                display: flex; justify-content: space-between; background: #f9f9f9 !important; 
+                border: 2px solid #333; padding: 15px; margin-top: 30px; border-radius: 8px; font-size: 14px;
+                page-break-inside: avoid; flex-wrap: wrap; gap: 15px; -webkit-print-color-adjust: exact; print-color-adjust: exact;
+            }
+            .print-summary-item strong { display: block; color: #555; font-size: 11px; text-transform: uppercase; margin-bottom: 4px; }
+            .print-val-cr { color: #28a745 !important; font-weight: bold; font-size: 16px; }
+            .print-val-dr { color: #dc3545 !important; font-weight: bold; font-size: 16px; }
+            .print-val-bal { color: #6f42c1 !important; font-weight: bold; font-size: 18px; }
+            .print-val-op { color: #17a2b8 !important; font-weight: bold; font-size: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-content">
+        
+        <div class="header">
+            <div>
+                <!-- Dynamic Back Link Handled via JS for Admin, Office, and Supervisor -->
+                <a href="dashboard_home.html" id="viewReportBtn" class="btn-back-dash" style="margin-bottom: 10px; width: max-content;" onclick="handleBackToDashboard(event)">← Back to Dashboard</a>
+                <h1>📖 Supervisor Ledger Book</h1>
+            </div>
+            <div id="supervisorNotice">🔒 Restricted: You can only view your own ledger.</div>
+            <div class="user-info" id="portalUserInfoBadge">Account & Transactions</div>
+        </div>
+
+        <!-- Filter Form Console -->
+        <div class="filter-panel">
+            <div class="filter-grid">
+                
+                <!-- Site Selection -->
+                <div class="form-group" style="z-index: 30;">
+                    <label>🏗️ Select Site First</label>
+                    <div class="custom-dropdown-container">
+                        <div class="form-control dropdown-selected" id="siteSelectorTrigger" onclick="toggleDropdown('siteMenu')">
+                            <span id="selectedSiteText">-- Choose a Site --</span>
+                            <span style="font-size: 10px;">▼</span>
+                        </div>
+                        <div class="dropdown-menu-custom" id="siteMenu">
+                            <input type="text" class="dropdown-search-input" placeholder="🔍 Search Site..." id="siteSearchInput" onkeyup="filterList('siteSearchInput', 'siteList')">
+                            <ul class="dropdown-list" id="siteList"></ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Supervisor Selection -->
+                <div class="form-group" style="z-index: 20;">
+                    <label>🛡️ Assigned Supervisor</label>
+                    <div class="custom-dropdown-container">
+                        <div class="form-control dropdown-selected disabled" id="supSelector" onclick="toggleDropdown('supMenu')">
+                            <span id="selectedSupText">Select Site First</span>
+                            <span style="font-size: 10px;">▼</span>
+                        </div>
+                        <div class="dropdown-menu-custom" id="supMenu">
+                            <input type="text" class="dropdown-search-input" placeholder="🔍 Search Supervisor..." id="supSearchInput" onkeyup="filterList('supSearchInput', 'supList')">
+                            <ul class="dropdown-list" id="supList"></ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Date Inputs -->
+                <div class="form-group" style="z-index: 10;">
+                    <label>📅 From Date</label>
+                    <input type="date" class="form-control" id="fromDate">
+                </div>
+
+                <div class="form-group" style="z-index: 10;">
+                    <label>📅 To Date</label>
+                    <input type="date" class="form-control" id="toDate">
+                </div>
+
+                <div class="form-group" style="z-index: 5;">
+                    <label>Action</label>
+                    <div class="btn-group-custom">
+                        <button type="button" class="btn-custom btn-search" onclick="fetchLedger()">⚡ Search</button>
+                        <button type="button" class="btn-custom btn-all" onclick="showAllDates()">📅 Show All</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Export Toolbar -->
+        <div class="action-toolbar">
+            <div class="toolbar-info">
+                Viewing Ledger for: <span id="activeLedgerLabel">No Supervisor Selected</span>
+            </div>
+            <div class="export-buttons">
+                <button class="btn-export btn-excel" onclick="exportToExcel('Supervisor_Ledger')">📊 Export Excel</button>
+                <button class="btn-export btn-print" onclick="generateAndPrintReport()">🖨️ Print A4 Report</button>
+            </div>
+        </div>
+
+        <!-- Table & Summary -->
+        <div class="table-container-box">
+            <div class="table-scroll-area">
+                <table id="statementTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Particulars / Description</th>
+                            <th>Voucher / Ref No.</th>
+                            <th style="text-align: right;">Credit (Cr) <br><small style="color:var(--text-muted); font-weight: 500;">Fund Received</small></th>
+                            <th style="text-align: right;">Debit (Dr) <br><small style="color:var(--text-muted); font-weight: 500;">Total Expense</small></th>
+                            <th style="text-align: right;">Available Balance (₹)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ledgerTableBody">
+                        <tr>
+                            <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">
+                                Please select a Site and Supervisor to view ledger.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Sticky Summary Bar -->
+            <div class="table-footer-summary">
+                <div class="summary-item">
+                    <span class="summary-label">Opening Balance:</span>
+                    <span class="summary-val" id="footOpeningBal" style="color:#17a2b8;">₹0.00</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Range Total (Cr):</span>
+                    <span class="summary-val type-cr" id="totalCredit">₹0.00</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Range Total Exp (Dr):</span>
+                    <span class="summary-val type-dr" id="totalDebit">₹0.00</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Final Net Balance:</span>
+                    <span class="summary-val" id="netBalance" style="color:var(--theme-color);">₹0.00</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= PRINT REPORT CONTAINER (A4 MULTIPAGE) ================= -->
+    <div id="printReportContainer">
+        <div class="print-page">
+            <div class="print-header">
+                <h1>ATR CONSTRUCTION</h1>
+                <p><strong>Supervisor Fund & Expense Report</strong></p>
+                <p>Supervisor: <span id="printSupName"></span> | Site: <span id="printSiteName"></span></p>
+                <p>Date Range: <span id="printDateRange"></span></p>
+            </div>
+
+            <!-- Section 1: Employee Expenses -->
+            <div class="print-section">
+                <div class="print-section-title">1. Employee Expenses & Payments</div>
+                <table class="print-table" id="printEmpTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Employee Name & Code</th>
+                            <th style="text-align:center;">Present (Days)</th>
+                            <th style="text-align:center;">OT (Hrs)</th>
+                            <th class="amount-col">Paid Advance (₹)</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                    <!-- Footer restored to show Grand Totals -->
+                    <tfoot>
+                        <tr style="background:#f0f0f0; font-weight:bold;">
+                            <td colspan="2" style="text-align:right;">Grand Total Employee Expense:</td>
+                            <td class="center-col" id="printTotalPresent">0</td>
+                            <td class="center-col" id="printTotalOT">0</td>
+                            <td class="amount-col" style="color:#dc3545;" id="printTotalEmpExp">₹0.00</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <!-- Section 2: Site Expenses -->
+            <div class="print-section">
+                <div class="print-section-title">2. General Site Expenses (Tools/Materials)</div>
+                <table class="print-table" id="printSiteExpTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Description / Reason</th>
+                            <th class="amount-col">Expense Amount (₹)</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                    <tfoot>
+                        <tr style="background:#f0f0f0; font-weight:bold;">
+                            <td colspan="2" style="text-align:right;">Grand Total Site Expense:</td>
+                            <td class="amount-col" style="color:#dc3545;" id="printTotalSiteExp">₹0.00</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <!-- Section 3: Credit Log -->
+            <div class="print-section">
+                <div class="print-section-title">3. Credit Log (Fund Received by Supervisor)</div>
+                <table class="print-table" id="printCreditTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Reference / Bank Details</th>
+                            <th class="amount-col">Amount Received (₹)</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                    <tfoot>
+                        <tr style="background:#e8f5e9; font-weight:bold;">
+                            <td colspan="2" style="text-align:right;">Grand Total Fund Received:</td>
+                            <td class="amount-col" style="color:#28a745;" id="printTotalCredit">₹0.00</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <!-- Section 4: Monthly Financial Summary (NEW) -->
+            <div class="print-section">
+                <div class="print-section-title" style="border-left-color: #28a745;">4. Monthly Financial Summary (মাসিক হিসাবের সারসংক্ষেপ)</div>
+                <table class="print-table" id="printMonthlySummaryTable">
+                    <thead>
+                        <tr>
+                            <th>Month & Year</th>
+                            <th class="amount-col" style="color:#17a2b8;">Opening Balance</th>
+                            <th class="amount-col" style="color:#28a745;">Fund Received (Cr)</th>
+                            <th class="amount-col" style="color:#dc3545;">Emp Exp (Dr)</th>
+                            <th class="amount-col" style="color:#dc3545;">Site Exp (Dr)</th>
+                            <th class="amount-col" style="color:#6f42c1;">Closing Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <!-- Final Grand Summary Box -->
+            <div class="print-summary-box">
+                <div class="print-summary-item">
+                    <strong>Initial Opening Bal</strong>
+                    <span class="print-val-op" id="printSumOpening">₹0.00</span>
+                </div>
+                <div class="print-summary-item">
+                    <strong>Total Received (Cr)</strong>
+                    <span class="print-val-cr" id="printSumCr">₹0.00</span>
+                </div>
+                <div class="print-summary-item">
+                    <strong>Total Emp Exp (Dr)</strong>
+                    <span class="print-val-dr" id="printSumEmp">₹0.00</span>
+                </div>
+                <div class="print-summary-item">
+                    <strong>Total Site Exp (Dr)</strong>
+                    <span class="print-val-dr" id="printSumSite">₹0.00</span>
+                </div>
+                <div class="print-summary-item">
+                    <strong>Final Net Balance</strong>
+                    <span class="print-val-bal" id="printSumBal">₹0.00</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ================= MOCK DATABASE =================
+        const sites = [
+            { id: 1, name: "Dum Dum Project" },
+            { id: 2, name: "Salt Lake Sector V" },
+            { id: 3, name: "Barasat Highway" }
+        ];
+
+        const supervisors = [
+            { id: "SUP-001", name: "Rahul Sk" },
+            { id: "SUP-002", name: "Amitabha Roy" },
+            { id: "SUP-003", name: "Subrata Roy" }
+        ];
+
+        const siteTagging = [
+            { siteName: "Dum Dum Project", supId: "SUP-001" },
+            { siteName: "Dum Dum Project", supId: "SUP-002" },
+            { siteName: "Salt Lake Sector V", supId: "SUP-003" },
+            { siteName: "Barasat Highway", supId: "SUP-001" }
+        ];
+
+        // Structure: Credit (Cr) = Money Received by Supervisor, Debit (Dr) = Money Spent by Supervisor
+        // type: "EmpExp", "SiteExp", "Credit"
+        const ledgerDb = [
+            // ====== Salt Lake Sector V (SUP-003) ======
+            { id: 101, supId: "SUP-003", site: "Salt Lake Sector V", date: "2026-08-01", type: "Credit", desc: "Previous Month Fund (HDFC)", ref: "NEFT-99", dr: 0, cr: 100000, empName: "", empCode: "", present: 0, ot: 0 },
+            { id: 102, supId: "SUP-003", site: "Salt Lake Sector V", date: "2026-08-20", type: "EmpExp", desc: "Old Labor Advance", ref: "WAGE-AUG", dr: 60000, cr: 0, empName: "Bikash Roy", empCode: "EMP-005", present: 20, ot: 10 },
+            // September Data
+            { id: 1, supId: "SUP-003", site: "Salt Lake Sector V", date: "2026-09-01", type: "Credit", desc: "Initial Site Allocation Fund", ref: "NEFT-101", dr: 0, cr: 150000, empName: "", empCode: "", present: 0, ot: 0 },
+            { id: 2, supId: "SUP-003", site: "Salt Lake Sector V", date: "2026-09-05", type: "EmpExp", desc: "Labor Advance", ref: "WAGE-01", dr: 12000, cr: 0, empName: "Bikash Roy", empCode: "EMP-005", present: 6, ot: 10 },
+            { id: 3, supId: "SUP-003", site: "Salt Lake Sector V", date: "2026-09-08", type: "SiteExp", desc: "Local Hardware Purchase", ref: "BILL-895", dr: 15500, cr: 0, empName: "", empCode: "", present: 0, ot: 0 },
+            // October Data (To test multi-month grouping)
+            { id: 4, supId: "SUP-003", site: "Salt Lake Sector V", date: "2026-10-02", type: "EmpExp", desc: "Helper Weekly Payment", ref: "WAGE-02", dr: 8000, cr: 0, empName: "Ratan Das", empCode: "EMP-008", present: 12, ot: 0 },
+            { id: 5, supId: "SUP-003", site: "Salt Lake Sector V", date: "2026-10-15", type: "Credit", desc: "Mid-month Fund Topup", ref: "NEFT-108", dr: 0, cr: 50000, empName: "", empCode: "", present: 0, ot: 0 },
+            { id: 6, supId: "SUP-003", site: "Salt Lake Sector V", date: "2026-10-18", type: "SiteExp", desc: "Transport & Scaffolding", ref: "VCH-201", dr: 4500, cr: 0, empName: "", empCode: "", present: 0, ot: 0 },
+            
+            // ====== Dum Dum Project (SUP-001) ======
+            { id: 9, supId: "SUP-001", site: "Dum Dum Project", date: "2026-09-02", type: "Credit", desc: "Mobilization Advance", ref: "VCH-1005", dr: 0, cr: 200000, empName: "", empCode: "", present: 0, ot: 0 },
+            { id: 10, supId: "SUP-001", site: "Dum Dum Project", date: "2026-09-07", type: "EmpExp", desc: "Head Mason Weekly Pay", ref: "WAGE-10", dr: 18000, cr: 0, empName: "Ramesh Das", empCode: "EMP-001", present: 6, ot: 12 },
+            { id: 11, supId: "SUP-001", site: "Dum Dum Project", date: "2026-09-11", type: "SiteExp", desc: "Diesel for Generator", ref: "CASH-MEMO-44", dr: 5000, cr: 0, empName: "", empCode: "", present: 0, ot: 0 },
+            { id: 14, supId: "SUP-001", site: "Dum Dum Project", date: "2026-10-26", type: "SiteExp", desc: "Site Cleaning & Debris Removal", ref: "VCH-109", dr: 8500, cr: 0, empName: "", empCode: "", present: 0, ot: 0 }
+        ];
+
+        let selectedSiteName = null;
+        let selectedSupId = null;
+        let isSupervisorMode = false;
+        let currentPortalMode = "admin"; // 'admin', 'office', or 'supervisor'
+        
+        let currentlyFilteredRecords = [];
+        let currentOpeningBalance = 0;
+
+        window.onload = function() {
+            checkUrlPermissions();
+            populateSites();
+        };
+
+        function checkUrlPermissions() {
+            const urlParams = new URLSearchParams(window.location.search);
+            let viewMode = (urlParams.get('view') || '').toLowerCase();
+            let siteParam = urlParams.get('site');
+            let supIdParam = urlParams.get('supId');
+
+            let parentPath = "";
+            try {
+                if (window.parent && window.parent !== window) {
+                    parentPath = (window.parent.location.pathname || '').toLowerCase();
+                }
+            } catch (e) {}
+
+            const viewReportBtn = document.getElementById('viewReportBtn');
+            const userInfoBadge = document.getElementById('portalUserInfoBadge');
+
+            if (viewMode === 'supervisor' || parentPath.includes('supervisordashboard')) {
+                currentPortalMode = 'supervisor';
+                isSupervisorMode = true;
+
+                const resolvedSite = siteParam || sessionStorage.getItem('atr_supervisor_site') || "Salt Lake Sector V";
+                const resolvedSupId = supIdParam || sessionStorage.getItem('atr_supervisor_id') || "SUP-003";
+                
+                if(viewReportBtn) viewReportBtn.href = `supervisor_dashboard_home.html`;
+
+                document.getElementById('supervisorNotice').style.display = 'flex';
+                selectedSiteName = resolvedSite;
+                selectedSupId = resolvedSupId;
+
+                document.getElementById('selectedSiteText').innerText = resolvedSite;
+                document.getElementById('siteSelectorTrigger').classList.add('disabled');
+                document.getElementById('siteSelectorTrigger').onclick = null;
+                
+                let supName = supervisors.find(s => s.id === resolvedSupId)?.name || "Unknown";
+                document.getElementById('selectedSupText').innerText = supName;
+                document.getElementById('activeLedgerLabel').innerText = supName;
+                document.getElementById('supSelector').classList.add('disabled');
+                
+                fetchLedger(); 
+
+            } else if (viewMode === 'office' || parentPath.includes('officedashboard')) {
+                currentPortalMode = 'office';
+                isSupervisorMode = false;
+                if (viewReportBtn) viewReportBtn.href = "office/office_dashboard_home.html";
+                if (userInfoBadge) userInfoBadge.innerText = "🏢 Office Portal • Account & Transactions";
+
+            } else {
+                currentPortalMode = 'admin';
+                isSupervisorMode = false;
+                if(viewReportBtn) viewReportBtn.href = "dashboard_home.html";
+            }
+        }
+
+        function handleBackToDashboard(event) {
+            if (currentPortalMode === 'office') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.loadOfficeWorkspaceHome === 'function') {
+                        window.parent.loadOfficeWorkspaceHome();
+                        return;
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "office_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "office/office_dashboard_home.html";
+            } else if (currentPortalMode === 'supervisor') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window) {
+                        const parentHomeLink = window.parent.document.querySelector('.dashboard-home-link');
+                        if (parentHomeLink) {
+                            window.location.href = parentHomeLink.href;
+                            return;
+                        }
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "supervisor_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "supervisor_dashboard_home.html";
+            }
+        }
+
+        // ================= DROPDOWN LOGIC =================
+        function toggleDropdown(menuId) {
+            if (isSupervisorMode) return; 
+            if (menuId === 'supMenu' && !selectedSiteName) {
+                alert("Please select a Site first.");
+                return;
+            }
+            document.querySelectorAll('.dropdown-menu-custom').forEach(menu => {
+                if(menu.id !== menuId) menu.classList.remove('show');
+            });
+            document.getElementById(menuId).classList.toggle('show');
+        }
+
+        window.onclick = function(event) {
+            if (!event.target.closest('.custom-dropdown-container')) {
+                document.querySelectorAll('.dropdown-menu-custom').forEach(m => m.classList.remove('show'));
+            }
+        };
+
+        function filterList(inputId, listId) {
+            const input = document.getElementById(inputId).value.toLowerCase();
+            const li = document.getElementById(listId).getElementsByTagName('li');
+            for (let i = 0; i < li.length; i++) {
+                const text = li[i].innerText.toLowerCase();
+                li[i].style.display = text.includes(input) ? "" : "none";
+            }
+        }
+
+        function populateSites() {
+            if (isSupervisorMode) return;
+            const ul = document.getElementById('siteList');
+            ul.innerHTML = '';
+            sites.forEach(site => {
+                let li = document.createElement('li');
+                li.innerText = site.name;
+                li.onclick = () => handleSiteSelect(site.name);
+                ul.appendChild(li);
+            });
+        }
+
+        function handleSiteSelect(name) {
+            if (isSupervisorMode) return;
+            selectedSiteName = name;
+            document.getElementById('selectedSiteText').innerText = name;
+            document.getElementById('siteMenu').classList.remove('show');
+            
+            selectedSupId = null;
+            document.getElementById('selectedSupText').innerText = "-- Choose Supervisor --";
+            document.getElementById('activeLedgerLabel').innerText = "No Supervisor Selected";
+            document.getElementById('supSelector').classList.remove('disabled');
+            
+            let validSupIds = siteTagging.filter(t => t.siteName === name).map(t => t.supId);
+            let validSups = supervisors.filter(s => validSupIds.includes(s.id));
+            
+            const ul = document.getElementById('supList');
+            ul.innerHTML = '';
+            
+            if(validSups.length === 0) {
+                ul.innerHTML = `<li style="color:#ff6b6b; justify-content:center;">No Supervisors assigned here</li>`;
+            } else {
+                validSups.forEach(sup => {
+                    let li = document.createElement('li');
+                    li.innerHTML = `<span>${sup.name}</span> <span style="font-size:10px; color:var(--text-muted);">ID: ${sup.id}</span>`;
+                    li.onclick = () => handleSupSelect(sup.id, sup.name);
+                    ul.appendChild(li);
+                });
+            }
+            clearTable();
+        }
+
+        function handleSupSelect(id, name) {
+            if (isSupervisorMode) return;
+            selectedSupId = id;
+            document.getElementById('selectedSupText').innerText = name;
+            document.getElementById('supMenu').classList.remove('show');
+            document.getElementById('activeLedgerLabel').innerText = name;
+            fetchLedger(); 
+        }
+
+        function showAllDates() {
+            document.getElementById('fromDate').value = '';
+            document.getElementById('toDate').value = '';
+            fetchLedger();
+        }
+
+        function getMonthYearStr(dateStr) {
+            if (!dateStr) return "";
+            const parts = String(dateStr).split('-');
+            if (parts.length === 3) {
+                const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+                return d.toLocaleString('default', { month: 'long', year: 'numeric' });
+            }
+            const d = new Date(dateStr);
+            return d.toLocaleString('default', { month: 'long', year: 'numeric' });
+        }
+
+        // ================= LEDGER ENGINE & OPENING BALANCE =================
+        function clearTable() {
+            currentlyFilteredRecords = [];
+            currentOpeningBalance = 0;
+            document.getElementById('ledgerTableBody').innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">Select Supervisor to view records.</td></tr>`;
+            document.getElementById('totalDebit').innerText = "₹0.00";
+            document.getElementById('totalCredit').innerText = "₹0.00";
+            document.getElementById('footOpeningBal').innerText = "₹0.00";
+            document.getElementById('netBalance').innerText = "₹0.00";
+        }
+
+        function fetchLedger() {
+            if (!selectedSupId || !selectedSiteName) {
+                alert("Please ensure Site and Supervisor are selected.");
+                return;
+            }
+
+            const fromDateStr = document.getElementById('fromDate').value;
+            const toDateStr = document.getElementById('toDate').value;
+            const fromDate = fromDateStr ? new Date(fromDateStr) : null;
+            const toDate = toDateStr ? new Date(toDateStr) : null;
+
+            let allRecords = ledgerDb.filter(r => r.supId === selectedSupId && r.site === selectedSiteName);
+            
+            currentOpeningBalance = 0;
+            currentlyFilteredRecords = [];
+
+            if (fromDate) {
+                let pastRecords = allRecords.filter(r => new Date(r.date) < fromDate);
+                pastRecords.forEach(r => {
+                    currentOpeningBalance += r.cr;
+                    currentOpeningBalance -= r.dr;
+                });
+                currentlyFilteredRecords = allRecords.filter(r => new Date(r.date) >= fromDate);
+            } else {
+                currentlyFilteredRecords = allRecords;
+            }
+
+            if (toDate) {
+                currentlyFilteredRecords = currentlyFilteredRecords.filter(r => new Date(r.date) <= toDate);
+            }
+
+            currentlyFilteredRecords.sort((a, b) => new Date(a.date) - new Date(b.date));
+            renderLedgerTable(currentlyFilteredRecords);
+        }
+
+        function renderLedgerTable(records) {
+            const tbody = document.getElementById('ledgerTableBody');
+            tbody.innerHTML = '';
+
+            let runBal = currentOpeningBalance; 
+            let totalDr = 0; 
+            let totalCr = 0; 
+            let currentMonth = "";
+
+            tbody.innerHTML += `
+                <tr style="background: rgba(23, 162, 184, 0.1);">
+                    <td colspan="5" style="text-align: right; font-weight: bold; color: #17a2b8;">OPENING BALANCE (Before Selected Date):</td>
+                    <td style="text-align: right; font-weight: bold; color: ${runBal < 0 ? '#dc3545' : '#28a745'};">₹${runBal.toLocaleString('en-IN')}</td>
+                </tr>
+            `;
+
+            if(records.length === 0) {
+                tbody.innerHTML += `<tr><td colspan="6" style="text-align: center; color: #ff6b6b; padding: 30px;">No transactions found for selected criteria.</td></tr>`;
+            } else {
+                records.forEach(r => {
+                    let recordMonth = getMonthYearStr(r.date);
+                    if (recordMonth !== currentMonth) {
+                        currentMonth = recordMonth;
+                        tbody.innerHTML += `
+                            <tr class="month-header-row">
+                                <td colspan="6">📅 Month: ${currentMonth}</td>
+                            </tr>
+                        `;
+                    }
+
+                    totalDr += r.dr;
+                    totalCr += r.cr;
+                    runBal += (r.cr - r.dr);
+
+                    let drText = r.dr > 0 ? `₹${r.dr.toLocaleString('en-IN')}` : "-";
+                    let crText = r.cr > 0 ? `₹${r.cr.toLocaleString('en-IN')}` : "-";
+                    
+                    let tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="color: var(--text-muted); font-size: 12px; font-weight: 600;">${r.date}</td>
+                        <td style="font-weight: 600;">${r.desc}</td>
+                        <td><span style="background: var(--input-bg); border: 1px solid var(--border-color); padding: 4px 8px; border-radius: 4px; font-size:11px; color: var(--theme-color); font-weight: bold;">${r.ref}</span></td>
+                        <td style="text-align: right;" class="type-cr">${crText}</td>
+                        <td style="text-align: right;" class="type-dr">${drText}</td>
+                        <td style="text-align: right; font-weight: bold; color: ${runBal < 0 ? '#dc3545' : '#28a745'};">₹${runBal.toLocaleString('en-IN')}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            document.getElementById('footOpeningBal').innerText = `₹${currentOpeningBalance.toLocaleString('en-IN')}`;
+            document.getElementById('totalCredit').innerText = `₹${totalCr.toLocaleString('en-IN')}`;
+            document.getElementById('totalDebit').innerText = `₹${totalDr.toLocaleString('en-IN')}`;
+            document.getElementById('netBalance').innerText = `₹${runBal.toLocaleString('en-IN')}`;
+            document.getElementById('netBalance').style.color = runBal < 0 ? '#dc3545' : '#28a745';
+        }
+
+        // ================= A4 REPORT GENERATOR (MONTH-WISE SUBTOTALS & MONTHLY SUMMARY) =================
+        function generateAndPrintReport() {
+            if (!selectedSupId || !selectedSiteName || (currentlyFilteredRecords.length === 0 && currentOpeningBalance === 0)) {
+                alert("No data available to print."); return;
+            }
+
+            let supName = supervisors.find(s => s.id === selectedSupId)?.name || "Unknown";
+            document.getElementById('printSupName').innerText = `${supName} (${selectedSupId})`;
+            document.getElementById('printSiteName').innerText = selectedSiteName;
+            
+            let fDate = document.getElementById('fromDate').value || "Start";
+            let tDate = document.getElementById('toDate').value || "Today";
+            document.getElementById('printDateRange').innerText = `${fDate} to ${tDate}`;
+
+            const empTbody = document.querySelector('#printEmpTable tbody');
+            const siteExpTbody = document.querySelector('#printSiteExpTable tbody');
+            const creditTbody = document.querySelector('#printCreditTable tbody');
+            const summaryTbody = document.querySelector('#printMonthlySummaryTable tbody');
+            
+            empTbody.innerHTML = ''; siteExpTbody.innerHTML = ''; creditTbody.innerHTML = ''; summaryTbody.innerHTML = '';
+
+            let grandSumEmp = 0, grandSumSite = 0, grandSumCr = 0;
+            let grandSumPresent = 0, grandSumOT = 0;
+
+            // Advanced Subtotal Rendering Engine
+            let renderGroupedTable = (typeFilter, tbodyElem, rowFormatter, isEmp = false) => {
+                let recs = currentlyFilteredRecords.filter(r => r.type === typeFilter);
+                if (recs.length === 0) return;
+                
+                let curMonth = "";
+                let monthSumDr = 0, monthSumCr = 0;
+                let monthSumPresent = 0, monthSumOT = 0;
+                let colSpan = isEmp ? 5 : 3;
+
+                let appendSubtotal = () => {
+                    if (curMonth !== "") {
+                        if (isEmp) {
+                            tbodyElem.innerHTML += `<tr class="print-subtotal-row">
+                                <td colspan="2" style="text-align:right;">Total for ${curMonth}:</td>
+                                <td class="center-col">${monthSumPresent}</td>
+                                <td class="center-col">${monthSumOT}</td>
+                                <td class="amount-col">₹${monthSumDr.toLocaleString('en-IN')}</td>
+                            </tr>`;
+                        } else {
+                            let amt = typeFilter === 'Credit' ? monthSumCr : monthSumDr;
+                            let cls = typeFilter === 'Credit' ? 'cr' : '';
+                            tbodyElem.innerHTML += `<tr class="print-subtotal-row ${cls}">
+                                <td colspan="2" style="text-align:right;">Total for ${curMonth}:</td>
+                                <td class="amount-col">₹${amt.toLocaleString('en-IN')}</td>
+                            </tr>`;
+                        }
+                    }
+                };
+
+                recs.forEach(r => {
+                    let rMonth = getMonthYearStr(r.date);
+                    if (rMonth !== curMonth) {
+                        appendSubtotal();
+                        curMonth = rMonth;
+                        monthSumDr = 0; monthSumCr = 0; monthSumPresent = 0; monthSumOT = 0;
+                        tbodyElem.innerHTML += `<tr><td colspan="${colSpan}" class="print-month-header">Month: ${curMonth}</td></tr>`;
+                    }
+                    
+                    if (typeFilter === 'Credit') monthSumCr += r.cr;
+                    else monthSumDr += r.dr;
+
+                    if (isEmp) {
+                        monthSumPresent += parseFloat(r.present) || 0;
+                        monthSumOT += parseFloat(r.ot) || 0;
+                    }
+                    
+                    tbodyElem.innerHTML += rowFormatter(r);
+                });
+                appendSubtotal(); 
+            };
+
+            // Employee Expenses
+            renderGroupedTable('EmpExp', empTbody, (r) => {
+                grandSumEmp += r.dr;
+                grandSumPresent += parseFloat(r.present) || 0;
+                grandSumOT += parseFloat(r.ot) || 0;
+                return `<tr>
+                    <td>${r.date}</td>
+                    <td>${r.empName} (${r.empCode})</td>
+                    <td class="center-col">${r.present}</td>
+                    <td class="center-col">${r.ot}</td>
+                    <td class="amount-col">₹${r.dr.toLocaleString('en-IN')}</td>
+                </tr>`;
+            }, true);
+
+            // Site Expenses
+            renderGroupedTable('SiteExp', siteExpTbody, (r) => {
+                grandSumSite += r.dr;
+                return `<tr>
+                    <td>${r.date}</td>
+                    <td>${r.desc}</td>
+                    <td class="amount-col">₹${r.dr.toLocaleString('en-IN')}</td>
+                </tr>`;
+            }, false);
+
+            // Credit Log
+            renderGroupedTable('Credit', creditTbody, (r) => {
+                grandSumCr += r.cr;
+                return `<tr>
+                    <td>${r.date}</td>
+                    <td>${r.desc} (Ref: ${r.ref})</td>
+                    <td class="amount-col" style="color:#28a745;">₹${r.cr.toLocaleString('en-IN')}</td>
+                </tr>`;
+            }, false);
+
+            // Update Report Grand Totals into DOM
+            document.getElementById('printTotalPresent').innerText = grandSumPresent;
+            document.getElementById('printTotalOT').innerText = grandSumOT;
+            document.getElementById('printTotalEmpExp').innerText = `₹${grandSumEmp.toLocaleString('en-IN')}`;
+            
+            document.getElementById('printTotalSiteExp').innerText = `₹${grandSumSite.toLocaleString('en-IN')}`;
+            document.getElementById('printTotalCredit').innerText = `₹${grandSumCr.toLocaleString('en-IN')}`;
+
+            // ================= BUILD MONTHLY FINANCIAL SUMMARY (SECTION 4) =================
+            let monthMap = {};
+            currentlyFilteredRecords.forEach(r => {
+                let m = getMonthYearStr(r.date);
+                if(!monthMap[m]) monthMap[m] = { cr: 0, empDr: 0, siteDr: 0 };
+                if (r.type === 'Credit') monthMap[m].cr += r.cr;
+                if (r.type === 'EmpExp') monthMap[m].empDr += r.dr;
+                if (r.type === 'SiteExp') monthMap[m].siteDr += r.dr;
+            });
+
+            let runningSumBal = currentOpeningBalance;
+            for (let monthKey in monthMap) {
+                let mData = monthMap[monthKey];
+                let mClose = runningSumBal + mData.cr - (mData.empDr + mData.siteDr);
+                summaryTbody.innerHTML += `
+                    <tr>
+                        <td><strong>${monthKey}</strong></td>
+                        <td class="amount-col" style="color:#17a2b8;">₹${runningSumBal.toLocaleString('en-IN')}</td>
+                        <td class="amount-col" style="color:#28a745;">₹${mData.cr.toLocaleString('en-IN')}</td>
+                        <td class="amount-col" style="color:#dc3545;">₹${mData.empDr.toLocaleString('en-IN')}</td>
+                        <td class="amount-col" style="color:#dc3545;">₹${mData.siteDr.toLocaleString('en-IN')}</td>
+                        <td class="amount-col" style="color:#6f42c1; font-weight:bold;">₹${mClose.toLocaleString('en-IN')}</td>
+                    </tr>
+                `;
+                runningSumBal = mClose;
+            }
+
+            // Update Final Summary Box
+            document.getElementById('printSumOpening').innerText = `₹${currentOpeningBalance.toLocaleString('en-IN')}`;
+            document.getElementById('printSumCr').innerText = `₹${grandSumCr.toLocaleString('en-IN')}`;
+            document.getElementById('printSumEmp').innerText = `₹${grandSumEmp.toLocaleString('en-IN')}`;
+            document.getElementById('printSumSite').innerText = `₹${grandSumSite.toLocaleString('en-IN')}`;
+            document.getElementById('printSumBal').innerText = `₹${runningSumBal.toLocaleString('en-IN')}`;
+
+            window.print();
+        }
+
+        // ================= CUSTOM EXCEL EXPORT (100% MATCHING A4 REPORT FORMAT) =================
+        function exportToExcel(filename = 'Supervisor_Ledger') {
+            if (!selectedSupId || !selectedSiteName || (currentlyFilteredRecords.length === 0 && currentOpeningBalance === 0)) {
+                alert("No data available to export."); return;
+            }
+
+            let supName = supervisors.find(s => s.id === selectedSupId)?.name || "Unknown";
+            let fDate = document.getElementById('fromDate').value || "Start";
+            let tDate = document.getElementById('toDate').value || "Today";
+
+            // Initialize Array
+            const exportData = [
+                ["ATR CONSTRUCTION - SUPERVISOR FUND & EXPENSE REPORT"],
+                ["Supervisor:", `${supName} (${selectedSupId})`, "Site:", selectedSiteName],
+                ["Date Range:", `${fDate} to ${tDate}`],
+                []
+            ];
+
+            let grandSumEmp = 0, grandSumSite = 0, grandSumCr = 0;
+            let grandSumPresent = 0, grandSumOT = 0;
+
+            let processExcelSection = (title, headers, typeFilter, rowMapper, isEmp = false) => {
+                exportData.push([title]);
+                exportData.push(headers);
+                let recs = currentlyFilteredRecords.filter(r => r.type === typeFilter);
+                if (recs.length === 0) { exportData.push(["No records found."]); exportData.push([]); return; }
+                
+                let curMonth = "";
+                let monthSumDr = 0, monthSumCr = 0;
+                let monthSumPresent = 0, monthSumOT = 0;
+
+                let appendExcelSubtotal = () => {
+                    if (curMonth !== "") {
+                        if (isEmp) exportData.push(["", `TOTAL FOR ${curMonth}:`, monthSumPresent, monthSumOT, monthSumDr]);
+                        else exportData.push(["", `TOTAL FOR ${curMonth}:`, "", typeFilter === 'Credit' ? monthSumCr : monthSumDr]);
+                    }
+                };
+
+                recs.forEach(r => {
+                    let rMonth = getMonthYearStr(r.date);
+                    if (rMonth !== curMonth) {
+                        appendExcelSubtotal();
+                        curMonth = rMonth;
+                        monthSumDr = 0; monthSumCr = 0; monthSumPresent = 0; monthSumOT = 0;
+                        let monthRow = [`MONTH: ${curMonth.toUpperCase()}`];
+                        for(let i=1; i<headers.length; i++) monthRow.push("");
+                        exportData.push(monthRow);
+                    }
+                    
+                    if (typeFilter === 'Credit') monthSumCr += r.cr;
+                    else monthSumDr += r.dr;
+
+                    if (isEmp) {
+                        monthSumPresent += parseFloat(r.present) || 0;
+                        monthSumOT += parseFloat(r.ot) || 0;
+                    }
+                    
+                    exportData.push(rowMapper(r));
+                });
+                appendExcelSubtotal();
+                
+                // Add Grand Totals for the section
+                if (isEmp) exportData.push(["GRAND TOTAL EMPLOYEE EXPENSE:", "", grandSumPresent, grandSumOT, grandSumEmp]);
+                else if (typeFilter === 'SiteExp') exportData.push(["GRAND TOTAL SITE EXPENSE:", "", "", grandSumSite]);
+                else if (typeFilter === 'Credit') exportData.push(["GRAND TOTAL FUND RECEIVED:", "", "", grandSumCr]);
+                exportData.push([]);
+            };
+
+            // SECTION 1: EMPLOYEES
+            processExcelSection("1. EMPLOYEE EXPENSES & PAYMENTS", ["Date", "Employee Name & Code", "Present (Days)", "OT (Hrs)", "Paid Advance (Rs.)"], 'EmpExp', (r) => {
+                grandSumEmp += r.dr;
+                grandSumPresent += parseFloat(r.present) || 0;
+                grandSumOT += parseFloat(r.ot) || 0;
+                return [r.date, `${r.empName} (${r.empCode})`, r.present, r.ot, r.dr];
+            }, true);
+
+            // SECTION 2: SITE EXPENSE
+            processExcelSection("2. GENERAL SITE EXPENSES", ["Date", "Description / Reason", "", "Expense Amount (Rs.)"], 'SiteExp', (r) => {
+                grandSumSite += r.dr;
+                return [r.date, r.desc, "", r.dr];
+            });
+
+            // SECTION 3: CREDIT LOG
+            processExcelSection("3. CREDIT LOG (FUND RECEIVED)", ["Date", "Reference / Bank Details", "", "Amount Received (Rs.)"], 'Credit', (r) => {
+                grandSumCr += r.cr;
+                return [r.date, `${r.desc} (Ref: ${r.ref})`, "", r.cr];
+            });
+
+            // SECTION 4: MONTHLY FINANCIAL SUMMARY
+            exportData.push(["4. MONTHLY FINANCIAL SUMMARY"]);
+            exportData.push(["Month & Year", "Opening Balance", "Fund Received (Cr)", "Emp Exp (Dr)", "Site Exp (Dr)", "Closing Balance"]);
+            
+            let monthMap = {};
+            currentlyFilteredRecords.forEach(r => {
+                let m = getMonthYearStr(r.date);
+                if(!monthMap[m]) monthMap[m] = { cr: 0, empDr: 0, siteDr: 0 };
+                if (r.type === 'Credit') monthMap[m].cr += r.cr;
+                if (r.type === 'EmpExp') monthMap[m].empDr += r.dr;
+                if (r.type === 'SiteExp') monthMap[m].siteDr += r.dr;
+            });
+
+            let runningSumBal = currentOpeningBalance;
+            for (let monthKey in monthMap) {
+                let mData = monthMap[monthKey];
+                let mClose = runningSumBal + mData.cr - (mData.empDr + mData.siteDr);
+                exportData.push([monthKey, runningSumBal, mData.cr, mData.empDr, mData.siteDr, mClose]);
+                runningSumBal = mClose;
+            }
+            exportData.push([]);
+
+            // FINAL SUMMARY
+            exportData.push(["GRAND TOTAL SUMMARY"]);
+            exportData.push(["Initial Opening Balance:", currentOpeningBalance]);
+            exportData.push(["Total Fund Received in Range (Cr):", grandSumCr]);
+            exportData.push(["Total Employee Exp in Range (Dr):", grandSumEmp]);
+            exportData.push(["Total Site Exp in Range (Dr):", grandSumSite]);
+            exportData.push(["Final Available Balance:", runningSumBal]);
+
+            // Create Worksheet & Download
+            const ws = XLSX.utils.aoa_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Ledger_Report");
+            XLSX.writeFile(wb, filename + '_' + new Date().toISOString().slice(0,10) + '.xlsx');
+        }
+    </script>
+</body>
+</html>

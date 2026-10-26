@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Master Dashboard Container</title>
+    
+    <!-- ================= 🚀 FRAME-BUSTING SECURITY (INCEPTION BUG FIX) ================= -->
+    <!-- This extremely powerful logic prevents the dashboard from loading inside its own iframe -->
+    <script>
+        if (window.self !== window.top) {
+            window.top.location.replace(window.location.href);
+        }
+    </script>
+
+    <!-- GLOBAL THEME MEMORY (Load before rendering to prevent light/dark flickering) -->
+    <script>
+        const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'atr_theme' && e.newValue) {
+                document.documentElement.setAttribute('data-theme', e.newValue);
+                const themeIcon = document.getElementById('themeIcon');
+                if (themeIcon) themeIcon.innerText = e.newValue === 'dark' ? '🌓' : '☀️';
+            }
+        });
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
+
+        /* ================= THEME ENGINE (DARK / LIGHT MODE) ================= */
+        :root {
+            --bg-body: #121212;
+            --bg-sidebar: #1e1e1e;
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --hover-bg: rgba(255, 255, 255, 0.08);
+            --shadow: 0 4px 15px rgba(0,0,0,0.3);
+            --theme-transition: background-color 0.4s ease, color 0.4s ease;
+        }
+
+        [data-theme="light"] {
+            --bg-body: #f0f2f5;
+            --bg-sidebar: #ffffff;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #666666;
+            --border-color: rgba(0, 0, 0, 0.1);
+            --glass-bg: rgba(0, 0, 0, 0.02);
+            --hover-bg: rgba(0, 0, 0, 0.05);
+            --shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Montserrat', sans-serif;
+            scroll-behavior: smooth;
+        }
+
+        /* ================= CUSTOM MODERN SCROLLBAR ================= */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(136, 136, 136, 0.3);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(136, 136, 136, 0.6);
+        }
+
+        /* ================= APP LAYOUT (FIXED SHELL) ================= */
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            transition: var(--theme-transition);
+        }
+
+        /* Sidebar Navigation Layout */
+        .sidebar {
+            width: 280px;
+            min-width: 280px;
+            height: 100vh;
+            background-color: var(--bg-sidebar);
+            padding: 25px 15px;
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            transition: margin-left 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease;
+            z-index: 1001;
+            opacity: 1;
+        }
+
+        /* Hide Sidebar Styling */
+        body.sidebar-hidden .sidebar {
+            margin-left: -280px;
+            opacity: 0;
+        }
+
+        /* Main Workspace Control Frame */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background: var(--bg-body);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+        }
+
+        /* ================= FIXED HEADER ================= */
+        .header {
+            flex-shrink: 0;
+            background: var(--bg-sidebar);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 40px;
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            z-index: 1000;
+        }
+
+        /* ================= IFRAME VIEWPORT CONTAINER ================= */
+        .iframe-container {
+            flex: 1;
+            width: 100%;
+            height: 100%;
+            border: none;
+            background-color: var(--bg-body);
+        }
+
+        /* ================= CREATIVE PROFILE SECTION ================= */
+        .creative-profile-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .avatar-wrapper {
+            position: relative;
+            width: 85px;
+            height: 85px;
+            cursor: pointer;
+            border-radius: 50%;
+            border: 3px solid #ffc107;
+            padding: 3px;
+            transition: transform 0.3s;
+        }
+
+        .avatar-wrapper:hover {
+            transform: scale(1.05);
+        }
+
+        .profile-img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            background-color: var(--hover-bg);
+        }
+
+        .camera-overlay {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            background: #007bff;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 12px;
+            border: 2px solid var(--bg-sidebar);
+            transition: all 0.3s;
+        }
+
+        .camera-overlay:hover {
+            background: #ffc107;
+            color: #121212;
+        }
+
+        /* Profile Glass Dropdown */
+        .profile-dropdown-menu {
+            position: absolute;
+            top: 100px;
+            width: 200px;
+            background: var(--bg-card);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            padding: 15px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .creative-profile-container.active .profile-dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .profile-dropdown-menu h4 { font-size: 15px; margin-bottom: 2px; color: var(--text-main); text-align: center;}
+        .profile-dropdown-menu span { display: block; font-size: 11px; color: #ffc107; text-align: center; margin-bottom: 10px; font-weight: bold;}
+        .profile-dropdown-menu hr { border: 0; border-top: 1px solid var(--border-color); margin: 10px 0; }
+        
+        .profile-dropdown-menu a {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-main);
+            text-decoration: none;
+            padding: 8px 10px;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .profile-dropdown-menu a:hover {
+            background: var(--hover-bg);
+            color: #ffc107;
+        }
+        .profile-dropdown-menu a.logout-btn:hover { color: #ff6b6b; }
+        
+        /* ================= SIDEBAR LINKS & TREES ================= */
+        .sidebar a, .tree-toggle {
+            color: var(--text-muted);
+            text-decoration: none;
+            padding: 12px 15px;
+            margin-bottom: 5px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            user-select: none;
+        }
+
+        .sidebar a:hover, .sidebar a.active, .tree-toggle:hover, .tree-container.open > .tree-toggle {
+            background-color: #ffc107;
+            color: #121212;
+        }
+
+        .dashboard-home-link {
+            background: var(--glass-bg);
+            border: 1px solid var(--border-color);
+            margin-bottom: 15px;
+            border-radius: 8px;
+        }
+
+        /* TREE MODE DROPDOWN ENGINE LAYOUTS */
+        .tree-container { margin-bottom: 5px; }
+
+        .tree-menu {
+            max-height: 0;
+            overflow: hidden;
+            list-style: none;
+            padding-left: 20px;
+            transition: max-height 0.3s ease-out;
+            background: var(--glass-bg);
+            border-radius: 0 0 6px 6px;
+        }
+
+        .tree-menu li a {
+            font-size: 13px;
+            padding: 10px 15px;
+            margin-bottom: 2px;
+            font-weight: 500;
+            border-radius: 0 4px 4px 0;
+        }
+
+        /* Hierarchy border accents themes */
+        #masterTree .tree-menu li a { border-left: 2px solid #007bff; }
+        #approvalTree .tree-menu li a { border-left: 2px solid #17a2b8; }
+        #employeeTree .tree-menu li a { border-left: 2px solid #28a745; }
+        #contractorTree .tree-menu li a { border-left: 2px solid #fd7e14; }
+        #mobilizationTree .tree-menu li a { border-left: 2px solid #6f42c1; }
+        #companyTree .tree-menu li a { border-left: 2px solid #20c997; }
+        #supervisorTree .tree-menu li a { border-left: 2px solid #3f51b5; }
+        #salesTree .tree-menu li a { border-left: 2px solid #e91e63; }
+        #purchaseTree .tree-menu li a { border-left: 2px solid #00bcd4; }
+        #paymentTree .tree-menu li a { border-left: 2px solid #dc3545; }
+        #reportTree .tree-menu li a { border-left: 2px solid #ffc107; }
+        #stockTree .tree-menu li a { border-left: 2px solid #9c27b0; }
+        #docTree .tree-menu li a { border-left: 2px solid #457b9d; }
+
+        .tree-container.open .tree-menu { max-height: 650px; padding-top: 4px; padding-bottom: 4px; }
+        .tree-container.open .arrow { transform: rotate(90deg); }
+        .arrow { transition: transform 0.3s; font-size: 12px; }
+
+        /* ================= HEADER CONTENT ================= */
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .header-left h1 { font-size: 24px; color: var(--text-main); }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .icon-btn {
+            background: var(--glass-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s;
+        }
+
+        .icon-btn:hover { background: var(--hover-bg); transform: translateY(-2px); }
+
+        .notification-wrapper { position: relative; }
+        
+        .badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #ff6b6b;
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 2px solid var(--bg-sidebar);
+        }
+
+        .notif-dropdown-menu {
+            position: absolute;
+            top: 50px;
+            right: 0;
+            width: 320px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            z-index: 2000;
+        }
+
+        .notification-wrapper.active .notif-dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .notif-dropdown-menu h4 {
+            padding: 15px;
+            font-size: 14px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-main);
+            background: var(--glass-bg);
+            border-radius: 10px 10px 0 0;
+        }
+
+        .notif-item {
+            padding: 12px 15px;
+            display: block;
+            text-decoration: none;
+            color: var(--text-main);
+            font-size: 13px;
+            border-bottom: 1px solid var(--border-color);
+            transition: background 0.2s;
+        }
+
+        .notif-item:hover { background: var(--hover-bg); color: #17a2b8; }
+        .notif-item:last-child { border-bottom: none; border-radius: 0 0 10px 10px; }
+    </style>
+</head>
+<body>
+
+    <!-- ================= FIXED SIDEBAR ================= -->
+    <div class="sidebar">
+        
+        <!-- CREATIVE PROFILE SECTION -->
+        <div class="creative-profile-container" id="profileContainer">
+            <div class="avatar-wrapper" onclick="toggleProfileMenu(event)">
+                <img src="https://ui-avatars.com/api/?name=Rahul+Sk&background=2b2b2b&color=ffc107" id="profileImage" class="profile-img" alt="Admin">
+                <div class="camera-overlay" onclick="document.getElementById('fileUpload').click(); event.stopPropagation();">
+                    📷
+                </div>
+            </div>
+            <input type="file" id="fileUpload" style="display:none;" accept="image/*" onchange="updateProfilePic(event)">
+            
+            <div class="profile-dropdown-menu" id="profileMenu">
+                <h4>Rahul Sk</h4>
+                <span>Super Admin</span>
+                <hr>
+                <a href="ChangePassword.html" target="contentFrame" onclick="closeDropdowns()">🔑 Change Password</a>
+                <a href="index.html" class="logout-btn">🚪 Logout</a>
+            </div>
+        </div>
+
+        <!-- MAIN DASHBOARD HOME LINK -->
+        <a href="dashboard_home.html" target="contentFrame" id="mainDashboardHomeLink" class="dashboard-home-link active" onclick="setActiveSidebarLink(this)">📊 Main Dashboard</a>
+
+        <!-- TREE SECTIONS LINKED TO IFRAME -->
+        <div class="tree-container" id="masterTree">
+            <div class="tree-toggle" onclick="toggleTreeMenu('masterTree')"><span>🛠️ Master Section</span><span class="arrow">▶</span></div>
+            <ul class="tree-menu">
+                <li><a href="NewUserEntry.html" target="contentFrame" onclick="setActiveSidebarLink(this)">👤 New User Entry</a></li>
+                <li><a href="MenuAlotment.html" target="contentFrame" onclick="setActiveSidebarLink(this)">📋 Menu Allotment</a></li>
+                <li><a href="HeadAllotment.html" target="contentFrame" onclick="setActiveSidebarLink(this)">🏷️ Head Entry</a></li>
+                <li><a href="BankEntry.html" target="contentFrame" onclick="setActiveSidebarLink(this)">🏦 Bank Entry</a></li>
+                <li><a href="T&CEntry.html" target="contentFrame" onclick="setActiveSidebarLink(this)">📜 Add T&C Entry</a></li>
+            </ul>
+        </div>
+
+        <div class="tree-container" id="approvalTree">
+            <div class="tree-toggle" onclick="toggleTreeMenu('approvalTree')"><span>✅ Approval Section</span><span class="arrow">▶</span></div>
+            <ul class="tree-menu">
+                <li><a href="ApproveOffice.html" target="contentFrame" onclick="setActiveSidebarLink(this)">🏢 Office User Requests</a></li>
+                <li><a href="ApproveSupervisor.html" target="contentFrame" onclick="setActiveSidebarLink(this)">🛡️ Supervisor Requests</a></li>
+                <li><a href="ApprovalLogs.html" target="contentFrame" onclick="setActiveSidebarLink(this)">📜 Approval History</a></li>
+            </ul>
+        </div>
+
+        <div class="tree-container" id="employeeTree">
+            <div class="tree-toggle" onclick="toggleTreeMenu('employeeTree')"><span>👥 Employee Section</span><span class="arrow">▶</span></div>
+            <ul class="tree-menu">
+                <li><a href="EmployeeCategory.html" target="contentFrame" onclick="setActiveSidebarLink(this)">👔 Position Category</a></li>
+                <li><a href="RegisteredEmployeeRecords.html" target="contentFrame" onclick="setActiveSidebarLink(this)">📝 Employee Joining</a></li>
+                <li><a href="SiteTagging.html" target="contentFrame" onclick="setActiveSidebarLink(this)">📍 Site Tagging</a></li>
+                <li><a href="EmployeeSubId.html" target="contentFrame" onclick="setActiveSidebarLink(this)">🆔 Sub ID Create</a></li>
+                <li><a href="Paymentlist.html" target="contentFrame" onclick="setActiveSidebarLink(this)">📄 Payment List</a></li>
+                <li><a href="EmployeeAttendance.html" target="contentFrame" onclick="setActiveSidebarLink(this)">📅 Attendence</a></li>
+                <li><a href="SiteLeaveEntry.html" target="contentFrame" onclick="setActiveSidebarLink(this)">🚪 Site Leave Entry</a></li>
+                <li><a href="EmployeeLedger.html" target="contentFrame" onclick="setActiveSidebarLink(this)">📖 Employee Ledger</a></li>
+            </ul>
+        </div>
+
+        <div class="tree-container" id="contractorTree">
+            <div class="tree-toggle" onclick="toggleTreeMenu('contractorTree')"><span>🏗️ Contractor Section</span><span class="arrow">▶</span></div>
+            <ul class="tree-menu">
+                <li><a href="AddContractor.html" target="contentFrame" onclick="setActiveSidebarLink(this)">👷 Add Contractor</a></li>
+                <li><a href="SiteOrderEntry.html" target="contentFrame" onclick="setActiveSidebarLink(this)">📦 Site Order Entry</a></li>
+                <li><a href="ProductEntry.html" target="contentFrame" onclick="setActiveSidebarLink(this)">🧱 Product Entry</a></li>
+                <li><a href="ContractorLedger.html" target="contentFrame" onclick="setActiveSidebarLink(this)">📖 Contractor Ledger</a></li>
+            </ul>
+        </div>
+
+        <div class="tree-container" id="mobilizationTree">
+            <div class="tree-toggle" onclick="toggleTreeMenu('mobilizationTree')"><span>⚙️ Mobilization Section</span><span class="arrow">▶</span></div>
+            <ul class="tree-menu">
+                <li><a href="AddEquipment.html" target="contentFrame" onclick="setActiveSidebarLink(this)">🚜 Add Equipment</a></li>
+                <li><a href="SiteOrderEquipment.html" target="contentFrame" onclick="setActiveSidebarLink(this)">📋 Site Order Equipment</a></li>
+                <li><a href="EquipmentLeave.html" target="contentFrame" onclick="setActiveSidebarLink(this)">⏱️ Equipment Leave</a></li>
+                <li><a href="SiteTaggingEquipment.html" target="contentFrame" onclick="setActiveSidebarLink(this)">📍 Site Tagging Equipment</a></li>
+            </ul>
+        </div>
+
+        <div class="tree-container" id="companyTree">
+            <div class="tree-toggle" onclick="toggleTreeMenu('companyTree')"><span>🏢 Company Section</span><span class="arrow">▶</span></div>
+            <ul class="tree-menu">
+                <li><a href="AddCompany.html" target="contentFrame" onclick="setActiveSidebarLink(this)">🏢 Add Company</a></li>
+                <li><a href="BalanceReceived.html" target="contentFrame" onclick="setActiveSidebarLink(this)">💰 Balance Received</a></li>
+                <li><a href="CompanyLedger.html" target="contentFrame" onclick="setActiveSidebarLink(this)">📊 Company Ledger</a></li>
+                <li><a href="CompanyLoanManagement.html" target="contentFrame" onclick="setActiveSidebarLink(this)">🏦 Company Loan Management</a></li>
+                <li><a href="VehicleManagement.html" target="contentFrame" onclick="setActiveSidebarLink(this)">🚜 Vehicle Management</a></li>
+                <li><a href="IncomeExpenseEntry.html" target="contentFrame" onclick="setActiveSidebarLink(this)">💸 Income Expense Entry</a></li>
+                <li><a href="bankstatement.html" target="contentFrame" onclick="setActiveSidebarLink(this)">📜 Bank Statement</a></li>
+            </ul>
+        </div>
+
+        <div class="tree-container" id="supervisorTree">
+            <div class="tree-toggle" onclick="toggleTreeMenu('supervisorTree')"><span>🛡️ Supervisor Section</span><span class="arrow">▶</span></div>
+            <ul class="tree-menu">
+                <li><a href="AddSupervisor.html" target="contentFrame" onclick="setActiveSidebarLink(this)">👤 Add Supervisor</a></li>
+                <li><a href="SiteTaggingSupervisor.html" target="contentFrame" onclick="setActiveSidebarLink(this)">📍 Site Tagging Supervisor</a></li>
+                <li><a href="SupervisorLedger.html" target="contentFrame" onclick="setActiveSidebarLink(this)">📖 Supervisor Ledger</a></li>
+            </ul>
+        </div>
+
+        <div class="tree-container" id="salesTree">
+            <div class="tree-toggle" onclick="toggleTreeMenu('salesTree')"><span>🛍️ Sales Section</span><span class="arrow">▶</span></div>
+            <ul class="tree-menu">
+                <li><a href="PurchaseOrderEntry.html" target="contentFrame" onclick="setActiveSidebarLink(this)">📄 Purchase Order Entry</a></li>
+                <li><a href="InvoiceEntry.html" target="contentFrame" onclick="setActiveSidebarLink(this)">🧾 Invoice Entry</a></li>
+                <li><a href="ViewSite.html" target="contentFrame" onclick="setActiveSidebarLink(this)">👁️ Sales Report</a></li>
+            </ul>
+        </div>
+
+        <div class="tree-container" id="purchaseTree">
+            <div class="tree-toggle" onclick="toggleTreeMenu('purchaseTree')"><span>🛒 Purchase Section</span><span class="arrow">▶</span></div>
+            <ul class="tree-menu">
+                <li><a href="AddRetailer.html" target="contentFrame" onclick="setActiveSidebarLink(this)">🏪 Add Retailer</a></li>
+                <li><a href="RetailSiteInvoice.html" target="contentFrame" onclick="setActiveSidebarLink(this)">🧾 Retail Site Invoice</a></li>
+                <li><a href="GstReport.html" target="contentFrame" onclick="setActiveSidebarLink(this)">📈 GST Report</a></li>
+                <li><a href="NonGstReport.html" target="contentFrame" onclick="setActiveSidebarLink(this)">📉 Non GST Report</a></li>
+                <li><a href="RetailLedger.html" target="contentFrame" onclick="setActiveSidebarLink(this)">📖 Retail Ledger</a></li>
+            </ul>
+        </div>
+
+        <div class="tree-container" id="paymentTree">
+            <div class="tree-toggle" onclick="toggleTreeMenu('paymentTree')"><span>💳 Payment Section</span><span class="arrow">▶</span></div>
+            <ul class="tree-menu">
+                <li><a href="AllTypePayment.html" target="contentFrame" onclick="setActiveSidebarLink(this)">💸 All Type Payment</a></li>
+            </ul>
+        </div>
+
+        <div class="tree-container" id="reportTree">
+            <div class="tree-toggle" onclick="toggleTreeMenu('reportTree')"><span>📊 Report Section</span><span class="arrow">▶</span></div>
+            <ul class="tree-menu">
+                <li><a href="MobilizationReport.html" target="contentFrame" onclick="setActiveSidebarLink(this)">🚜 Mobilization Report</a></li>
+                <li><a href="EmployeeLedger.html" target="contentFrame" onclick="setActiveSidebarLink(this)">👥 Employee Report</a></li>
+                <li><a href="ContractorLedger.html" target="contentFrame" onclick="setActiveSidebarLink(this)">👷 Contractor Report</a></li>
+                <li><a href="CompanyLedger.html" target="contentFrame" onclick="setActiveSidebarLink(this)">🏢 Company Report</a></li>
+                <li><a href="SupervisorLedger.html" target="contentFrame" onclick="setActiveSidebarLink(this)">🛡️ Supervisor Report</a></li>
+                <li><a href="StockView.html" target="contentFrame" onclick="setActiveSidebarLink(this)">💰 Selles Report</a></li>
+                <li><a href="RetailLedger.html" target="contentFrame" onclick="setActiveSidebarLink(this)">🛍️ Purchase Report</a></li>
+                <li><a href="GstBillDownload.html" target="contentFrame" onclick="setActiveSidebarLink(this)">📥 GST Bill Download</a></li>
+                <li><a href="NonGstBillDownload.html" target="contentFrame" onclick="setActiveSidebarLink(this)">📥 Non GST Bill Download</a></li>
+                <li><a href="FullSiteLedger.html" target="contentFrame" onclick="setActiveSidebarLink(this)">📊 Full Site Report Ledger</a></li>
+            </ul>
+        </div>
+
+        <div class="tree-container" id="stockTree">
+            <div class="tree-toggle" onclick="toggleTreeMenu('stockTree')"><span>📦 Stock Management</span><span class="arrow">▶</span></div>
+            <ul class="tree-menu">
+                <li><a href="StockView.html" target="contentFrame" onclick="setActiveSidebarLink(this)">🔍 Add/View Stock</a></li>
+                <li><a href="CurrentStock.html" target="contentFrame" onclick="setActiveSidebarLink(this)">📊 Current Stock</a></li>
+                <li><a href="StockTransfer.html" target="contentFrame" onclick="setActiveSidebarLink(this)">🔄 Stock Transfer</a></li>
+                <li><a href="StockReport.html" target="contentFrame" onclick="setActiveSidebarLink(this)">📋 Stock Report</a></li>
+            </ul>
+        </div>
+
+        <div class="tree-container" id="docTree">
+            <div class="tree-toggle" onclick="toggleTreeMenu('docTree')"><span>📜 Company Document</span><span class="arrow">▶</span></div>
+            <ul class="tree-menu">
+                <li><a href="CreateDocList.html" target="contentFrame" onclick="setActiveSidebarLink(this)">📁 Create Doc List</a></li>
+                <li><a href="Backup.html" target="contentFrame" onclick="setActiveSidebarLink(this)">💾 Company Full Backup</a></li>
+            </ul>
+        </div>
+
+    </div>
+
+    <!-- ================= MAIN CONTENT ================= -->
+    <div class="main-content">
+        
+        <!-- FIXED TOP HEADER -->
+        <div class="header">
+            <div class="header-left">
+                <button class="icon-btn" onclick="toggleSidebar()" title="Toggle Sidebar">☰</button>
+                <h1>ATR Administration</h1>
+            </div>
+            
+            <div class="header-right">
+                <!-- Theme Toggle Button -->
+                <button class="icon-btn" onclick="toggleTheme()" title="Switch Light/Dark Mode" id="themeIcon">🌓</button>
+                
+                <!-- Notification Bell for Approvals -->
+                <div class="notification-wrapper" id="notifContainer">
+                    <button class="icon-btn" onclick="toggleNotification(event)" title="Pending Approvals">
+                        🔔<span class="badge" id="adminTotalNotifBadge">4</span>
+                    </button>
+                    <div class="notif-dropdown-menu" id="notifMenu">
+                        <h4>Pending Approvals</h4>
+                        <a href="ApproveOffice.html" target="contentFrame" class="notif-item" id="notifOfficeLink" onclick="openApprovalFromNotif('ApproveOffice.html')">🏢 2 Office Requests</a>
+                        <a href="ApproveSupervisor.html" target="contentFrame" class="notif-item" id="notifSupervisorLink" onclick="openApprovalFromNotif('ApproveSupervisor.html')">🛡️ 1 Supervisor Request</a>
+                        <a href="ApproveOffice.html" target="contentFrame" class="notif-item" id="notifLoanLink" onclick="openApprovalFromNotif('ApproveOffice.html')">🏦 1 Loan / EMI Request</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= MASTER IFRAME VIEWPORT ================= -->
+        <iframe name="contentFrame" id="contentFrame" class="iframe-container" src="dashboard_home.html"></iframe>
+
+    </div>
+
+    <script>
+        // Initialize Theme Icon, Saved Admin Avatar, Live Approval Counts & Iframe Sync
+        document.addEventListener('DOMContentLoaded', () => {
+            const currentTheme = localStorage.getItem('atr_theme') || 'dark';
+            const themeIcon = document.getElementById('themeIcon');
+            if (themeIcon) {
+                themeIcon.innerText = currentTheme === 'dark' ? '🌓' : '☀️';
+            }
+
+            // Restore saved Admin profile image if available
+            const savedAdminAvatar = localStorage.getItem('atr_admin_avatar');
+            if (savedAdminAvatar) {
+                document.getElementById('profileImage').src = savedAdminAvatar;
+            }
+
+            refreshAdminNotificationCounts();
+
+            // Sync active sidebar state when child pages navigate back to dashboard_home.html
+            const iframe = document.getElementById('contentFrame');
+            if (iframe) {
+                iframe.addEventListener('load', () => {
+                    try {
+                        const iLoc = iframe.contentWindow.location.pathname || '';
+                        if (iLoc.endsWith('dashboard_home.html')) {
+                            clearTreeActiveLinks();
+                        }
+                    } catch (e) {}
+                });
+            }
+        });
+
+        window.addEventListener('storage', function(e) {
+            if (
+                e.key === 'atr_office_approvals' ||
+                e.key === 'atr_supervisor_approvals' ||
+                e.key === 'atr_company_loans_db'
+            ) {
+                refreshAdminNotificationCounts();
+            }
+        });
+
+        // Live Notification Counter synced with Office, Supervisor & Loan Approval Queues
+        function refreshAdminNotificationCounts() {
+            const officeRaw = localStorage.getItem('atr_office_approvals');
+            const supRaw = localStorage.getItem('atr_supervisor_approvals');
+            const loanRaw = localStorage.getItem('atr_company_loans_db');
+
+            const allOfficeReqs = officeRaw ? (JSON.parse(officeRaw) || []) : [];
+            const allSupReqs = supRaw ? (JSON.parse(supRaw) || []) : [];
+            const allLoans = loanRaw ? (JSON.parse(loanRaw) || []) : [];
+
+            // Filter standard office requests (excluding loan ones to count them separately)
+            const officePending = allOfficeReqs.filter(r => r.status === 'Pending' && !r.module.includes("Loan")).length;
+            const supPending = allSupReqs.filter(r => r.status === 'Pending').length;
+            
+            // Count pending loan/emi approvals
+            const loanPending = allLoans.filter(l => l.pendingStatus && l.pendingStatus.includes("Pending")).length;
+
+            const totalPending = officePending + supPending + loanPending;
+
+            const badgeEl = document.getElementById('adminTotalNotifBadge');
+            if (badgeEl) {
+                badgeEl.innerText = totalPending;
+                badgeEl.style.display = totalPending > 0 ? 'flex' : 'none';
+            }
+
+            const offLink = document.getElementById('notifOfficeLink');
+            const supLink = document.getElementById('notifSupervisorLink');
+            const loanLink = document.getElementById('notifLoanLink');
+
+            if (offLink) offLink.innerText = `🏢 ${officePending} Office Request${officePending !== 1 ? 's' : ''}`;
+            if (supLink) supLink.innerText = `🛡️ ${supPending} Supervisor Request${supPending !== 1 ? 's' : ''}`;
+            if (loanLink) loanLink.innerText = `🏦 ${loanPending} Loan/EMI Pending Approval${loanPending !== 1 ? 's' : ''}`;
+        }
+
+        function openApprovalFromNotif(targetFile) {
+            closeDropdowns();
+            const approvalTree = document.getElementById('approvalTree');
+            if (approvalTree) approvalTree.classList.add('open');
+
+            const allLinks = document.querySelectorAll('.sidebar a');
+            allLinks.forEach(a => {
+                if (a.getAttribute('href') === targetFile) {
+                    setActiveSidebarLink(a);
+                }
+            });
+        }
+
+        // Tree Menu Toggle
+        function toggleTreeMenu(treeId) {
+            const el = document.getElementById(treeId);
+            if (el) el.classList.toggle('open');
+        }
+
+        // Set Active Sidebar Link
+        function setActiveSidebarLink(clickedLink) {
+            document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
+            if (clickedLink) clickedLink.classList.add('active');
+        }
+
+        // Expose helper for child pages
+        window.clearTreeActiveLinks = function() {
+            document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
+            const homeLink = document.getElementById('mainDashboardHomeLink');
+            if (homeLink) homeLink.classList.add('active');
+        };
+
+        // Sidebar Toggle with Smooth Transition
+        function toggleSidebar() {
+            document.body.classList.toggle('sidebar-hidden');
+        }
+
+        // ================= INSTANT LIVE THEME UPDATE =================
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            // 1. Save globally in Memory
+            localStorage.setItem('atr_theme', newTheme);
+            
+            // 2. Change Master Layout Theme Instantly
+            document.documentElement.setAttribute('data-theme', newTheme);
+            document.getElementById('themeIcon').innerText = newTheme === 'dark' ? '🌓' : '☀️';
+            
+            // 3. Update Child Iframe Theme Smoothly
+            const iframe = document.getElementById('contentFrame');
+            if (iframe) {
+                try {
+                    const iDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    if (iDoc && iDoc.documentElement) {
+                        iDoc.documentElement.setAttribute('data-theme', newTheme);
+                    }
+                } catch(e) {}
+            }
+        }
+
+        // Profile Menu Toggle
+        function toggleProfileMenu(e) {
+            e.stopPropagation();
+            const container = document.getElementById('profileContainer');
+            document.getElementById('notifContainer').classList.remove('active'); 
+            container.classList.toggle('active');
+        }
+
+        // Notification Menu Toggle
+        function toggleNotification(e) {
+            e.stopPropagation();
+            const container = document.getElementById('notifContainer');
+            document.getElementById('profileContainer').classList.remove('active'); 
+            container.classList.toggle('active');
+        }
+
+        function closeDropdowns() {
+            document.getElementById('profileContainer').classList.remove('active');
+            document.getElementById('notifContainer').classList.remove('active');
+        }
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', function(event) {
+            const profile = document.getElementById('profileContainer');
+            const notif = document.getElementById('notifContainer');
+            
+            if (profile && !profile.contains(event.target)) {
+                profile.classList.remove('active');
+            }
+            if (notif && !notif.contains(event.target)) {
+                notif.classList.remove('active');
+            }
+        });
+
+        // Profile Image Upload Preview & Persistence
+        function updateProfilePic(event) {
+            const reader = new FileReader();
+            reader.onload = function() {
+                const output = document.getElementById('profileImage');
+                output.src = reader.result;
+                try {
+                    localStorage.setItem('atr_admin_avatar', reader.result);
+                } catch (e) {}
+            };
+            if(event.target.files[0]) {
+                reader.readAsDataURL(event.target.files[0]);
+            }
+        }
+    </script>
+</body>
+</html>

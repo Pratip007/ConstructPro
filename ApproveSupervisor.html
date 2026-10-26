@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Supervisor Request & Approval Center</title>
+    
+    <!-- Sync theme with Master Dashboard -->
+    <script>
+        function applyDashboardTheme() {
+            const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        }
+        applyDashboardTheme();
+        window.addEventListener('storage', applyDashboardTheme);
+    </script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- SheetJS (XLSX) Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-body: transparent; 
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.12);
+            
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(0, 0, 0, 0.25);
+            --input-focus-bg: rgba(0, 0, 0, 0.45);
+            
+            --shadow: 0 4px 15px rgba(0,0,0,0.3);
+            
+            --theme-color: #E30B5C;
+            --theme-glow: rgba(227, 11, 92, 0.4);
+            --theme-transition: all 0.3s ease;
+            --calendar-filter: invert(1);
+        }
+
+        [data-theme="light"] {
+            --bg-body: #f4f6f9;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #555555;
+            --border-color: rgba(0, 0, 0, 0.12);
+            
+            --glass-bg: rgba(255, 255, 255, 0.9);
+            --glass-border: rgba(0, 0, 0, 0.1);
+            --input-bg: #f1f3f5;
+            --input-focus-bg: #ffffff;
+            
+            --shadow: 0 8px 25px rgba(0,0,0,0.05);
+            --calendar-filter: invert(0);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; scroll-behavior: smooth; }
+        body { background-color: var(--bg-body); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; transition: var(--theme-transition); }
+
+        /* ================= MAIN CONTENT ================= */
+        .main-content { flex: 1; display: flex; flex-direction: column; padding: 20px 25px; height: 100vh; overflow: hidden; width: 100%; max-width: 1650px; margin: 0 auto; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; flex-shrink: 0; flex-wrap: wrap; gap: 12px; }
+        .header h1 { font-size: 22px; color: var(--text-main); display: flex; align-items: center; gap: 10px; margin-top: 5px; }
+        
+        .btn-back-dash { 
+            background-color: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color); 
+            text-decoration: none; padding: 6px 13px; border-radius: 6px; font-weight: 700; font-size: 11.5px; 
+            transition: all 0.3s; display: inline-flex; align-items: center; width: max-content;
+        }
+        .btn-back-dash:hover { background-color: var(--theme-color); color: #fff; border-color: var(--theme-color); transform: translateY(-2px); box-shadow: 0 4px 10px var(--theme-glow); }
+
+        .header-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+        /* Tab Switcher Buttons */
+        .tab-btn {
+            background: var(--input-bg); color: var(--text-muted); border: 1px solid var(--border-color);
+            padding: 9px 14px; border-radius: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer;
+            text-transform: uppercase; transition: all 0.3s; display: flex; align-items: center; gap: 7px;
+        }
+        .tab-btn:hover { border-color: var(--theme-color); color: var(--text-main); }
+        .tab-btn.active { background: var(--theme-color); color: #ffffff; border-color: var(--theme-color); box-shadow: 0 4px 15px var(--theme-glow); }
+        
+        .count-pill { background: rgba(0,0,0,0.3); color: #fff; padding: 2px 6px; border-radius: 10px; font-size: 10px; font-weight: 800; }
+
+        .btn-ledger-sync { background: rgba(0, 123, 255, 0.15); color: #007bff; border: 1px solid rgba(0, 123, 255, 0.4); padding: 9px 14px; border-radius: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer; text-transform: uppercase; transition: all 0.3s; display: flex; align-items: center; gap: 6px; }
+        .btn-ledger-sync:hover { background-color: #007bff; color: white; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,123,255,0.3); }
+
+        .btn-export { background: rgba(40, 167, 69, 0.15); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.4); padding: 9px 14px; border-radius: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer; text-transform: uppercase; transition: all 0.3s; }
+        .btn-export:hover { background-color: #28a745; color: white; transform: translateY(-2px); }
+
+        /* ================= KPI SUMMARY CARDS ================= */
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 12px; flex-shrink: 0; }
+        .stat-card { 
+            background: var(--glass-bg); backdrop-filter: blur(12px); border: 1px solid var(--border-color);
+            padding: 12px 16px; border-radius: 10px; position: relative; overflow: hidden; box-shadow: var(--shadow);
+        }
+        .stat-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; }
+        .stat-card.orange::before { background: #ffc107; }
+        .stat-card.teal::before { background: #20c997; }
+        .stat-card.blue::before { background: #007bff; }
+        .stat-card.purple::before { background: #b18cfd; }
+        
+        .stat-card h4 { font-size: 10px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.4px; }
+        .stat-card h2 { font-size: 19px; font-weight: 800; color: var(--text-main); }
+        .stat-card .sub-text { font-size: 10.5px; margin-top: 3px; display: block; color: var(--text-muted); }
+
+        /* ================= FILTER CONTROLS BAR ================= */
+        .controls-bar { 
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; align-items: end; margin-bottom: 12px; 
+            background: var(--glass-bg); backdrop-filter: blur(12px);
+            padding: 11px 15px; border-radius: 10px; border: 1px solid var(--glass-border); flex-shrink: 0;
+        }
+        .filter-item { display: flex; flex-direction: column; gap: 4px; }
+        .filter-item label { font-size: 9.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; }
+        .form-control { background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 8px 10px; border-radius: 6px; font-size: 11.5px; outline: none; transition: 0.3s; width: 100%; }
+        .form-control:focus { border-color: var(--theme-color); box-shadow: 0 0 6px var(--theme-glow); background: var(--input-focus-bg); }
+        .form-control option { background: var(--bg-card); color: var(--text-main); }
+        textarea.form-control { resize: none; }
+        ::-webkit-calendar-picker-indicator { filter: var(--calendar-filter); cursor: pointer; }
+
+        /* ================= FIXED TABLE (NO HORIZONTAL SCROLLBAR) ================= */
+        .table-container-box { 
+            background: var(--glass-bg); backdrop-filter: blur(12px);
+            border-radius: 12px 12px 0 0; box-shadow: var(--shadow); flex: 1; min-height: 0; 
+            border: 1px solid var(--glass-border); border-top: 4px solid var(--theme-color); border-bottom: none; 
+            overflow-y: auto; overflow-x: hidden; width: 100%;
+        }
+        .table-container-box::-webkit-scrollbar { width: 6px; }
+        .table-container-box::-webkit-scrollbar-thumb { background: rgba(227, 11, 92, 0.35); border-radius: 4px; }
+        
+        table { width: 100%; table-layout: fixed; border-collapse: collapse; border-spacing: 0; text-align: left; }
+        thead { position: sticky; top: 0; background-color: var(--bg-card); z-index: 10; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        th { 
+            padding: 11px 8px; color: var(--theme-color); font-weight: 700; text-transform: uppercase; 
+            font-size: 10px; letter-spacing: 0.3px; border-bottom: 2px solid var(--theme-color); 
+            border-right: 1px solid var(--border-color); vertical-align: middle; line-height: 1.3;
+            word-wrap: break-word; overflow-wrap: break-word;
+        }
+        th:last-child { border-right: none; }
+        td { 
+            padding: 10px 8px; border-bottom: 1px solid var(--border-color); 
+            border-right: 1px solid var(--border-color); font-size: 11.5px; 
+            color: var(--text-main); vertical-align: middle; line-height: 1.35;
+            word-wrap: break-word; overflow-wrap: break-word;
+        }
+        td:last-child { border-right: none; }
+        tbody tr { transition: background 0.2s; }
+        tbody tr:hover { background: rgba(227, 11, 92, 0.05); }
+
+        /* Badges */
+        .badge { padding: 3px 8px; border-radius: 14px; font-size: 9.5px; font-weight: 700; display: inline-block; text-transform: uppercase; text-align: center; }
+        .badge-pending { background: rgba(255, 193, 7, 0.15); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.35); }
+        .badge-approved { background: rgba(40, 167, 69, 0.15); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.35); }
+        .badge-rejected { background: rgba(220, 53, 69, 0.15); color: #dc3545; border: 1px solid rgba(220, 53, 69, 0.35); }
+
+        /* Supervisor 3 Categories */
+        .cat-att-ot { background: rgba(32, 201, 151, 0.15); color: #20c997; border: 1px solid rgba(32, 201, 151, 0.35); }
+        .cat-emp-pay { background: rgba(0, 123, 255, 0.15); color: #007bff; border: 1px solid rgba(0, 123, 255, 0.35); }
+        .cat-site-exp { background: rgba(253, 126, 20, 0.15); color: #fd7e14; border: 1px solid rgba(253, 126, 20, 0.35); }
+
+        /* Salary Basis & Attendance/OT Pills */
+        .basis-perday { display: inline-block; background: rgba(0, 123, 255, 0.15); color: #007bff; border: 1px solid rgba(0, 123, 255, 0.35); padding: 1px 5px; border-radius: 4px; font-size: 9px; font-weight: 800; text-transform: uppercase; margin-top: 2px; }
+        .basis-monthly { display: inline-block; background: rgba(111, 66, 193, 0.15); color: #b18cfd; border: 1px solid rgba(111, 66, 193, 0.35); padding: 1px 5px; border-radius: 4px; font-size: 9px; font-weight: 800; text-transform: uppercase; margin-top: 2px; }
+
+        .att-pill { display: inline-block; background: rgba(40, 167, 69, 0.15); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.35); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; margin-top: 3px; margin-right: 3px; }
+        .ot-pill-counted { display: inline-block; background: rgba(255, 193, 7, 0.15); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.35); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; margin-top: 3px; }
+        .ot-pill-uncounted { display: inline-block; background: rgba(170, 170, 170, 0.12); color: var(--text-muted); border: 1px dashed var(--border-color); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; margin-top: 3px; }
+
+        .sync-tag { display: inline-block; background: rgba(32, 201, 151, 0.15); color: #20c997; border: 1px solid rgba(32, 201, 151, 0.35); padding: 2px 5px; border-radius: 4px; font-size: 9px; font-weight: 700; margin-top: 3px; }
+
+        /* Compact Action Buttons Wrapper Inside TD */
+        .action-btns { display: flex; gap: 4px; align-items: center; justify-content: center; flex-wrap: wrap; width: 100%; }
+        .btn-act { padding: 5px 7px; border-radius: 5px; font-size: 10px; font-weight: 700; cursor: pointer; border: none; transition: 0.2s; display: inline-flex; align-items: center; gap: 3px; text-transform: uppercase; }
+        .btn-view { background: rgba(23, 162, 184, 0.15); color: #17a2b8; border: 1px solid rgba(23, 162, 184, 0.4); }
+        .btn-view:hover { background: #17a2b8; color: #fff; }
+        .btn-approve { background: rgba(40, 167, 69, 0.15); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.4); }
+        .btn-approve:hover { background: #28a745; color: #fff; transform: translateY(-1px); }
+        .btn-reject { background: rgba(220, 53, 69, 0.15); color: #dc3545; border: 1px solid rgba(220, 53, 69, 0.4); }
+        .btn-reject:hover { background: #dc3545; color: #fff; transform: translateY(-1px); }
+
+        /* STICKY FOOTER BAR */
+        .summary-footer-bar { 
+            background: var(--input-bg); padding: 11px 25px; border-radius: 0 0 12px 12px; 
+            display: flex; justify-content: space-between; align-items: center; 
+            border: 1px solid var(--border-color); border-top: 2px solid var(--theme-color); 
+            flex-shrink: 0; box-shadow: 0 -4px 15px rgba(0,0,0,0.2); z-index: 20; flex-wrap: wrap; gap: 15px;
+        }
+        .summary-footer-box { text-align: center; }
+        .summary-footer-box span { display: block; font-size: 9.5px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 2px; }
+        .summary-footer-box h3 { font-size: 14.5px; margin: 0; font-weight: 800; }
+
+        /* ================= MODALS ================= */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(8px); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 20px; }
+        .modal-overlay.active { display: flex; }
+        .modal-card { background: var(--bg-card); width: 100%; max-width: 880px; border-radius: 12px; border-top: 4px solid var(--theme-color); box-shadow: 0 10px 40px rgba(0,0,0,0.6); max-height: 92vh; display: flex; flex-direction: column; border: 1px solid var(--border-color); }
+        .modal-card.small { max-width: 500px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; border-bottom: 1px solid var(--border-color); }
+        .modal-header h2 { font-size: 17px; color: var(--theme-color); }
+        .close-btn { background: none; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; }
+        .close-btn:hover { color: #dc3545; }
+        .modal-body { padding: 22px; overflow-y: auto; overflow-x: hidden; flex: 1; }
+        .modal-footer { padding: 14px 24px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 10px; background: var(--input-bg); border-radius: 0 0 12px 12px; }
+
+        .btn-save { background: var(--theme-color); color: white; padding: 10px 20px; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; text-transform: uppercase; transition: 0.3s; box-shadow: 0 4px 10px var(--theme-glow); }
+        .btn-save:hover { filter: brightness(1.1); transform: translateY(-2px); }
+
+        /* Toast Notification */
+        .toast-banner {
+            position: fixed; bottom: 25px; right: 25px; background: #1e1e1e; color: #fff;
+            border-left: 5px solid #28a745; padding: 14px 20px; border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); font-size: 13px; font-weight: 600;
+            display: none; z-index: 3000; border: 1px solid rgba(40,167,69,0.4);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-content">
+        <!-- HEADER -->
+        <div class="header">
+            <div>
+                <a href="dashboard.html" class="btn-back-dash">← Back to Dashboard</a>
+                <h1>🛡️ Supervisor Request & Approval Center</h1>
+            </div>
+            <div class="header-actions">
+                <!-- Pending Requests Button -->
+                <button class="tab-btn active" id="btnPendingTab" onclick="switchTab('pending')">
+                    ⏳ Pending Approvals <span class="count-pill" id="pillPending">0</span>
+                </button>
+                
+                <!-- History Button -->
+                <button class="tab-btn" id="btnHistoryTab" onclick="switchTab('history')">
+                    📜 Approval History <span class="count-pill" id="pillHistory">0</span>
+                </button>
+
+                <!-- Employee Ledger Sync View Button -->
+                <button class="btn-ledger-sync" onclick="openEmpLedgerModal()">
+                    📖 Synced Employee Ledger (<span id="empLedgerCount">0</span>)
+                </button>
+                
+                <!-- Export Button -->
+                <button class="btn-export" onclick="exportSupervisorRequestsExcel()">📊 Export Excel</button>
+            </div>
+        </div>
+
+        <!-- KPI SUMMARY CARDS -->
+        <div class="stats-grid">
+            <div class="stat-card orange">
+                <h4>Pending Supervisor Requests</h4>
+                <h2 id="kpiPendingCount" style="color: #ffc107;">0</h2>
+                <span class="sub-text" id="kpiPendingAmt">Pending Value: ₹0.00</span>
+            </div>
+            <div class="stat-card teal">
+                <h4>Approved Attendance & OT (Cr)</h4>
+                <h2 id="kpiApprovedAttAmt" style="color: #20c997;">₹0.00</h2>
+                <span class="sub-text" id="kpiApprovedAttSub">Per-Day OT (8h Basis) | Monthly OT ₹0</span>
+            </div>
+            <div class="stat-card blue">
+                <h4>Approved Employee Payments (Dr)</h4>
+                <h2 id="kpiApprovedEmpAmt" style="color: #007bff;">₹0.00</h2>
+                <span class="sub-text">Auto-posted to Employee Ledgers</span>
+            </div>
+            <div class="stat-card purple">
+                <h4>Approved Site Expenses</h4>
+                <h2 id="kpiApprovedExpAmt" style="color: #b18cfd;">₹0.00</h2>
+                <span class="sub-text" id="kpiHistoryRatio">0 Approved / 0 Rejected</span>
+            </div>
+        </div>
+
+        <!-- FILTERS BAR -->
+        <div class="controls-bar">
+            <div class="filter-item">
+                <label>🛡️ Select Supervisor</label>
+                <select class="form-control" id="filterSupervisor" onchange="renderTable()">
+                    <option value="All">All Supervisors</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label>🏗️ Assigned Project / Site</label>
+                <select class="form-control" id="filterSite" onchange="renderTable()">
+                    <option value="All">All Sites</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label>⚡ Request Category</label>
+                <select class="form-control" id="filterCategory" onchange="renderTable()">
+                    <option value="All">All Categories (All 3)</option>
+                    <option value="Attendance & OT">📅 Attendance & OT (Present/OT)</option>
+                    <option value="Employee Payment">💸 Employee Payment</option>
+                    <option value="Site Expense">🛠️ Site Expense</option>
+                </select>
+            </div>
+            <div class="filter-item" id="historyStatusFilterBox" style="display: none;">
+                <label>📌 History Status</label>
+                <select class="form-control" id="filterHistoryStatus" onchange="renderTable()">
+                    <option value="All">All (Approved & Rejected)</option>
+                    <option value="Approved">✔️ Approved Only</option>
+                    <option value="Rejected">❌ Rejected Only</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label>📅 Date Filter</label>
+                <input type="date" class="form-control" id="filterDate" onchange="renderTable()">
+            </div>
+            <div class="filter-item">
+                <label>🔍 Quick Search</label>
+                <input type="text" class="form-control" id="searchBox" placeholder="Employee Name, Per Day, Monthly, OT, Req ID..." onkeyup="renderTable()">
+            </div>
+        </div>
+
+        <!-- MAIN TABLE (100% Fixed Width - No Horizontal Scrollbar) -->
+        <div class="table-container-box">
+            <table id="supervisorReqTable">
+                <thead id="tableHead"></thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+
+        <!-- STICKY FOOTER BAR -->
+        <div class="summary-footer-bar">
+            <div class="summary-footer-box">
+                <span>Current View Mode</span>
+                <h3 id="footViewMode" style="color: var(--theme-color);">⏳ PENDING APPROVALS</h3>
+            </div>
+            <div class="summary-footer-box">
+                <span>Requests Displayed</span>
+                <h3 id="footDisplayed">0</h3>
+            </div>
+            <div class="summary-footer-box">
+                <span>Attendance & OT / Emp Pay / Site Exp</span>
+                <h3 id="footBreakdown" style="color: #007bff;">0 / 0 / 0</h3>
+            </div>
+            <div class="summary-footer-box">
+                <span>Total Displayed Value</span>
+                <h3 id="footTotalAmt" style="color: #28a745;">₹ 0.00</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 1. VIEW REQUEST DETAILS MODAL ================= -->
+    <div class="modal-overlay" id="viewDetailModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2 id="viewModalTitle">👁️ Supervisor Request Details</h2>
+                <button class="close-btn" onclick="closeViewModal()">×</button>
+            </div>
+            <div class="modal-body" id="viewModalBody"></div>
+            <div class="modal-footer" id="viewModalFooter"></div>
+        </div>
+    </div>
+
+    <!-- ================= 2. ADMIN DECISION (APPROVE / REJECT) MODAL ================= -->
+    <div class="modal-overlay" id="decisionModal" style="z-index: 1500;">
+        <div class="modal-card small">
+            <div class="modal-header">
+                <h2 id="decisionModalTitle">Confirm Decision</h2>
+                <button class="close-btn" onclick="closeDecisionModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p id="decisionPromptText" style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.5;"></p>
+                <div id="empSyncNotice" style="display:none; background:rgba(0,123,255,0.12); border:1px solid rgba(0,123,255,0.35); color:#007bff; padding:10px 12px; border-radius:6px; font-size:12px; font-weight:700; margin-bottom:14px;"></div>
+                <div class="filter-item">
+                    <label>💬 Admin Remarks / Note (Saved in History)</label>
+                    <textarea class="form-control" id="adminDecisionRemark" rows="3" placeholder="Enter approval note or reason for rejection..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-save" id="confirmDecisionBtn" onclick="executeAdminDecision()">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 3. SYNCED EMPLOYEE LEDGER PREVIEW MODAL ================= -->
+    <div class="modal-overlay" id="empLedgerModal" style="z-index: 1400;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>📖 Employee Ledger (Auto-Synced Present/OT & Payments)</h2>
+                <button class="close-btn" onclick="closeEmpLedgerModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">
+                    <strong>Rule Active:</strong> For <strong>Per Day Basis</strong> employees, OT is calculated on an <strong>8-Hour Duty</strong> basis and added to salary. For <strong>Monthly Basis</strong> employees, OT hours are logged for record only and <strong>NOT counted</strong> in salary.
+                </p>
+                <div style="border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
+                    <table style="width: 100%; table-layout: fixed; border-collapse: collapse;">
+                        <thead>
+                            <tr>
+                                <th style="width: 11%;">Date</th>
+                                <th style="width: 13%;">Req ID</th>
+                                <th style="width: 22%;">Employee & Basis</th>
+                                <th style="width: 11%;">Sub ID</th>
+                                <th style="width: 23%;">Present/OT Breakdown</th>
+                                <th style="width: 10%; text-align:right;">Earned (Cr ₹)</th>
+                                <th style="width: 10%; text-align:right;">Paid (Dr ₹)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="empLedgerTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-save" onclick="closeEmpLedgerModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast-banner" id="toastBanner"></div>
+
+    <script>
+        // ================= CORE SALARY & OT CALCULATION RULE =================
+        // Standard Duty = 8 Hours.
+        // 1. If salaryBasis === "Per Day":
+        //    Hourly OT Rate = baseDailyWage / 8
+        //    OT Amount = (baseDailyWage / 8) * otHours
+        //    Total Earned = presentWage + OT Amount
+        // 2. If salaryBasis === "Monthly":
+        //    OT Hours are displayed, but OT Amount = 0 (NOT counted with salary)
+        //    Total Earned = presentWage only
+        function computeAttendanceEntry(entry) {
+            if (entry.category !== "Attendance & OT") return entry;
+            const presentWage = Math.round(entry.baseDailyWage * entry.daysCount);
+            let otRatePerHr = 0;
+            let otAmount = 0;
+
+            if (entry.salaryBasis === "Per Day") {
+                otRatePerHr = entry.baseDailyWage / 8; // 8-Hour Duty Rule
+                otAmount = Math.round(otRatePerHr * entry.otHours);
+            } else {
+                // Monthly Basis -> OT is shown but NOT counted in salary
+                otRatePerHr = 0;
+                otAmount = 0;
+            }
+
+            entry.presentWage = presentWage;
+            entry.otRatePerHr = otRatePerHr;
+            entry.otAmount = otAmount;
+            entry.amount = presentWage + otAmount;
+            return entry;
+        }
+
+        // ================= MOCK SUPERVISOR REQUESTS DATABASE =================
+        let rawSupervisorRequests = [
+            {
+                id: 1, reqNo: "SUP-REQ-201", date: "2026-09-28", time: "08:45 AM",
+                supId: "SUP-001", supName: "Rajesh Mondal", site: "Dum Dum Complex",
+                category: "Attendance & OT",
+                empId: "EMP-001", empName: "Ramesh Das (Head Mason)", subId: "SUB-DD-01",
+                salaryBasis: "Per Day", monthlySalary: 0, baseDailyWage: 720, // 720 / 8 = ₹90/hr
+                presentStatus: "Present (1 Day)", daysCount: 1, otHours: 4, // 4 hrs * 90 = ₹360 OT
+                expenseTitle: "", billRef: "ATT-28SEP-01",
+                amount: 0,
+                narration: "Full Day (8h Duty) Present + 4 Hours Evening Slab Casting Overtime",
+                status: "Pending", adminDate: "", adminRemarks: "", ledgerSynced: false
+            },
+            {
+                id: 2, reqNo: "SUP-REQ-202", date: "2026-09-28", time: "09:10 AM",
+                supId: "SUP-001", supName: "Rajesh Mondal", site: "Dum Dum Complex",
+                category: "Attendance & OT",
+                empId: "EMP-009", empName: "Pronab Chatterjee (Foreman)", subId: "SUB-DD-01",
+                salaryBasis: "Monthly", monthlySalary: 24000, baseDailyWage: 800, // Monthly Fixed
+                presentStatus: "Present (1 Day)", daysCount: 1, otHours: 3.5, // 3.5 Hrs OT Logged, ₹0 Added!
+                expenseTitle: "", billRef: "ATT-28SEP-02",
+                amount: 0,
+                narration: "1 Day Attendance + 3.5 Hrs Evening Supervision OT (Monthly Staff)",
+                status: "Pending", adminDate: "", adminRemarks: "", ledgerSynced: false
+            },
+            {
+                id: 3, reqNo: "SUP-REQ-203", date: "2026-09-28", time: "09:30 AM",
+                supId: "SUP-001", supName: "Rajesh Mondal", site: "Dum Dum Complex",
+                category: "Employee Payment",
+                empId: "EMP-001", empName: "Ramesh Das (Head Mason)", subId: "SUB-DD-01",
+                salaryBasis: "Per Day", monthlySalary: 0, baseDailyWage: 720,
+                presentStatus: "", daysCount: 0, otHours: 0,
+                expenseTitle: "", billRef: "WAGE-WK-04",
+                amount: 4500,
+                narration: "Weekly Khuraki & Mason Wage Advance paid at site",
+                status: "Pending", adminDate: "", adminRemarks: "", ledgerSynced: false
+            },
+            {
+                id: 4, reqNo: "SUP-REQ-204", date: "2026-09-28", time: "11:10 AM",
+                supId: "SUP-001", supName: "Rajesh Mondal", site: "Dum Dum Complex",
+                category: "Site Expense",
+                empId: "", empName: "", subId: "",
+                salaryBasis: "", monthlySalary: 0, baseDailyWage: 0,
+                presentStatus: "", daysCount: 0, otHours: 0,
+                expenseTitle: "Maa Tara Hardware - Cutting Wheel & Binding Wire", billRef: "CH-8821",
+                amount: 1850,
+                narration: "Urgent cutting discs & 10kg binding wire purchased for shuttering",
+                status: "Pending", adminDate: "", adminRemarks: "", ledgerSynced: false
+            },
+            {
+                id: 5, reqNo: "SUP-REQ-205", date: "2026-09-28", time: "01:20 PM",
+                supId: "SUP-003", supName: "Subrata Roy", site: "Salt Lake Sector V",
+                category: "Attendance & OT",
+                empId: "EMP-005", empName: "Bikash Roy (Bar Binder)", subId: "SUB-SL-02",
+                salaryBasis: "Per Day", monthlySalary: 0, baseDailyWage: 640, // 640 / 8 = ₹80/hr
+                presentStatus: "Present (1 Day)", daysCount: 1, otHours: 2.5, // 2.5 * 80 = ₹200 OT
+                expenseTitle: "", billRef: "ATT-28SEP-05",
+                amount: 0,
+                narration: "1 Day (8h Duty) Present + 2.5 Hrs Beam Reinforcement OT",
+                status: "Pending", adminDate: "", adminRemarks: "", ledgerSynced: false
+            },
+            {
+                id: 6, reqNo: "SUP-REQ-206", date: "2026-09-28", time: "02:15 PM",
+                supId: "SUP-003", supName: "Subrata Roy", site: "Salt Lake Sector V",
+                category: "Employee Payment",
+                empId: "EMP-005", empName: "Bikash Roy (Bar Binder)", subId: "SUB-SL-02",
+                salaryBasis: "Per Day", monthlySalary: 0, baseDailyWage: 640,
+                presentStatus: "", daysCount: 0, otHours: 0,
+                expenseTitle: "", billRef: "WAGE-WK-04",
+                amount: 3200,
+                narration: "Weekly payment given to Bikash Roy from supervisor advance",
+                status: "Pending", adminDate: "", adminRemarks: "", ledgerSynced: false
+            },
+            {
+                id: 7, reqNo: "SUP-REQ-207", date: "2026-09-28", time: "04:40 PM",
+                supId: "SUP-004", supName: "Koushik Ghosh", site: "Barasat Highway",
+                category: "Attendance & OT",
+                empId: "EMP-014", empName: "Tarun Debnath (Site Incharge)", subId: "SUB-BH-03",
+                salaryBasis: "Monthly", monthlySalary: 18000, baseDailyWage: 600,
+                presentStatus: "Present (1 Day)", daysCount: 1, otHours: 2, // Monthly -> 2 Hrs OT shown, ₹0 counted
+                expenseTitle: "", billRef: "ATT-28SEP-07",
+                amount: 0,
+                narration: "Full Day Present + 2 Hrs Late Cement Unloading OT (Monthly Basis)",
+                status: "Pending", adminDate: "", adminRemarks: "", ledgerSynced: false
+            },
+            // HISTORICAL RECORDS (Already Approved / Rejected)
+            {
+                id: 8, reqNo: "SUP-REQ-197", date: "2026-09-26", time: "05:30 PM",
+                supId: "SUP-001", supName: "Rajesh Mondal", site: "Dum Dum Complex",
+                category: "Attendance & OT",
+                empId: "EMP-001", empName: "Ramesh Das (Head Mason)", subId: "SUB-DD-01",
+                salaryBasis: "Per Day", monthlySalary: 0, baseDailyWage: 720, // ₹90/hr
+                presentStatus: "6 Days Present", daysCount: 6, otHours: 8, // 6*720=4320 + 8*90=720 => 5040
+                expenseTitle: "", billRef: "ATT-WK-03",
+                amount: 0,
+                narration: "Week 3 Attendance (6 Days Present + 8 Hrs Total OT @ 8h Duty Rate)",
+                status: "Approved", adminDate: "2026-09-26 06:45 PM", adminRemarks: "Per-Day 8h OT verified & credited to ledger.", ledgerSynced: true
+            },
+            {
+                id: 9, reqNo: "SUP-REQ-198", date: "2026-09-26", time: "06:00 PM",
+                supId: "SUP-001", supName: "Rajesh Mondal", site: "Dum Dum Complex",
+                category: "Employee Payment",
+                empId: "EMP-001", empName: "Ramesh Das (Head Mason)", subId: "SUB-DD-01",
+                salaryBasis: "Per Day", monthlySalary: 0, baseDailyWage: 720,
+                presentStatus: "", daysCount: 0, otHours: 0,
+                expenseTitle: "", billRef: "WAGE-WK-03",
+                amount: 4000,
+                narration: "Week 3 Mason Payment from Supervisor Advance",
+                status: "Approved", adminDate: "2026-09-26 07:15 PM", adminRemarks: "Payment approved & debited in Ramesh Das ledger.", ledgerSynced: true
+            },
+            {
+                id: 10, reqNo: "SUP-REQ-199", date: "2026-09-27", time: "01:20 PM",
+                supId: "SUP-004", supName: "Koushik Ghosh", site: "Barasat Highway",
+                category: "Site Expense",
+                empId: "", empName: "", subId: "",
+                salaryBasis: "", monthlySalary: 0, baseDailyWage: 0,
+                presentStatus: "", daysCount: 0, otHours: 0,
+                expenseTitle: "Unbilled Local Transport & Unloading", billRef: "NO-BILL",
+                amount: 3500,
+                narration: "Local van fare for shifting scaffolding pipes",
+                status: "Rejected", adminDate: "2026-09-27 03:00 PM", adminRemarks: "Rejected: Please attach proper challan or vehicle slip.", ledgerSynced: false
+            }
+        ];
+
+        // Apply 8-hour Per-Day vs Monthly OT calculation to all records
+        let supervisorRequests = rawSupervisorRequests.map(computeAttendanceEntry);
+
+        // ================= EMPLOYEE LEDGER DATABASE (Synced on Approval) =================
+        let employeeLedgerEntries = [
+            {
+                ledgerId: "LED-900",
+                date: "2026-09-26",
+                reqNo: "SUP-REQ-197",
+                empId: "EMP-001",
+                empName: "Ramesh Das (Head Mason)",
+                salaryBasis: "Per Day",
+                subId: "SUB-DD-01",
+                supName: "Rajesh Mondal",
+                site: "Dum Dum Complex",
+                type: "Attendance & OT",
+                particulars: "6 Days Present (₹4,320) + OT: 8 Hrs @ ₹90/hr (₹720)",
+                creditEarned: 5040,
+                debitPaid: 0
+            },
+            {
+                ledgerId: "LED-901",
+                date: "2026-09-26",
+                reqNo: "SUP-REQ-198",
+                empId: "EMP-001",
+                empName: "Ramesh Das (Head Mason)",
+                salaryBasis: "Per Day",
+                subId: "SUB-DD-01",
+                supName: "Rajesh Mondal",
+                site: "Dum Dum Complex",
+                type: "Employee Payment",
+                particulars: "Week 3 Mason Payment from Supervisor Advance",
+                creditEarned: 0,
+                debitPaid: 4000
+            }
+        ];
+
+        let currentTab = 'pending'; // 'pending' or 'history'
+        let pendingDecision = { id: null, status: '' };
+
+        window.onload = function() {
+            localStorage.setItem('atr_employee_ledger', JSON.stringify(employeeLedgerEntries));
+            populateDropdownFilters();
+            renderTable();
+        };
+
+        function populateDropdownFilters() {
+            const supSelect = document.getElementById('filterSupervisor');
+            const siteSelect = document.getElementById('filterSite');
+
+            const supMap = new Map();
+            const sitesSet = new Set();
+
+            supervisorRequests.forEach(r => {
+                if (!supMap.has(r.supId)) supMap.set(r.supId, r.supName);
+                sitesSet.add(r.site);
+            });
+
+            supSelect.innerHTML = `<option value="All">All Supervisors (${supMap.size})</option>`;
+            supMap.forEach((name, id) => {
+                supSelect.innerHTML += `<option value="${id}">${name} (${id})</option>`;
+            });
+
+            siteSelect.innerHTML = `<option value="All">All Sites (${sitesSet.size})</option>`;
+            sitesSet.forEach(s => {
+                siteSelect.innerHTML += `<option value="${s}">${s}</option>`;
+            });
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.getElementById('btnPendingTab').classList.toggle('active', tab === 'pending');
+            document.getElementById('btnHistoryTab').classList.toggle('active', tab === 'history');
+            document.getElementById('historyStatusFilterBox').style.display = tab === 'history' ? 'flex' : 'none';
+            document.getElementById('footViewMode').innerText = tab === 'pending' ? '⏳ PENDING APPROVALS' : '📜 APPROVAL HISTORY';
+            renderTable();
+        }
+
+        function getCategoryBadge(cat) {
+            if (cat === 'Attendance & OT') {
+                return `<span class="badge cat-att-ot">📅 Attendance & OT</span>`;
+            }
+            if (cat === 'Employee Payment') {
+                return `<span class="badge cat-emp-pay">💸 Emp Payment</span>`;
+            }
+            return `<span class="badge cat-site-exp">🛠️ Site Expense</span>`;
+        }
+
+        function getSalaryBasisBadge(basis) {
+            if (!basis) return '';
+            if (basis === 'Per Day') return `<span class="basis-perday">Per Day (8h Duty)</span>`;
+            return `<span class="basis-monthly">Monthly Basis</span>`;
+        }
+
+        function getStatusBadge(r) {
+            if (r.status === 'Pending') return `<span class="badge badge-pending">⏳ PENDING</span>`;
+            if (r.status === 'Approved') {
+                let syncNote = '';
+                if (r.category === 'Attendance & OT') syncNote = `<div class="sync-tag">🔗 Wage Cr</div>`;
+                else if (r.category === 'Employee Payment') syncNote = `<div class="sync-tag">🔗 Paid Dr</div>`;
+                else syncNote = `<div class="sync-tag">🔗 Exp Added</div>`;
+                return `<span class="badge badge-approved">✔️ APPROVED</span>${syncNote}`;
+            }
+            return `<span class="badge badge-rejected">❌ REJECTED</span>`;
+        }
+
+        function getFilteredData() {
+            const sup = document.getElementById('filterSupervisor').value;
+            const site = document.getElementById('filterSite').value;
+            const cat = document.getElementById('filterCategory').value;
+            const histStatus = document.getElementById('filterHistoryStatus').value;
+            const fDate = document.getElementById('filterDate').value;
+            const query = document.getElementById('searchBox').value.toLowerCase();
+
+            return supervisorRequests.filter(r => {
+                if (currentTab === 'pending' && r.status !== 'Pending') return false;
+                if (currentTab === 'history' && r.status === 'Pending') return false;
+                if (currentTab === 'history' && histStatus !== 'All' && r.status !== histStatus) return false;
+
+                if (sup !== 'All' && r.supId !== sup) return false;
+                if (site !== 'All' && r.site !== site) return false;
+                if (cat !== 'All' && r.category !== cat) return false;
+                if (fDate && r.date !== fDate) return false;
+
+                const searchStr = `${r.reqNo} ${r.supName} ${r.supId} ${r.site} ${r.category} ${r.empName} ${r.empId} ${r.salaryBasis} ${r.subId} ${r.presentStatus} ${r.expenseTitle} ${r.billRef} ${r.narration}`.toLowerCase();
+                if (query && !searchStr.includes(query)) return false;
+                return true;
+            });
+        }
+
+        function updateKPIs() {
+            const pendingList = supervisorRequests.filter(r => r.status === 'Pending');
+            const pendingAmt = pendingList.reduce((sum, r) => sum + r.amount, 0);
+
+            const approvedAttList = supervisorRequests.filter(r => r.status === 'Approved' && r.category === 'Attendance & OT');
+            const approvedAttAmt = approvedAttList.reduce((sum, r) => sum + r.amount, 0);
+
+            const approvedEmpAmt = supervisorRequests
+                .filter(r => r.status === 'Approved' && r.category === 'Employee Payment')
+                .reduce((sum, r) => sum + r.amount, 0);
+
+            const approvedExpAmt = supervisorRequests
+                .filter(r => r.status === 'Approved' && r.category === 'Site Expense')
+                .reduce((sum, r) => sum + r.amount, 0);
+
+            const approvedCount = supervisorRequests.filter(r => r.status === 'Approved').length;
+            const rejectedCount = supervisorRequests.filter(r => r.status === 'Rejected').length;
+
+            document.getElementById('kpiPendingCount').innerText = pendingList.length;
+            document.getElementById('kpiPendingAmt').innerText = `Pending Value: ₹${pendingAmt.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+            
+            document.getElementById('kpiApprovedAttAmt').innerText = `₹${approvedAttAmt.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+            document.getElementById('kpiApprovedAttSub').innerText = `${approvedAttList.length} Present & OT Entries Approved`;
+
+            document.getElementById('kpiApprovedEmpAmt').innerText = `₹${approvedEmpAmt.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+            document.getElementById('kpiApprovedExpAmt').innerText = `₹${approvedExpAmt.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+            document.getElementById('kpiHistoryRatio').innerText = `${approvedCount} Approved / ${rejectedCount} Rejected`;
+
+            document.getElementById('pillPending').innerText = pendingList.length;
+            document.getElementById('pillHistory').innerText = approvedCount + rejectedCount;
+            document.getElementById('empLedgerCount').innerText = employeeLedgerEntries.length;
+        }
+
+        function buildTargetDetailsHtml(r) {
+            if (r.category === 'Attendance & OT') {
+                const otBadgeHtml = r.salaryBasis === 'Per Day'
+                    ? `<span class="ot-pill-counted">⏱️ OT: ${r.otHours}h @ ₹${r.otRatePerHr}/h = ₹${r.otAmount}</span>`
+                    : `<span class="ot-pill-uncounted">⏱️ OT: ${r.otHours}h (₹0 - Monthly Not Counted)</span>`;
+
+                return `
+                    <div>
+                        <strong style="color:#20c997;">👷 ${r.empName}</strong> 
+                        <span style="font-size:10.5px; color:var(--text-muted);">(${r.empId})</span>
+                        ${getSalaryBasisBadge(r.salaryBasis)}
+                    </div>
+                    <div>
+                        <span class="att-pill">✔️ ${r.presentStatus}: ₹${r.presentWage}</span>
+                        ${otBadgeHtml}
+                    </div>
+                    <div style="font-size:10.5px; color:var(--text-muted); margin-top:3px;">💬 "${r.narration}"</div>
+                `;
+            } else if (r.category === 'Employee Payment') {
+                return `
+                    <div>
+                        <strong style="color:#007bff;">👷 ${r.empName}</strong> 
+                        <span style="font-size:10.5px; color:var(--text-muted);">(${r.empId})</span>
+                        ${getSalaryBasisBadge(r.salaryBasis)}
+                    </div>
+                    <div style="font-size:10.5px; color:var(--text-muted); margin-top:2px;">💬 "${r.narration}"</div>
+                `;
+            } else {
+                return `
+                    <div><strong style="color:#fd7e14;">🛠️ ${r.expenseTitle}</strong></div>
+                    <div style="font-size:10.5px; color:var(--text-muted); margin-top:2px;">💬 "${r.narration}"</div>
+                `;
+            }
+        }
+
+        function renderTable() {
+            updateKPIs();
+            const list = getFilteredData();
+            const thead = document.getElementById('tableHead');
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            let attOtCount = 0, empPayCount = 0, siteExpCount = 0, sumDisplayedAmt = 0;
+            list.forEach(r => {
+                sumDisplayedAmt += r.amount;
+                if (r.category === 'Attendance & OT') attOtCount++;
+                else if (r.category === 'Employee Payment') empPayCount++;
+                else siteExpCount++;
+            });
+
+            if (currentTab === 'pending') {
+                // Exact 100% Column Width Distribution (10 + 13 + 11 + 27 + 9 + 10 + 8 + 12 = 100%)
+                thead.innerHTML = `
+                    <tr>
+                        <th style="width: 10%;">Req ID & Time</th>
+                        <th style="width: 13%;">Supervisor & Site</th>
+                        <th style="width: 11%;">Category</th>
+                        <th style="width: 27%;">Present/OT (Per-Day vs Monthly), Payment or Expense</th>
+                        <th style="width: 9%;">Sub ID / Ref</th>
+                        <th style="width: 10%; text-align:right;">Net Amount (₹)</th>
+                        <th style="width: 8%; text-align:center;">Status</th>
+                        <th style="width: 12%; text-align:center;">Admin Decision</th>
+                    </tr>
+                `;
+
+                if (list.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:35px; color:var(--text-muted);">🎉 No pending supervisor requests awaiting approval!</td></tr>`;
+                } else {
+                    list.forEach(r => {
+                        const targetHtml = buildTargetDetailsHtml(r);
+                        const refHtml = (r.category === 'Employee Payment' || r.category === 'Attendance & OT')
+                            ? `<div style="font-weight:700; color:var(--theme-color);">${r.subId}</div>
+                               <div style="font-size:10px; color:var(--text-muted);">${r.billRef}</div>`
+                            : `<div style="font-weight:700;">${r.billRef}</div>`;
+
+                        let amtLabel = '';
+                        if (r.category === 'Attendance & OT') {
+                            amtLabel = r.salaryBasis === 'Per Day'
+                                ? `<div style="font-size:9.5px; color:#20c997;">Wage + 8h OT</div>`
+                                : `<div style="font-size:9.5px; color:#b18cfd;">Monthly (OT ₹0)</div>`;
+                        } else if (r.category === 'Employee Payment') {
+                            amtLabel = `<div style="font-size:9.5px; color:#007bff;">Paid Advance</div>`;
+                        } else {
+                            amtLabel = `<div style="font-size:9.5px; color:#fd7e14;">Site Expense</div>`;
+                        }
+
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>
+                                    <strong style="color:var(--theme-color);">${r.reqNo}</strong>
+                                    <div style="font-size:10px; color:var(--text-muted);">${r.date}<br>${r.time}</div>
+                                </td>
+                                <td>
+                                    <strong>${r.supName}</strong> <span style="font-size:10px; color:var(--text-muted);">(${r.supId})</span>
+                                    <div style="font-size:10.5px; color:var(--theme-color); margin-top:2px;">📍 ${r.site}</div>
+                                </td>
+                                <td>${getCategoryBadge(r.category)}</td>
+                                <td>${targetHtml}</td>
+                                <td>${refHtml}</td>
+                                <td style="text-align:right; font-weight:800; font-size:13px; color:#28a745;">
+                                    ₹${r.amount.toLocaleString('en-IN', {minimumFractionDigits: 2})}
+                                    ${amtLabel}
+                                </td>
+                                <td style="text-align:center;">${getStatusBadge(r)}</td>
+                                <td style="text-align:center;">
+                                    <div class="action-btns">
+                                        <button class="btn-act btn-view" onclick="openViewModal(${r.id})" title="View Details">👁️</button>
+                                        <button class="btn-act btn-approve" onclick="openDecisionModal(${r.id}, 'Approved')">✔️ Approve</button>
+                                        <button class="btn-act btn-reject" onclick="openDecisionModal(${r.id}, 'Rejected')">❌ Reject</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                }
+            } else {
+                // HISTORY VIEW TABLE - Exact 100% Column Width Distribution (10 + 12 + 11 + 25 + 8 + 10 + 9 + 10 + 5 = 100%)
+                thead.innerHTML = `
+                    <tr>
+                        <th style="width: 10%;">Req ID & Date</th>
+                        <th style="width: 12%;">Supervisor & Site</th>
+                        <th style="width: 11%;">Category</th>
+                        <th style="width: 25%;">Present/OT, Payment or Expense</th>
+                        <th style="width: 8%;">Sub ID / Ref</th>
+                        <th style="width: 10%; text-align:right;">Net Amount (₹)</th>
+                        <th style="width: 9%; text-align:center;">Status</th>
+                        <th style="width: 10%;">Admin Remarks</th>
+                        <th style="width: 5%; text-align:center;">View</th>
+                    </tr>
+                `;
+
+                if (list.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:35px; color:var(--text-muted);">No supervisor request history found for the selected criteria.</td></tr>`;
+                } else {
+                    list.forEach(r => {
+                        const targetHtml = buildTargetDetailsHtml(r);
+                        const refHtml = (r.category === 'Employee Payment' || r.category === 'Attendance & OT')
+                            ? `<div style="font-weight:700; color:var(--theme-color);">${r.subId}</div>`
+                            : `<div style="font-weight:700;">${r.billRef}</div>`;
+
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>
+                                    <strong style="color:var(--theme-color);">${r.reqNo}</strong>
+                                    <div style="font-size:10px; color:var(--text-muted);">${r.date}<br>${r.time}</div>
+                                </td>
+                                <td>
+                                    <strong>${r.supName}</strong>
+                                    <div style="font-size:10.5px; color:var(--theme-color);">📍 ${r.site}</div>
+                                </td>
+                                <td>${getCategoryBadge(r.category)}</td>
+                                <td>${targetHtml}</td>
+                                <td>${refHtml}</td>
+                                <td style="text-align:right; font-weight:800; color:#28a745;">
+                                    ₹${r.amount.toLocaleString('en-IN', {minimumFractionDigits: 2})}
+                                </td>
+                                <td style="text-align:center;">${getStatusBadge(r)}</td>
+                                <td>
+                                    <div style="font-size:10px; font-weight:700;">🕒 ${r.adminDate}</div>
+                                    <div style="font-size:10.5px; color:${r.status === 'Approved' ? '#28a745' : '#ff6b6b'}; margin-top:2px;">
+                                        💬 ${r.adminRemarks}
+                                    </div>
+                                </td>
+                                <td style="text-align:center;">
+                                    <div class="action-btns">
+                                        <button class="btn-act btn-view" onclick="openViewModal(${r.id})" title="View Details">👁️</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                }
+            }
+
+            document.getElementById('footDisplayed').innerText = `${list.length} Requests`;
+            document.getElementById('footBreakdown').innerText = `${attOtCount} Att/OT / ${empPayCount} Pay / ${siteExpCount} Exp`;
+            document.getElementById('footTotalAmt').innerText = `₹ ${sumDisplayedAmt.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+        }
+
+        // ================= 1. VIEW DETAILS MODAL =================
+        function openViewModal(id) {
+            const r = supervisorRequests.find(item => item.id === id);
+            if (!r) return;
+
+            document.getElementById('viewModalTitle').innerText = `👁️ Supervisor Request — ${r.reqNo}`;
+            const body = document.getElementById('viewModalBody');
+            const footer = document.getElementById('viewModalFooter');
+
+            let specificDetailsHtml = '';
+            if (r.category === 'Attendance & OT') {
+                const otRuleExplanation = r.salaryBasis === 'Per Day'
+                    ? `<span style="color:#ffc107; font-weight:700;">${r.otHours} Hours × ₹${r.otRatePerHr}/hr (₹${r.baseDailyWage} ÷ 8h Duty) = ₹${r.otAmount} (Added to Salary)</span>`
+                    : `<span style="color:var(--text-muted); font-weight:700;">${r.otHours} Hours Logged | ₹0.00 (Monthly Basis — OT Not Counted in Salary)</span>`;
+
+                specificDetailsHtml = `
+                    <div style="margin-top:15px; padding:15px; border-radius:8px; background:rgba(32,201,151,0.08); border-left:4px solid #20c997;">
+                        <h4 style="font-size:12px; color:#20c997; text-transform:uppercase; margin-bottom:10px;">📅 Employee Present & Overtime (OT) Breakdown</h4>
+                        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; font-size:13px;">
+                            <div><span style="font-size:10px; color:var(--text-muted); display:block;">EMPLOYEE NAME & ID</span><strong>${r.empName} (${r.empId})</strong></div>
+                            <div><span style="font-size:10px; color:var(--text-muted); display:block;">SALARY BASIS</span>${getSalaryBasisBadge(r.salaryBasis)}</div>
+                            <div><span style="font-size:10px; color:var(--text-muted); display:block;">SUB ID / WORK ORDER</span><strong style="color:var(--theme-color);">${r.subId}</strong></div>
+                            <div><span style="font-size:10px; color:var(--text-muted); display:block;">ATTENDANCE STATUS</span><strong style="color:#28a745;">${r.presentStatus} (₹${r.presentWage})</strong></div>
+                            <div><span style="font-size:10px; color:var(--text-muted); display:block;">OVERTIME (8-HR DUTY RULE)</span>${otRuleExplanation}</div>
+                            <div><span style="font-size:10px; color:var(--text-muted); display:block;">NET CREDITED SALARY (CR)</span><strong style="color:#20c997; font-size:15px;">₹${r.amount.toLocaleString('en-IN')}</strong></div>
+                        </div>
+                    </div>`;
+            } else if (r.category === 'Employee Payment') {
+                specificDetailsHtml = `
+                    <div style="margin-top:15px; padding:15px; border-radius:8px; background:rgba(0,123,255,0.08); border-left:4px solid #007bff;">
+                        <h4 style="font-size:12px; color:#007bff; text-transform:uppercase; margin-bottom:8px;">👷 Employee Payment Details (Target Ledger)</h4>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; font-size:13px;">
+                            <div><span style="font-size:10px; color:var(--text-muted); display:block;">EMPLOYEE NAME</span><strong>${r.empName}</strong></div>
+                            <div><span style="font-size:10px; color:var(--text-muted); display:block;">EMPLOYEE ID & BASIS</span><strong>${r.empId}</strong> ${getSalaryBasisBadge(r.salaryBasis)}</div>
+                            <div><span style="font-size:10px; color:var(--text-muted); display:block;">SUB ID / WORK REF</span><strong style="color:var(--theme-color);">${r.subId}</strong></div>
+                        </div>
+                    </div>`;
+            } else {
+                specificDetailsHtml = `
+                    <div style="margin-top:15px; padding:15px; border-radius:8px; background:rgba(253,126,20,0.08); border-left:4px solid #fd7e14;">
+                        <h4 style="font-size:12px; color:#fd7e14; text-transform:uppercase; margin-bottom:8px;">🛠️ Site Expense / Tool Purchase Details</h4>
+                        <div style="display:grid; grid-template-columns: 2fr 1fr; gap:10px; font-size:13px;">
+                            <div><span style="font-size:10px; color:var(--text-muted); display:block;">ITEM / EXPENSE HEAD</span><strong>${r.expenseTitle}</strong></div>
+                            <div><span style="font-size:10px; color:var(--text-muted); display:block;">BILL / CHALLAN REF</span><strong>${r.billRef}</strong></div>
+                        </div>
+                    </div>`;
+            }
+
+            const historyHtml = r.status !== 'Pending'
+                ? `<div style="margin-top:15px; padding:12px; border-radius:8px; background:var(--input-bg); border:1px solid var(--border-color);">
+                       <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Admin Decision Log</div>
+                       <div style="margin-top:6px; font-size:13px;"><strong>Status:</strong> ${getStatusBadge(r)} &nbsp;|&nbsp; <strong>Time:</strong> ${r.adminDate}</div>
+                       <div style="margin-top:5px; font-size:12.5px;"><strong>Admin Remarks:</strong> ${r.adminRemarks}</div>
+                   </div>`
+                : '';
+
+            body.innerHTML = `
+                <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; background:var(--input-bg); padding:14px; border-radius:8px; border:1px solid var(--border-color);">
+                    <div><span style="font-size:10px; color:var(--text-muted); display:block;">SUPERVISOR</span><strong>${r.supName} (${r.supId})</strong></div>
+                    <div><span style="font-size:10px; color:var(--text-muted); display:block;">ASSIGNED SITE</span><strong style="color:var(--theme-color);">📍 ${r.site}</strong></div>
+                    <div><span style="font-size:10px; color:var(--text-muted); display:block;">CATEGORY</span>${getCategoryBadge(r.category)}</div>
+                    <div><span style="font-size:10px; color:var(--text-muted); display:block;">REQUEST DATE & TIME</span><strong>${r.date} | ${r.time}</strong></div>
+                    <div><span style="font-size:10px; color:var(--text-muted); display:block;">VOUCHER / REF</span><strong>${r.billRef}</strong></div>
+                    <div><span style="font-size:10px; color:var(--text-muted); display:block;">NET AMOUNT</span><strong style="color:#28a745; font-size:16px;">₹${r.amount.toLocaleString('en-IN', {minimumFractionDigits: 2})}</strong></div>
+                </div>
+                ${specificDetailsHtml}
+                <div style="margin-top:15px; padding:12px; border-radius:8px; background:var(--input-bg); border:1px solid var(--border-color);">
+                    <span style="font-size:10px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Supervisor Narration / Note:</span>
+                    <p style="font-size:13px; margin-top:4px;">"${r.narration}"</p>
+                </div>
+                ${historyHtml}
+            `;
+
+            if (r.status === 'Pending') {
+                footer.innerHTML = `
+                    <button class="btn-act btn-approve" style="padding:10px 18px; font-size:12px;" onclick="closeViewModal(); openDecisionModal(${r.id}, 'Approved');">✔️ Approve Request</button>
+                    <button class="btn-act btn-reject" style="padding:10px 18px; font-size:12px;" onclick="closeViewModal(); openDecisionModal(${r.id}, 'Rejected');">❌ Reject Request</button>
+                `;
+            } else {
+                footer.innerHTML = `<button class="btn-save" onclick="closeViewModal()">Close</button>`;
+            }
+
+            document.getElementById('viewDetailModal').classList.add('active');
+        }
+
+        function closeViewModal() {
+            document.getElementById('viewDetailModal').classList.remove('active');
+        }
+
+        // ================= 2. ADMIN APPROVE / REJECT & AUTO LEDGER SYNC =================
+        function openDecisionModal(id, status) {
+            pendingDecision = { id, status };
+            const r = supervisorRequests.find(item => item.id === id);
+            const titleEl = document.getElementById('decisionModalTitle');
+            const promptEl = document.getElementById('decisionPromptText');
+            const noticeEl = document.getElementById('empSyncNotice');
+            const btnEl = document.getElementById('confirmDecisionBtn');
+            const remarkInput = document.getElementById('adminDecisionRemark');
+
+            if (status === 'Approved') {
+                titleEl.innerText = `✔️ Approve Supervisor Request (${r.reqNo})`;
+                titleEl.style.color = '#28a745';
+                btnEl.style.background = '#28a745';
+                btnEl.innerText = '✔️ Confirm Approval';
+
+                if (r.category === 'Attendance & OT') {
+                    if (r.salaryBasis === 'Per Day') {
+                        promptEl.innerHTML = `Approve <strong>${r.presentStatus} (₹${r.presentWage}) + ${r.otHours} Hrs OT (₹${r.otAmount} @ 8h Duty)</strong> for Per-Day Employee <strong>${r.empName}</strong>?`;
+                        noticeEl.style.display = 'block';
+                        noticeEl.innerHTML = `🔗 Per-Day Basis (8h Duty): Total <strong>₹${r.amount} (Cr)</strong> [Wage + OT] will be added to ${r.empName}'s Ledger!`;
+                        remarkInput.value = `Per-Day Present & ${r.otHours}h OT (8h Duty basis) verified & ₹${r.amount} credited.`;
+                    } else {
+                        promptEl.innerHTML = `Approve <strong>${r.presentStatus} (₹${r.presentWage})</strong> & log <strong>${r.otHours} Hrs OT (₹0)</strong> for Monthly Employee <strong>${r.empName}</strong>?`;
+                        noticeEl.style.display = 'block';
+                        noticeEl.innerHTML = `ℹ️ Monthly Basis Rule: OT (${r.otHours} Hrs) will be recorded in ledger particulars, but <strong>₹0 OT</strong> is added to salary. Only <strong>₹${r.amount} (Cr)</strong> will be credited!`;
+                        remarkInput.value = `Monthly Attendance verified (${r.otHours}h OT logged, not counted in salary).`;
+                    }
+                } else if (r.category === 'Employee Payment') {
+                    promptEl.innerHTML = `Approve payment of <strong>₹${r.amount.toLocaleString('en-IN')}</strong> to <strong>${r.empName} (${r.empId})</strong> under Sub ID <strong>${r.subId}</strong>?`;
+                    noticeEl.style.display = 'block';
+                    noticeEl.innerHTML = `🔗 Auto-Sync Active: Approving this payment will debit <strong>₹${r.amount} (Dr)</strong> in ${r.empName}'s Ledger!`;
+                    remarkInput.value = `Approved & ₹${r.amount} auto-added to ${r.empName}'s Ledger.`;
+                } else {
+                    promptEl.innerHTML = `Approve Site Expense of <strong>₹${r.amount.toLocaleString('en-IN')}</strong> for <strong>${r.expenseTitle}</strong> at <strong>${r.site}</strong>?`;
+                    noticeEl.style.display = 'none';
+                    remarkInput.value = 'Site Expense verified & approved by Admin.';
+                }
+            } else {
+                titleEl.innerText = `❌ Reject Supervisor Request (${r.reqNo})`;
+                titleEl.style.color = '#dc3545';
+                promptEl.innerHTML = `Please enter the reason for <strong>REJECTING</strong> this ${r.category} request from Supervisor <strong>${r.supName}</strong>:`;
+                noticeEl.style.display = 'none';
+                btnEl.style.background = '#dc3545';
+                btnEl.innerText = '❌ Confirm Rejection';
+                remarkInput.value = '';
+            }
+
+            document.getElementById('decisionModal').classList.add('active');
+        }
+
+        function closeDecisionModal() {
+            document.getElementById('decisionModal').classList.remove('active');
+        }
+
+        function executeAdminDecision() {
+            const remark = document.getElementById('adminDecisionRemark').value.trim();
+            if (pendingDecision.status === 'Rejected' && !remark) {
+                alert("⚠️ Please provide a reason for rejecting the request!");
+                return;
+            }
+
+            const r = supervisorRequests.find(item => item.id === pendingDecision.id);
+            if (!r) return;
+
+            const now = new Date();
+            r.status = pendingDecision.status;
+            r.adminDate = `${now.toISOString().slice(0, 10)} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+            r.adminRemarks = remark || (pendingDecision.status === 'Approved' ? 'Approved by Admin' : 'Rejected by Admin');
+
+            // AUTOMATICALLY SYNC TO EMPLOYEE LEDGER ON APPROVAL
+            if (pendingDecision.status === 'Approved' && !r.ledgerSynced) {
+                r.ledgerSynced = true;
+
+                if (r.category === 'Attendance & OT') {
+                    const partDetails = r.salaryBasis === 'Per Day'
+                        ? `${r.presentStatus} (₹${r.presentWage}) + OT: ${r.otHours} Hrs @ ₹${r.otRatePerHr}/hr [8h Duty] (₹${r.otAmount})`
+                        : `${r.presentStatus} (₹${r.presentWage}) | OT: ${r.otHours} Hrs Logged (₹0 - Monthly Basis Not Counted)`;
+
+                    employeeLedgerEntries.unshift({
+                        ledgerId: `LED-${Date.now().toString().slice(-4)}`,
+                        date: r.date,
+                        reqNo: r.reqNo,
+                        empId: r.empId,
+                        empName: r.empName,
+                        salaryBasis: r.salaryBasis,
+                        subId: r.subId,
+                        supName: r.supName,
+                        site: r.site,
+                        type: "Attendance & OT",
+                        particulars: partDetails,
+                        creditEarned: r.amount,
+                        debitPaid: 0
+                    });
+                    localStorage.setItem('atr_employee_ledger', JSON.stringify(employeeLedgerEntries));
+                    showToast(`✅ Approved! ₹${r.amount.toLocaleString('en-IN')} (${r.salaryBasis}) credited to ${r.empName}'s Ledger!`);
+                } else if (r.category === 'Employee Payment') {
+                    employeeLedgerEntries.unshift({
+                        ledgerId: `LED-${Date.now().toString().slice(-4)}`,
+                        date: r.date,
+                        reqNo: r.reqNo,
+                        empId: r.empId,
+                        empName: r.empName,
+                        salaryBasis: r.salaryBasis || 'Per Day',
+                        subId: r.subId,
+                        supName: r.supName,
+                        site: r.site,
+                        type: "Employee Payment",
+                        particulars: r.narration,
+                        creditEarned: 0,
+                        debitPaid: r.amount
+                    });
+                    localStorage.setItem('atr_employee_ledger', JSON.stringify(employeeLedgerEntries));
+                    showToast(`✅ Approved! Payment ₹${r.amount.toLocaleString('en-IN')} (Dr) added to ${r.empName}'s Ledger!`);
+                } else {
+                    showToast(`✅ Approved! Site Expense of ₹${r.amount.toLocaleString('en-IN')} recorded.`);
+                }
+            } else if (pendingDecision.status === 'Rejected') {
+                showToast(`❌ Request ${r.reqNo} has been Rejected.`);
+            }
+
+            closeDecisionModal();
+            renderTable();
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toastBanner');
+            toast.innerText = msg;
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 4000);
+        }
+
+        // ================= 3. SYNCED EMPLOYEE LEDGER MODAL =================
+        function openEmpLedgerModal() {
+            const tbody = document.getElementById('empLedgerTableBody');
+            tbody.innerHTML = '';
+
+            if (employeeLedgerEntries.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:25px; color:var(--text-muted);">No approved employee entries synced yet.</td></tr>`;
+            } else {
+                let totalEarnedCr = 0, totalPaidDr = 0;
+                employeeLedgerEntries.forEach(entry => {
+                    totalEarnedCr += entry.creditEarned;
+                    totalPaidDr += entry.debitPaid;
+                    const typeBadge = entry.type === 'Attendance & OT'
+                        ? `<span class="badge cat-att-ot">📅 Present & OT</span>`
+                        : `<span class="badge cat-emp-pay">💸 Payment</span>`;
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${entry.date}</td>
+                            <td style="font-weight:700; color:var(--theme-color);">${entry.reqNo}</td>
+                            <td>
+                                <strong>${entry.empName}</strong> <span style="font-size:10.5px; color:var(--text-muted);">(${entry.empId})</span>
+                                <div style="margin-top:3px;">${getSalaryBasisBadge(entry.salaryBasis)}</div>
+                            </td>
+                            <td style="font-weight:700; color:#007bff;">${entry.subId}</td>
+                            <td>${typeBadge} <div style="font-size:10.5px; color:var(--text-muted); margin-top:3px;">${entry.particulars}</div></td>
+                            <td style="text-align:right; font-weight:800; color:#20c997;">${entry.creditEarned > 0 ? '₹' + entry.creditEarned.toLocaleString('en-IN', {minimumFractionDigits: 2}) : '-'}</td>
+                            <td style="text-align:right; font-weight:800; color:#007bff;">${entry.debitPaid > 0 ? '₹' + entry.debitPaid.toLocaleString('en-IN', {minimumFractionDigits: 2}) : '-'}</td>
+                        </tr>
+                    `;
+                });
+                const netPayable = totalEarnedCr - totalPaidDr;
+                tbody.innerHTML += `
+                    <tr style="background:rgba(32,201,151,0.1); font-weight:800;">
+                        <td colspan="5" style="text-align:right;">TOTAL SYNCED (NET DUE: ₹${netPayable.toLocaleString('en-IN', {minimumFractionDigits: 2})}):</td>
+                        <td style="text-align:right; color:#20c997;">₹${totalEarnedCr.toLocaleString('en-IN', {minimumFractionDigits: 2})} Cr</td>
+                        <td style="text-align:right; color:#007bff;">₹${totalPaidDr.toLocaleString('en-IN', {minimumFractionDigits: 2})} Dr</td>
+                    </tr>
+                `;
+            }
+
+            document.getElementById('empLedgerModal').classList.add('active');
+        }
+
+        function closeEmpLedgerModal() {
+            document.getElementById('empLedgerModal').classList.remove('active');
+        }
+
+        // ================= 4. EXPORT TO EXCEL =================
+        function exportSupervisorRequestsExcel() {
+            const list = getFilteredData();
+            if (list.length === 0) {
+                alert("No records available to export!");
+                return;
+            }
+
+            const exportData = [
+                ["ATR CONSTRUCTION - SUPERVISOR REQUEST & APPROVAL REPORT"],
+                ["View Mode:", currentTab.toUpperCase(), "Export Date:", new Date().toLocaleDateString()],
+                [],
+                ["Req ID", "Date", "Time", "Supervisor ID", "Supervisor Name", "Site", "Category", "Employee ID", "Employee Name", "Salary Basis", "Sub ID", "Present Status", "OT Hours", "OT Amount Counted (Rs.)", "Site Expense Item", "Ref / Memo No", "Net Amount (Rs.)", "Narration", "Status", "Synced to Ledger", "Admin Action Time", "Admin Remarks"]
+            ];
+
+            list.forEach(r => {
+                exportData.push([
+                    r.reqNo, r.date, r.time, r.supId, r.supName, r.site,
+                    r.category, r.empId || "-", r.empName || "-", r.salaryBasis || "-", r.subId || "-",
+                    r.presentStatus || "-", r.otHours || 0, r.otAmount || 0,
+                    r.expenseTitle || "-", r.billRef, r.amount, r.narration,
+                    r.status, r.ledgerSynced ? "YES" : "NO",
+                    r.adminDate || "Pending", r.adminRemarks || "-"
+                ]);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Supervisor_Requests");
+            XLSX.writeFile(wb, `ATR_Supervisor_Requests_${currentTab}_${new Date().toISOString().slice(0,10)}.xlsx`);
+        }
+    </script>
+</body>
+</html>

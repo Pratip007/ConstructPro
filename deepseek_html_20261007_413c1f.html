@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tax Invoice — Report Only</title>
+<style>
+/* ===== BASE ===== */
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  background:#eef1f6;color:#0f172a;-webkit-font-smoothing:antialiased;
+}
+button{font-family:inherit;cursor:pointer}
+
+/* ===== TOOLBAR ===== */
+.toolbar{
+  position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid #e2e8f0;
+  padding:10px 16px;display:flex;gap:8px;justify-content:flex-end;align-items:center;
+  box-shadow:0 2px 8px rgba(15,23,42,.06);
+}
+.toolbar button{
+  border:1px solid #dbe2ea;background:#fff;color:#0f172a;font-size:12.5px;font-weight:650;
+  padding:8px 14px;border-radius:9px;transition:.15s;display:inline-flex;align-items:center;gap:6px;
+}
+.toolbar button:hover{background:#f8fafc;border-color:#c7d2de}
+.toolbar button.primary{background:#2563eb;border-color:#2563eb;color:#fff}
+.toolbar button.primary:hover{background:#1d4ed8;border-color:#1d4ed8}
+
+/* ===== PAPER ===== */
+.paper{
+  --accent:#2563eb;
+  width:210mm;min-height:297mm;background:#fff;margin:20px auto;
+  padding:11mm 11mm 9mm;box-shadow:0 10px 40px rgba(15,23,42,.13);
+  font-size:10.5px;line-height:1.42;color:#0f172a;position:relative;
+}
+[contenteditable="true"]{outline:none;transition:.15s;border-radius:3px}
+[contenteditable="true"]:hover{background:#f1f5f9}
+[contenteditable="true"]:focus{background:#eff6ff;box-shadow:0 0 0 2px rgba(37,99,235,.25)}
+
+/* ===== HEADER ===== */
+.inv-head{
+  display:flex;justify-content:space-between;gap:18px;
+  padding-bottom:10px;border-bottom:2px solid var(--accent);margin-bottom:11px;
+}
+.seller-top{display:flex;gap:10px;align-items:flex-start}
+.logo{
+  width:40px;height:40px;border-radius:10px;background:var(--accent);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;
+  flex:0 0 auto;letter-spacing:-.02em;
+}
+.seller-name{font-size:16px;font-weight:800;letter-spacing:-.025em;line-height:1.2}
+.seller-addr{font-size:9.5px;color:#475569;margin-top:2px}
+.seller-meta{display:flex;flex-wrap:wrap;gap:3px 12px;margin-top:6px;font-size:9.5px;color:#334155}
+.seller-meta b{color:#64748b;font-weight:650}
+
+.doc{text-align:right;flex:0 0 auto}
+.doc-title{font-size:15px;font-weight:800;letter-spacing:.14em;color:var(--accent);margin-bottom:7px}
+.doc-meta{border-collapse:collapse;font-size:9.5px;margin-left:auto}
+.doc-meta td{padding:1.5px 0;vertical-align:top}
+.doc-meta td:first-child{color:#64748b;padding-right:12px;text-align:left;white-space:nowrap}
+.doc-meta td:last-child{text-align:right;font-weight:650;white-space:nowrap}
+
+/* ===== PARTIES ===== */
+.parties{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:11px}
+.party{border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;background:#fafbfd}
+.party-h{font-size:8.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:4px}
+.party-name{font-size:11px;font-weight:750;line-height:1.3}
+.party-body{font-size:9.5px;color:#475569;margin-top:2px}
+.party-meta{font-size:9.5px;color:#334155;margin-top:5px;display:grid;gap:1px}
+.party-meta b{color:#64748b;font-weight:650}
+
+/* ===== STRIP ===== */
+.strip{
+  display:flex;flex-wrap:wrap;gap:4px 18px;font-size:9px;color:#475569;
+  background:#f5f8fc;border-radius:6px;padding:5px 10px;margin-bottom:11px;
+}
+.strip b{color:#334155;font-weight:700}
+
+/* ===== ITEMS TABLE ===== */
+table.items{width:100%;border-collapse:collapse;table-layout:fixed;font-size:9.5px}
+table.items th{
+  background:var(--accent);color:#fff;font-weight:700;font-size:8.5px;text-transform:uppercase;
+  letter-spacing:.05em;padding:6px 5px;text-align:left;vertical-align:middle;
+}
+table.items td{padding:6px 5px;border-bottom:1px solid #eef2f7;vertical-align:top;word-wrap:break-word}
+table.items tbody tr:nth-child(even) td{background:#fafbfd}
+table.items .b{font-weight:700}
+table.items .unit{color:#94a3b8;font-size:8.5px}
+table.items .empty{text-align:center;color:#94a3b8;padding:16px}
+table.items tfoot td{
+  font-weight:800;background:#f1f5f9;border-top:1.5px solid #cbd5e1;border-bottom:none;
+  padding:6px 5px;font-size:10px;
+}
+.r{text-align:right}.c{text-align:center}
+.num{font-variant-numeric:tabular-nums}
+
+/* ===== BOTTOM ===== */
+.bottom{display:grid;grid-template-columns:1fr 242px;gap:14px;margin-top:12px;align-items:start}
+.blk{margin-bottom:9px;page-break-inside:avoid}
+.blk:last-child{margin-bottom:0}
+.blk-h{font-size:8.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#64748b;margin-bottom:4px}
+.words{font-size:10px;font-weight:700;background:#f5f8fc;border-left:2.5px solid var(--accent);padding:5px 9px;border-radius:0 6px 6px 0;line-height:1.45}
+.bank{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:9.5px}
+.bank b{color:#64748b;font-weight:650;white-space:nowrap}
+.bank span{color:#1e293b}
+.terms{font-size:9px;color:#475569;line-height:1.55}
+.terms div{margin-bottom:1px}
+
+table.mini{width:100%;border-collapse:collapse;font-size:9px}
+table.mini th{background:#f1f5f9;padding:3px 6px;font-weight:700;text-align:left;font-size:8.5px;color:#475569;text-transform:uppercase;letter-spacing:.04em}
+table.mini td{padding:3px 6px;border-bottom:1px solid #eef2f7}
+table.mini tr:last-child td{border-bottom:none}
+
+table.sums{width:100%;border-collapse:collapse;font-size:10px;margin-bottom:0}
+table.sums td{padding:4.5px 7px;vertical-align:middle}
+table.sums td:first-child{color:#475569}
+table.sums td:last-child{text-align:right;font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.sums tr.sub td{font-weight:650;color:#0f172a}
+table.sums tr.grand td{background:var(--accent);color:#fff;font-weight:800;font-size:12.5px;padding:7.5px 8px}
+table.sums tr.grand td:first-child{border-radius:7px 0 0 7px}
+table.sums tr.grand td:last-child{border-radius:0 7px 7px 0}
+
+.sign{margin-top:22px;text-align:center;page-break-inside:avoid}
+.sign-for{font-size:9.5px;font-weight:700;color:#334155;margin-bottom:4px}
+.sign-space{height:34px}
+.sign-line{border-top:1px dashed #94a3b8;margin:0 6px 4px}
+.sign-lbl{font-size:9px;color:#64748b;letter-spacing:.03em}
+
+.declaration{margin-top:11px;padding-top:8px;border-top:1px solid #e2e8f0;font-size:8.5px;color:#64748b;line-height:1.55}
+.thanks{margin-top:6px;font-size:9.5px;font-weight:700;color:var(--accent);text-align:center;letter-spacing:.03em}
+
+/* ===== TEMPLATES ===== */
+.paper.tpl-classic{border:1.5px solid #0f172a;padding:9mm}
+.paper.tpl-classic .inv-head{border-bottom:1.5px solid #0f172a}
+.paper.tpl-classic .doc-title{color:#0f172a}
+.paper.tpl-classic .logo{background:#0f172a;border-radius:0}
+.paper.tpl-classic .party{border:1px solid #0f172a;border-radius:0;background:#fff;padding:7px 9px}
+.paper.tpl-classic .party-h{color:#0f172a;border-bottom:1px solid #0f172a;padding-bottom:3px;margin-bottom:5px}
+.paper.tpl-classic .strip{background:#fff;border:1px solid #cbd5e1;border-radius:0}
+.paper.tpl-classic table.items th{background:#e8edf3;color:#0f172a;border:1px solid #0f172a}
+.paper.tpl-classic table.items td{border:1px solid #cbd5e1;background:#fff!important}
+.paper.tpl-classic table.items tfoot td{background:#e8edf3;border:1px solid #0f172a}
+.paper.tpl-classic .words{background:#fff;border-left:3px solid #0f172a;border-radius:0}
+.paper.tpl-classic table.sums tr.grand td{background:#0f172a;border-radius:0!important}
+.paper.tpl-classic .party-h,.paper.tpl-classic .doc-title{letter-spacing:.08em}
+
+.paper.tpl-minimal .inv-head{border-bottom:1px solid #cbd5e1}
+.paper.tpl-minimal .doc-title{color:#0f172a;font-weight:700;letter-spacing:.08em;font-size:14px}
+.paper.tpl-minimal .logo{background:#334155;border-radius:8px;width:34px;height:34px;font-size:13px}
+.paper.tpl-minimal .party{border:none;border-left:2px solid #cbd5e1;border-radius:0;background:transparent;padding:0 0 0 9px}
+.paper.tpl-minimal .party-h{color:#64748b}
+.paper.tpl-minimal .strip{background:transparent;padding:0;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;border-radius:0;padding:6px 0}
+.paper.tpl-minimal table.items th{background:transparent;color:#0f172a;border-bottom:1.5px solid #0f172a;padding-left:3px;padding-right:3px}
+.paper.tpl-minimal table.items tbody tr:nth-child(even) td{background:transparent}
+.paper.tpl-minimal table.items td{padding-left:3px;padding-right:3px;border-bottom:1px solid #f1f5f9}
+.paper.tpl-minimal table.items tfoot td{background:transparent;border-top:1.5px solid #0f172a}
+.paper.tpl-minimal .words{background:transparent;border-left:2px solid #cbd5e1;border-radius:0}
+.paper.tpl-minimal table.sums tr.grand td{background:#0f172a;border-radius:0}
+
+/* ===== PRINT ===== */
+@page{size:A4;margin:0}
+@media print{
+  html,body{background:#fff!important;height:auto!important;overflow:visible!important}
+  .no-print{display:none!important}
+  .paper{width:210mm!important;min-height:0!important;margin:0!important;padding:11mm 11mm 10mm!important;box-shadow:none!important;border-radius:0!important}
+  .paper.tpl-classic{border:1.5px solid #0f172a!important}
+  table.items thead{display:table-header-group}
+  table.items tr,.blk,.party,.sign{page-break-inside:avoid}
+  .bottom{page-break-inside:avoid}
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+}
+</style>
+</head>
+<body>
+
+<div class="toolbar no-print">
+  <button id="btnAdd" class="primary">＋ Add Item</button>
+  <button id="btnTheme">🎨 Theme: Modern</button>
+  <button id="btnPrint">🖨️ Print / PDF</button>
+</div>
+
+<div class="paper" id="paper"></div>
+
+<script>
+/* ============================================================
+   HELPERS
+   ============================================================ */
+const esc = s => String(s ?? '').replace(/[&<>"']/g,
+  m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+const nl = s => esc(s).replace(/\n/g, '<br>');
+const fmt = v => Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtQ = v => { const x = Number(v || 0); return Number.isInteger(x) ? String(x) : x.toFixed(2); };
+const money = v => '₹' + fmt(v);
+const initials = name => String(name || '?').trim().split(/\s+/).slice(0,2).map(w => w[0]).join('').toUpperCase();
+
+const ONES = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+const TENS = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+const two = k => k < 20 ? ONES[k] : TENS[Math.floor(k/10)] + (k%10 ? ' ' + ONES[k%10] : '');
+const three = k => { const h = Math.floor(k/100), r = k%100; return (h ? ONES[h] + ' Hundred' + (r ? ' ' : '') : '') + (r ? two(r) : ''); };
+function intWords(num) {
+  if (num === 0) return 'Zero';
+  let out = '';
+  const cr = Math.floor(num/10000000); num %= 10000000;
+  const la = Math.floor(num/100000);   num %= 100000;
+  const th = Math.floor(num/1000);     num %= 1000;
+  if (cr) out += intWords(cr) + ' Crore ';
+  if (la) out += two(la) + ' Lakh ';
+  if (th) out += two(th) + ' Thousand ';
+  if (num) out += three(num);
+  return out.trim();
+}
+function amountInWords(amount) {
+  let rupees = Math.floor(Math.abs(amount));
+  let paise  = Math.round((Math.abs(amount) - rupees) * 100);
+  if (paise === 100) { rupees += 1; paise = 0; }
+  let s = intWords(rupees) + ' Rupees';
+  if (paise) s += ' and ' + two(paise) + ' Paise';
+  return s + ' Only';
+}
+
+/* ============================================================
+   SAMPLE DATA
+   ============================================================ */
+const data = {
+  seller: {
+    name: 'Nexa Technologies Pvt. Ltd.',
+    address: '12, MG Road, Bengaluru,\nKarnataka 560001, India',
+    gstin: '29ABCDE1234F1Z5',
+    pan: 'ABCDE1234F',
+    state: 'Karnataka',
+    stateCode: '29',
+    phone: '+91 98765 43210',
+    email: 'billing@nexatech.in'
+  },
+  buyer: {
+    name: 'Bright Retail LLP',
+    address: '45, Anna Salai, Chennai,\nTamil Nadu 600002, India',
+    gstin: '33XYZAB5678G1Z2',
+    state: 'Tamil Nadu',
+    stateCode: '33',
+    phone: '+91 91234 56780'
+  },
+  meta: {
+    invoiceNo: 'INV/2025-26/0142',
+    invoiceDate: '2025-06-15',
+    dueDate: '2025-06-30',
+    poNo: 'PO-8842',
+    placeOfSupply: 'Tamil Nadu (33)',
+    reverseCharge: 'No',
+    transport: 'BlueDart Express',
+    vehicle: 'KA01AB1234',
+    ewayBill: '3910 4478 9921'
+  },
+  items: [
+    { desc:'Enterprise Software Licence (Annual Subscription)', hsn:'998314', qty:1, rate:45000, disc:0, gst:18 },
+    { desc:'Cloud Hosting & Maintenance — Q1', hsn:'998315', qty:3, rate:8500, disc:5, gst:18 },
+    { desc:'Custom Development Services', hsn:'998313', qty:40, rate:1200, disc:0, gst:18 }
+  ],
+  bank: {
+    name:'HDFC Bank',
+    holder:'Nexa Technologies Pvt. Ltd.',
+    account:'50200012345678',
+    ifsc:'HDFC0001234',
+    branch:'MG Road, Bengaluru',
+    upi:'nexatech@hdfcbank'
+  },
+  terms: 'Payment due within 15 days from the date of invoice.\nInterest @18% p.a. will be charged on overdue payments.\nGoods once sold will not be taken back or exchanged.\nSubject to Bengaluru jurisdiction only.',
+  declaration: 'We declare that this invoice shows the actual price of the goods/services described and that all particulars are true and correct.',
+  roundOff: true
+};
+
+/* ============================================================
+   ITEM ROW TEMPLATE
+   ============================================================ */
+function itemRowHTML(it, i) {
+  return `
+    <tr>
+      <td class="c">${i+1}</td>
+      <td contenteditable="true" data-f="desc">${esc(it.desc)}</td>
+      <td class="c" contenteditable="true" data-f="hsn">${esc(it.hsn)}</td>
+      <td class="r" contenteditable="true" data-f="qty">${it.qty}</td>
+      <td class="r" contenteditable="true" data-f="rate">${it.rate}</td>
+      <td class="r" contenteditable="true" data-f="disc">${it.disc}</td>
+      <td class="r computed" data-f="taxable"></td>
+      <td class="r" contenteditable="true" data-f="gst">${it.gst}</td>
+      <td class="r computed" data-f="tax"></td>
+      <td class="r computed" data-f="amount"></td>
+    </tr>`;
+}
+
+/* ============================================================
+   RENDER FULL REPORT
+   ============================================================ */
+function render() {
+  const paper = document.getElementById('paper');
+  paper.innerHTML = `
+  <div class="inv">
+    <div class="inv-head">
+      <div class="seller">
+        <div class="seller-top">
+          <div class="logo">${esc(initials(data.seller.name))}</div>
+          <div>
+            <div class="seller-name" contenteditable="true">${esc(data.seller.name)}</div>
+            <div class="seller-addr" contenteditable="true">${nl(data.seller.address)}</div>
+          </div>
+        </div>
+        <div class="seller-meta">
+          <span><b>GSTIN:</b> <span contenteditable="true">${esc(data.seller.gstin)}</span></span>
+          <span><b>PAN:</b> <span contenteditable="true">${esc(data.seller.pan)}</span></span>
+          <span><b>Ph:</b> <span contenteditable="true">${esc(data.seller.phone)}</span></span>
+          <span><b>Email:</b> <span contenteditable="true">${esc(data.seller.email)}</span></span>
+          <span><b>State Code:</b> <span id="sellerStateCode" contenteditable="true">${esc(data.seller.stateCode)}</span></span>
+        </div>
+      </div>
+      <div class="doc">
+        <div class="doc-title">TAX INVOICE</div>
+        <table class="doc-meta">
+          <tr><td>Invoice No.</td><td contenteditable="true">${esc(data.meta.invoiceNo)}</td></tr>
+          <tr><td>Invoice Date</td><td contenteditable="true">${esc(data.meta.invoiceDate)}</td></tr>
+          <tr><td>Due Date</td><td contenteditable="true">${esc(data.meta.dueDate)}</td></tr>
+          <tr><td>PO No.</td><td contenteditable="true">${esc(data.meta.poNo)}</td></tr>
+          <tr><td>Place of Supply</td><td contenteditable="true">${esc(data.meta.placeOfSupply)}</td></tr>
+          <tr><td>Reverse Charge</td><td contenteditable="true">${esc(data.meta.reverseCharge)}</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="parties">
+      <div class="party">
+        <div class="party-h">Bill To</div>
+        <div class="party-name" contenteditable="true">${esc(data.buyer.name)}</div>
+        <div class="party-body" contenteditable="true">${nl(data.buyer.address)}</div>
+        <div class="party-meta">
+          <div><b>GSTIN:</b> <span contenteditable="true">${esc(data.buyer.gstin)}</span></div>
+          <div><b>State:</b> <span contenteditable="true">${esc(data.buyer.state)}</span> <span>(<span id="buyerStateCode" contenteditable="true">${esc(data.buyer.stateCode)}</span>)</span></div>
+          <div><b>Phone:</b> <span contenteditable="true">${esc(data.buyer.phone)}</span></div>
+        </div>
+      </div>
+      <div class="party">
+        <div class="party-h">Ship To</div>
+        <div class="party-name" contenteditable="true">${esc(data.buyer.name)}</div>
+        <div class="party-body" contenteditable="true">${nl(data.buyer.address)}</div>
+        <div class="party-meta">
+          <div><b>State:</b> <span contenteditable="true">${esc(data.buyer.state)}</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="strip">
+      <span><b>Transport:</b> <span contenteditable="true">${esc(data.meta.transport)}</span></span>
+      <span><b>Vehicle:</b> <span contenteditable="true">${esc(data.meta.vehicle)}</span></span>
+      <span><b>E-Way Bill:</b> <span contenteditable="true">${esc(data.meta.ewayBill)}</span></span>
+      <span><b>Tax Type:</b> <span id="taxTypeLabel">Intra-State (CGST + SGST)</span></span>
+    </div>
+
+    <table class="items">
+      <colgroup>
+        <col style="width:3.2%"><col style="width:24%"><col style="width:9%">
+        <col style="width:7%"><col style="width:8%"><col style="width:6.5%">
+        <col style="width:11%"><col style="width:6.3%"><col style="width:11%"><col style="width:14%">
+      </colgroup>
+      <thead>
+        <tr>
+          <th class="c">#</th>
+          <th>Item &amp; Description</th>
+          <th class="c">HSN/SAC</th>
+          <th class="r">Qty</th>
+          <th class="r">Rate</th>
+          <th class="r">Disc%</th>
+          <th class="r">Taxable</th>
+          <th class="r">GST%</th>
+          <th class="r">Tax Amt</th>
+          <th class="r">Amount</th>
+        </tr>
+      </thead>
+      <tbody id="itemsBody">
+        ${data.items.map((it,i)=>itemRowHTML(it,i)).join('')}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="6" class="r">Total</td>
+          <td class="r" id="footTaxable">₹0.00</td>
+          <td></td>
+          <td class="r" id="footTax">₹0.00</td>
+          <td class="r" id="footAmount">₹0.00</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <div class="bottom">
+      <div class="col-l">
+        <div class="blk">
+          <div class="blk-h">Amount in Words</div>
+          <div class="words" id="amountWords">—</div>
+        </div>
+        <div class="blk">
+          <div class="blk-h">Tax Summary</div>
+          <table class="mini">
+            <thead>
+              <tr>
+                <th>Rate</th><th class="r">Taxable</th>
+                <th class="r" id="thCgst">CGST</th>
+                <th class="r" id="thSgst">SGST</th>
+                <th class="r" id="thIgst" style="display:none">IGST</th>
+              </tr>
+            </thead>
+            <tbody id="taxSummaryBody"></tbody>
+          </table>
+        </div>
+        <div class="blk">
+          <div class="blk-h">Bank Details</div>
+          <div class="bank">
+            <b>Bank</b><span contenteditable="true">${esc(data.bank.name)}</span>
+            <b>A/c Name</b><span contenteditable="true">${esc(data.bank.holder)}</span>
+            <b>A/c No.</b><span contenteditable="true">${esc(data.bank.account)}</span>
+            <b>IFSC</b><span contenteditable="true">${esc(data.bank.ifsc)}</span>
+            <b>Branch</b><span contenteditable="true">${esc(data.bank.branch)}</span>
+            <b>UPI</b><span contenteditable="true">${esc(data.bank.upi)}</span>
+          </div>
+        </div>
+        <div class="blk">
+          <div class="blk-h">Terms &amp; Conditions</div>
+          <div class="terms" contenteditable="true">${nl(data.terms)}</div>
+        </div>
+      </div>
+      <div class="col-r">
+        <table class="sums">
+          <tr><td>Sub Total</td><td id="sumSub">₹0.00</td></tr>
+          <tr id="rowDisc" style="display:none"><td>Discount</td><td id="sumDisc">− ₹0.00</td></tr>
+          <tr class="sub"><td>Taxable Value</td><td id="sumTaxable">₹0.00</td></tr>
+          <tr id="rowCgst"><td>CGST</td><td id="sumCgst">₹0.00</td></tr>
+          <tr id="rowSgst"><td>SGST</td><td id="sumSgst">₹0.00</td></tr>
+          <tr id="rowIgst" style="display:none"><td>IGST</td><td id="sumIgst">₹0.00</td></tr>
+          <tr id="rowRound"><td>Round Off</td><td id="sumRound">₹0.00</td></tr>
+          <tr class="grand"><td>Grand Total</td><td id="sumGrand">₹0.00</td></tr>
+        </table>
+        <div class="sign">
+          <div class="sign-for">For <span contenteditable="true">${esc(data.seller.name)}</span></div>
+          <div class="sign-space"></div>
+          <div class="sign-line"></div>
+          <div class="sign-lbl">Authorised Signatory</div>
+        </div>
+      </div>
+    </div>
+    <div class="declaration"><b>Declaration:</b> <span contenteditable="true">${esc(data.declaration)}</span></div>
+    <div class="thanks">Thank you for your business!</div>
+  </div>`;
+
+  recalc();
+}
+
+/* ============================================================
+   CALCULATE FROM DOM
+   ============================================================ */
+function recalc() {
+  const sellerCode = document.getElementById('sellerStateCode')?.textContent.trim() || '';
+  const buyerCode = document.getElementById('buyerStateCode')?.textContent.trim() || '';
+  const useIGST = sellerCode && buyerCode && sellerCode !== buyerCode;
+
+  document.getElementById('taxTypeLabel').textContent = useIGST ? 'Inter-State (IGST)' : 'Intra-State (CGST + SGST)';
+
+  document.getElementById('rowCgst').style.display = useIGST ? 'none' : '';
+  document.getElementById('rowSgst').style.display = useIGST ? 'none' : '';
+  document.getElementById('rowIgst').style.display = useIGST ? '' : 'none';
+  document.getElementById('thCgst').style.display = useIGST ? 'none' : '';
+  document.getElementById('thSgst').style.display = useIGST ? 'none' : '';
+  document.getElementById('thIgst').style.display = useIGST ? '' : 'none';
+
+  const rows = document.querySelectorAll('#itemsBody tr');
+  let sub = 0, disc = 0, taxable = 0, cgst = 0, sgst = 0, igst = 0;
+  const byRate = {};
+
+  rows.forEach(row => {
+    const get = f => row.querySelector(`[data-f="${f}"]`)?.textContent.trim() || '';
+    const qty = parseFloat(get('qty')) || 0;
+    const rate = parseFloat(get('rate')) || 0;
+    const discP = parseFloat(get('disc')) || 0;
+    const gstR = parseFloat(get('gst')) || 0;
+
+    const gross = qty * rate;
+    const dAmt = gross * discP / 100;
+    const tx = gross - dAmt;
+    const tax = tx * gstR / 100;
+
+    sub += gross;
+    disc += dAmt;
+    taxable += tx;
+
+    let c = 0, s = 0, ig = 0;
+    if (useIGST) {
+      ig = tax; igst += tax;
+    } else {
+      c = tax / 2; s = tax / 2;
+      cgst += c; sgst += s;
+    }
+
+    const taxableCell = row.querySelector('[data-f="taxable"]');
+    if (taxableCell) taxableCell.textContent = fmt(tx);
+    const taxCell = row.querySelector('[data-f="tax"]');
+    if (taxCell) taxCell.textContent = fmt(tax);
+    const amountCell = row.querySelector('[data-f="amount"]');
+    if (amountCell) amountCell.textContent = fmt(tx + tax);
+
+    const key = String(gstR);
+    if (!byRate[key]) byRate[key] = { rate: gstR, taxable: 0, cgst: 0, sgst: 0, igst: 0 };
+    byRate[key].taxable += tx;
+    byRate[key].cgst += c;
+    byRate[key].sgst += s;
+    byRate[key].igst += ig;
+  });
+
+  const taxTotal = cgst + sgst + igst;
+  const beforeRound = taxable + taxTotal;
+  const grand = data.roundOff ? Math.round(beforeRound) : beforeRound;
+  const roundOff = grand - beforeRound;
+
+  document.getElementById('sumSub').textContent = money(sub);
+  document.getElementById('sumTaxable').textContent = money(taxable);
+  document.getElementById('rowDisc').style.display = disc ? '' : 'none';
+  document.getElementById('sumDisc').textContent = '− ' + money(disc);
+  document.getElementById('sumCgst').textContent = money(cgst);
+  document.getElementById('sumSgst').textContent = money(sgst);
+  document.getElementById('sumIgst').textContent = money(igst);
+  document.getElementById('rowRound').style.display = Math.abs(roundOff) > 0.004 ? '' : 'none';
+  document.getElementById('sumRound').textContent = (roundOff > 0 ? '+' : '−') + ' ' + fmt(Math.abs(roundOff));
+  document.getElementById('sumGrand').textContent = money(grand);
+
+  document.getElementById('footTaxable').textContent = money(taxable);
+  document.getElementById('footTax').textContent = money(taxTotal);
+  document.getElementById('footAmount').textContent = money(taxable + taxTotal);
+
+  document.getElementById('amountWords').textContent = amountInWords(grand);
+
+  const summaryBody = document.getElementById('taxSummaryBody');
+  const rates = Object.values(byRate).sort((a,b)=>a.rate-b.rate);
+  if (rates.length === 0) {
+    summaryBody.innerHTML = `<tr><td colspan="4" style="color:#94a3b8">—</td></tr>`;
+  } else {
+    summaryBody.innerHTML = rates.map(g => `
+      <tr>
+        <td>${fmtQ(g.rate)}%</td>
+        <td class="r">${fmt(g.taxable)}</td>
+        ${useIGST
+          ? `<td class="r">${fmt(g.igst)}</td>`
+          : `<td class="r">${fmt(g.cgst)}</td><td class="r">${fmt(g.sgst)}</td>`}
+      </tr>`).join('');
+  }
+}
+
+/* ============================================================
+   ADD ITEM
+   ============================================================ */
+document.getElementById('btnAdd').addEventListener('click', () => {
+  const tbody = document.getElementById('itemsBody');
+  const i = tbody.children.length;
+  const newItem = { desc:'New Item', hsn:'', qty:1, rate:0, disc:0, gst:18 };
+  const temp = document.createElement('table');
+  temp.innerHTML = itemRowHTML(newItem, i);
+  const tr = temp.querySelector('tr');
+  tbody.appendChild(tr);
+  recalc();
+  tr.querySelector('[data-f="desc"]')?.focus();
+});
+
+/* ============================================================
+   THEME CHANGE
+   ============================================================ */
+const themes = [
+  { name:'Modern', template:'modern', accent:'#2563eb' },
+  { name:'Classic', template:'classic', accent:'#0f172a' },
+  { name:'Minimal', template:'minimal', accent:'#059669' },
+  { name:'Emerald', template:'modern', accent:'#059669' },
+  { name:'Violet', template:'modern', accent:'#7c3aed' },
+  { name:'Crimson', template:'modern', accent:'#dc2626' },
+];
+let themeIndex = 0;
+
+function applyTheme() {
+  const t = themes[themeIndex];
+  const paper = document.getElementById('paper');
+  paper.className = 'paper tpl-' + t.template;
+  paper.style.setProperty('--accent', t.accent);
+  document.getElementById('btnTheme').textContent = '🎨 Theme: ' + t.name;
+}
+
+document.getElementById('btnTheme').addEventListener('click', () => {
+  themeIndex = (themeIndex + 1) % themes.length;
+  applyTheme();
+});
+
+/* ============================================================
+   PRINT
+   ============================================================ */
+document.getElementById('btnPrint').addEventListener('click', () => window.print());
+
+/* ============================================================
+   LIVE RECALC ON EDIT
+   ============================================================ */
+document.getElementById('paper').addEventListener('input', e => {
+  if (e.target.closest('#itemsBody') ||
+      e.target.id === 'sellerStateCode' ||
+      e.target.id === 'buyerStateCode') {
+    recalc();
+  }
+});
+
+/* ============================================================
+   INIT
+   ============================================================ */
+render();
+applyTheme();
+</script>
+</body>
+</html>

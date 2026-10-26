@@ -1,0 +1,1549 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Registered Employee Records</title>
+    
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <!-- Sync theme with Master Dashboard -->
+    <script>
+        const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        window.addEventListener('storage', function(e) {
+            if(e.key === 'atr_theme') { document.documentElement.setAttribute('data-theme', e.newValue); }
+        });
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap');
+
+        :root {
+            --bg-body: transparent; 
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.1);
+            
+            /* Dynamic Glass & Input Variables */
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(0, 0, 0, 0.2);
+            --input-focus-bg: rgba(0, 0, 0, 0.4);
+            
+            --shadow: 0 4px 15px rgba(0,0,0,0.3);
+            
+            /* Theme Color (Green Accent for Employee Section) */
+            --theme-color: #28a745;
+            --theme-glow: rgba(40, 167, 69, 0.4);
+            --theme-transition: all 0.4s ease;
+        }
+
+        [data-theme="light"] {
+            --bg-body: transparent;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #555555;
+            --border-color: rgba(0, 0, 0, 0.1);
+            
+            --glass-bg: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --input-bg: rgba(255, 255, 255, 0.5);
+            --input-focus-bg: #ffffff;
+            
+            --shadow: 0 8px 25px rgba(0,0,0,0.05);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; scroll-behavior: smooth; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(136, 136, 136, 0.3); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(136, 136, 136, 0.6); }
+
+        /* Fixed Viewport Layout so only the Table Body scrolls vertically */
+        body { background-color: var(--bg-body); color: var(--text-main); display: flex; flex-direction: column; height: 100vh; overflow: hidden; transition: var(--theme-transition); }
+        .main-content { flex: 1; display: flex; flex-direction: column; height: 100vh; overflow: hidden; padding: 18px 30px; width: 100%; max-width: 1650px; margin: 0 auto; }
+
+        .header-section { flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; flex-wrap: nowrap; gap: 15px; transition: var(--theme-transition); }
+        .header-section h1 { font-size: 22px; color: var(--text-main); white-space: nowrap; }
+        .header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: nowrap; }
+        
+        .btn-header-link { padding: 8px 14px; border-radius: 6px; font-weight: 700; font-size: 12px; text-transform: uppercase; text-decoration: none; transition: all 0.3s ease; box-shadow: 0 4px 10px rgba(0,0,0,0.15); cursor: pointer; white-space: nowrap; }
+        .btn-add-new { background-color: var(--theme-color); color: #ffffff; }
+        .btn-tag-emp { background-color: #ffc107; color: #121212; }
+        .btn-back-dash { background-color: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color); text-transform: none; }
+        .btn-back-dash:hover { background-color: var(--theme-color); color: #ffffff; border-color: var(--theme-color); }
+        .btn-header-link:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0,0,0,0.25); }
+
+        .user-info { font-size: 12px; color: var(--theme-color); background: var(--glass-bg); padding: 7px 14px; border-radius: 20px; border: 1px solid var(--theme-color); font-weight: bold; white-space: nowrap; }
+
+        /* Wider & Flatter Glassy Management Box */
+        .glassy-management-box {
+            background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border); border-top: 4px solid var(--theme-color);
+            border-radius: 12px; padding: 18px 24px; box-shadow: var(--shadow); width: 100%; max-width: 100%; margin: 0 auto;
+            flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0;
+            transition: var(--theme-transition);
+        }
+
+        .management-header { flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: nowrap; gap: 12px; }
+        .management-header h2 { font-size: 18px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--theme-color); white-space: nowrap; margin: 0; }
+        
+        .controls-wrapper { display: flex; gap: 8px; align-items: center; flex-wrap: nowrap; width: auto; justify-content: flex-end; }
+        
+        /* Site Filter Dropdown */
+        .site-filter-box { display: flex; align-items: center; gap: 8px; background: var(--input-bg); padding: 4px 12px; border-radius: 6px; border: 1px solid var(--border-color); height: 36px; white-space: nowrap; }
+        .site-filter-box label { font-size: 10.5px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; white-space: nowrap; }
+        .site-filter-box select { background: transparent; color: var(--text-main); border: none; font-size: 12.5px; outline: none; cursor: pointer; padding: 2px; }
+        .site-filter-box select:disabled { cursor: not-allowed; color: #ffc107; font-weight: 700; }
+        .site-filter-box select option { background: var(--bg-card); color: var(--text-main); }
+
+        .search-box input { background-color: var(--input-bg); border: 1px solid var(--border-color); padding: 7px 12px; border-radius: 6px; color: var(--text-main); font-size: 12.5px; width: 195px; height: 36px; outline: none; transition: all 0.3s; }
+        .search-box input:focus { border-color: var(--theme-color); box-shadow: 0 0 8px var(--theme-glow); }
+
+        /* Template, Import & Export Buttons (Single-Line Compact) */
+        .btn-template { background: rgba(255, 193, 7, 0.15); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.45); padding: 0 12px; height: 36px; border-radius: 6px; font-weight: 700; font-size: 12px; cursor: pointer; text-transform: uppercase; transition: all 0.2s; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+        .btn-template:hover { background-color: #ffc107; color: #121212; transform: translateY(-1px); }
+
+        .btn-import { background: rgba(23, 162, 184, 0.15); color: #17a2b8; border: 1px solid rgba(23, 162, 184, 0.45); padding: 0 12px; height: 36px; border-radius: 6px; font-weight: 700; font-size: 12px; cursor: pointer; text-transform: uppercase; transition: all 0.2s; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+        .btn-import:hover { background-color: #17a2b8; color: #ffffff; transform: translateY(-1px); }
+
+        .export-dropdown { position: relative; display: inline-block; }
+        .btn-export { background-color: #ffc107; color: #121212; border: none; padding: 0 14px; height: 36px; border-radius: 6px; font-weight: 700; font-size: 12px; cursor: pointer; text-transform: uppercase; transition: all 0.2s; white-space: nowrap; display: inline-flex; align-items: center; }
+        .btn-export:hover { transform: translateY(-1px); }
+        .export-dropdown-content { display: none; position: absolute; right: 0; background-color: var(--bg-card); min-width: 160px; box-shadow: var(--shadow); border-radius: 6px; z-index: 99; border: 1px solid var(--border-color); overflow: hidden; }
+        .export-dropdown-content button { color: var(--text-main); padding: 10px 14px; display: block; width: 100%; text-align: left; background: none; border: none; font-size: 13px; cursor: pointer; transition: background 0.2s; }
+        .export-dropdown-content button:hover { background-color: var(--theme-color); color: white; }
+        .export-dropdown:hover .export-dropdown-content { display: block; }
+
+        .tab-buttons { flex-shrink: 0; display: flex; gap: 10px; margin-bottom: 12px; }
+        .tab-btn { background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-muted); padding: 7px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12.5px; transition: all 0.3s; }
+        .tab-btn.active { background-color: var(--theme-color); color: #ffffff; border-color: var(--theme-color); box-shadow: 0 2px 8px var(--theme-glow); }
+
+        /* Vertical-Only Scrollable Table Container (No Horizontal Scrollbar) */
+        .table-responsive { flex: 1; overflow-y: auto; overflow-x: hidden; min-height: 0; width: 100%; border-radius: 8px; border: 1px solid var(--border-color); }
+        table { width: 100%; border-collapse: collapse; text-align: left; table-layout: fixed; }
+        thead th { position: sticky; top: 0; z-index: 20; color: var(--text-muted); font-weight: 700; text-transform: uppercase; font-size: 11px; background-color: var(--bg-card); padding: 12px 10px; border-bottom: 2px solid var(--theme-color); box-shadow: 0 2px 6px rgba(0,0,0,0.2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        tbody td { padding: 10px 10px; border-bottom: 1px solid var(--border-color); font-size: 12.5px; color: var(--text-main); vertical-align: middle; transition: var(--theme-transition); white-space: normal; word-wrap: break-word; overflow-wrap: break-word; line-height: 1.35; }
+        tbody tr:hover { background: rgba(255, 255, 255, 0.03); }
+
+        /* Fixed Column Proportions so all 8 columns fit 100% inside the table without horizontal scrolling */
+        thead th:nth-child(1) { width: 58px; text-align: center; }
+        tbody td:nth-child(1) { text-align: center; }
+        thead th:nth-child(2) { width: 15%; }
+        thead th:nth-child(3) { width: 19%; }
+        thead th:nth-child(4) { width: 17%; }
+        thead th:nth-child(5) { width: 8%; }
+        thead th:nth-child(6) { width: 10%; }
+        thead th:nth-child(7) { width: 8%; }
+        thead th:nth-child(8) { width: 225px; text-align: center; }
+        tbody td:nth-child(8) { text-align: center; }
+        
+        .emp-tbl-avatar { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 2px solid #ffc107; background: #333; cursor: zoom-in; transition: transform 0.3s ease; vertical-align: middle; }
+        .emp-tbl-avatar:hover { transform: scale(2.2); z-index: 30; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        
+        .status-badge { padding: 3px 7px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; display: inline-block; }
+        .status-badge.active { background: rgba(40, 167, 69, 0.2); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.4); }
+        .status-badge.deactive { background: rgba(220, 53, 69, 0.2); color: #ff6b6b; border: 1px solid rgba(220, 53, 69, 0.4); }
+        .status-badge.pending-hold { background: rgba(255, 193, 7, 0.18); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.45); font-size: 9px; margin-top: 3px; }
+        .pos-type-pill { display: inline-block; margin-top: 3px; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; background: rgba(23, 162, 184, 0.15); color: #17a2b8; border: 1px solid rgba(23, 162, 184, 0.35); }
+        
+        .action-buttons { display: inline-flex; gap: 4px; flex-wrap: nowrap; align-items: center; justify-content: center; }
+        .btn-action { padding: 5px 8px; border-radius: 4px; font-size: 10.5px; font-weight: 700; cursor: pointer; border: none; transition: all 0.2s; white-space: nowrap; }
+        .btn-action:hover { transform: translateY(-1px); opacity: 0.9; }
+        .btn-view { background-color: #17a2b8; color: white; }
+        .btn-edit { background-color: #ffc107; color: #121212; }
+        .btn-toggle-deact { background-color: #dc3545; color: white; }
+        .btn-toggle-act { background-color: #28a745; color: white; }
+        .btn-delete { background-color: #721c24; color: #f8d7da; border: 1px solid #dc3545; }
+        
+        /* Modals Glassy Style */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 1000; padding: 20px; backdrop-filter: blur(5px); }
+        .modal-content { background: var(--bg-card); padding: 30px; border-radius: 14px; width: 100%; max-width: 850px; max-height: 90vh; overflow-y: auto; border: 1px solid var(--border-color); border-top: 4px solid var(--theme-color); box-shadow: var(--shadow); transition: var(--theme-transition); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; }
+        .close-modal { background: none; border: none; color: var(--text-main); font-size: 24px; cursor: pointer; }
+        
+        .profile-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
+        .profile-pic-col img { width: 100%; max-width: 230px; border-radius: 10px; border: 2px solid var(--theme-color); }
+        .profile-info-col p { margin-bottom: 10px; font-size: 13px; color: var(--text-muted); border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
+        .profile-info-col p strong { color: var(--text-main); width: 155px; display: inline-block; }
+
+        /* Accordion & Document Tree */
+        .accordion-header {
+            cursor: pointer;
+            background: var(--input-bg);
+            padding: 12px 15px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.3s ease;
+        }
+        .accordion-header:hover { background: var(--glass-bg); }
+        .accordion-content { animation: fadeIn 0.3s ease-in-out; }
+
+        .doc-tree-container { position: relative; padding-left: 35px; margin-top: 15px; }
+        .doc-tree-line { position: absolute; top: 25px; bottom: 35px; left: 14px; width: 2px; background: #17a2b8; }
+        
+        .tree-node {
+            position: relative;
+            margin-bottom: 15px;
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .tree-node::before { content: ''; position: absolute; left: -21px; top: 50%; width: 21px; height: 2px; background: #17a2b8; }
+        .tree-node::after {
+            content: '📄';
+            position: absolute;
+            left: -35px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--bg-card);
+            border: 2px solid #17a2b8;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 12px;
+            z-index: 2;
+        }
+        .tree-node.uploaded { border-left: 4px solid #28a745; }
+        .tree-node.missing { border-left: 4px solid #dc3545; }
+        
+        .doc-title { font-weight: 600; font-size: 13px; color: var(--text-main); }
+        .doc-subtitle { font-size: 11px; color: var(--text-muted); margin-top: 3px; display: block; }
+        .doc-missing-text { font-size: 11px; color: #dc3545; font-weight: bold; margin-top: 3px; display: block; }
+
+        .btn-tree-upload { background-color: #ffc107; color: #121212; padding: 6px 12px; border: none; border-radius: 4px; font-weight: 600; font-size: 11px; cursor: pointer; transition: all 0.2s; }
+        .btn-tree-upload:hover { background-color: #e0a800; }
+        
+        #hiddenDocInput, #empExcelImportInput { display: none; }
+
+        /* Approval Modal Inputs */
+        .approval-form-group { margin-bottom: 15px; }
+        .approval-form-group label { display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; }
+        .approval-input { width: 100%; padding: 11px 14px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-main); font-size: 13px; outline: none; }
+        .approval-input:focus { border-color: #ffc107; }
+
+        /* Toast Notification */
+        #toastPopup {
+            visibility: hidden;
+            min-width: 260px;
+            background-color: var(--theme-color);
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 14px 20px;
+            position: fixed;
+            z-index: 3000;
+            right: 25px;
+            bottom: 25px;
+            font-size: 13px;
+            font-weight: 700;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+            opacity: 0;
+            transition: opacity 0.3s, bottom 0.3s;
+            border-left: 4px solid #ffc107;
+        }
+        #toastPopup.show {
+            visibility: visible;
+            opacity: 1;
+            bottom: 35px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="toastPopup">Message</div>
+
+    <div class="main-content">
+        <div class="header-section">
+            <h1>📋 Registered Employee Records</h1>
+            <div class="header-actions">
+                <a href="EmployeeJoining.html" id="btnAddNewEmp" class="btn-header-link btn-add-new">➕ Add New Employee</a>
+                <a href="SiteTagging.html" id="btnTagEmp" class="btn-header-link btn-tag-emp">📍 Tag Employees</a>
+                <a href="dashboard_home.html" id="btnBackDashboard" class="btn-header-link btn-back-dash" onclick="handleBackToDashboard(event)">← Back to Dashboard</a>
+                <div class="user-info" id="userRoleBadge">Role: Super Admin</div>
+            </div>
+        </div>
+
+        <div class="glassy-management-box">
+            <div class="management-header">
+                <h2>📊 Employee Directory</h2>
+                
+                <div class="controls-wrapper">
+                    <div class="site-filter-box">
+                        <label for="siteFilter">Filter By Site:</label>
+                        <select id="siteFilter" onchange="renderTable()">
+                            <option value="all">All Active Employees</option>
+                            <option value="untagged">Untagged Employees (No Site)</option>
+                            <option disabled>──────────</option>
+                        </select>
+                    </div>
+
+                    <div class="search-box">
+                        <input type="text" id="searchInput" placeholder="🔍 Search ID, Name..." oninput="renderTable()">
+                    </div>
+
+                    <!-- TEMPLATE DOWNLOAD & BULK EXCEL IMPORT BUTTONS -->
+                    <button type="button" class="btn-template" onclick="downloadEmpTemplate()" title="Download Pre-Formatted Excel Template">📋 Template</button>
+                    <input type="file" id="empExcelImportInput" accept=".xlsx, .xls, .csv" onchange="importEmployeesFromExcel(event)">
+                    <button type="button" class="btn-import" id="btnImportExcel" onclick="document.getElementById('empExcelImportInput').click()" title="Bulk Import Employees from Excel">📤 Import Excel</button>
+                    
+                    <div class="export-dropdown">
+                        <button class="btn-export">📥 Export Data ▼</button>
+                        <div class="export-dropdown-content">
+                            <button onclick="exportData('pdf')">📄 Export as PDF</button>
+                            <button onclick="exportData('csv')">📊 Export as CSV</button>
+                            <button onclick="exportData('xlsx')">📈 Export as XLSX</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tab-buttons">
+                <button class="tab-btn active" id="btnActiveTab" onclick="switchTab('Active')">🟢 Active (<span id="activeCount">0</span>)</button>
+                <button class="tab-btn" id="btnDeactiveTab" onclick="switchTab('Deactive')">🔴 Deactive (<span id="deactiveCount">0</span>)</button>
+            </div>
+
+            <!-- Only this table container scrolls vertically (No Horizontal Scrollbar) -->
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Photo</th>
+                            <th>ID & Name</th>
+                            <th>Designation & Position</th>
+                            <th>Current Site</th>
+                            <th>Sub IDs</th>
+                            <th>Mobile</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="employeeTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Profile Modal -->
+    <div id="profileModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalEmpName" style="color: var(--theme-color);">Employee Profile</h3>
+                <button class="close-modal" onclick="closeModal('profileModal')">&times;</button>
+            </div>
+            
+            <div class="profile-grid" id="profileDetails">
+                <!-- Profile Content injected via JS -->
+            </div>
+            
+            <!-- Partition for Attached Documents (Collapsible Tree Style) -->
+            <div id="documentSection" style="margin-top: 25px; border-top: 1px dashed var(--border-color); padding-top: 20px;">
+                <!-- Document Tree injected via JS -->
+            </div>
+
+            <!-- Partition for Sub IDs -->
+            <div id="subIdSection" style="margin-top: 25px; border-top: 1px dashed var(--border-color); padding-top: 20px;">
+                <!-- Sub IDs injected via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Office / Supervisor Approval Request Modal (Routes to ApproveOffice.html or ApproveSupervisor.html) -->
+    <div id="roleApprovalModal" class="modal" style="z-index: 1200;">
+        <div class="modal-content" style="max-width: 500px; border-top-color: #ffc107;">
+            <div class="modal-header">
+                <h3 id="approvalModalTitle" style="color: #ffc107;">🏢 Send Request to ApproveOffice.html</h3>
+                <button class="close-modal" onclick="closeRoleApprovalModal()">&times;</button>
+            </div>
+            <p id="approvalModalDesc" style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">
+                অফিস পোর্টাল থেকে কোনো এমপ্লয়ির স্ট্যাটাস পরিবর্তন, ডকুমেন্ট পরিবর্তন বা রেকর্ড ডিলিট করতে চাইলে তা অ্যাডমিনের <strong>ApproveOffice.html</strong>-এ পাঠানো হবে। অ্যাডমিন অ্যাপ্রুভ করলেই কেবল এটি কার্যকর হবে।
+            </p>
+            <div class="approval-form-group">
+                <label>Action & Target Employee</label>
+                <input type="text" id="approvalTargetSummary" class="approval-input" readonly style="color: #ffc107; font-weight: 700;">
+            </div>
+            <div class="approval-form-group">
+                <label>Reason / Remarks for Admin Approval <span style="color: #ff4d4d;">*</span></label>
+                <textarea id="approvalReasonInput" class="approval-input" rows="3" placeholder="Explain clearly why this action is needed..." style="resize: none;"></textarea>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 18px;">
+                <button type="button" class="btn-action" style="flex: 1; padding: 12px; background: #ffc107; color: #121212; font-size: 12.5px; text-transform: uppercase;" onclick="confirmRoleApprovalSubmit()">📤 Send for Approval</button>
+                <button type="button" class="btn-action" style="padding: 12px 20px; background: #dc3545; color: #fff; font-size: 12.5px; text-transform: uppercase;" onclick="closeRoleApprovalModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Input for Document Uploads from Modal -->
+    <input type="file" id="hiddenDocInput" onchange="handleDocUpload(event)" accept="image/*,application/pdf">
+
+    <!-- Image Click Zoom Modal -->
+    <div id="imageZoomModal" class="modal" onclick="closeModal('imageZoomModal')" style="cursor: zoom-out; z-index: 1050;">
+        <img id="zoomedImage" src="" style="max-width: 90%; max-height: 90%; border-radius: 10px; border: 3px solid var(--theme-color); box-shadow: 0 0 30px rgba(0,0,0,0.8);">
+    </div>
+
+    <script>
+        // =========================================================================================
+        // 1. 3-IN-1 SMART PORTAL ROLE DETECTION (ADMIN / OFFICE STAFF / SUPERVISOR)
+        // =========================================================================================
+        let currentPortalMode = "admin"; // 'admin', 'office', or 'supervisor'
+        let loggedUserId = "ADMIN";
+        let loggedUserName = "Super Admin";
+        let assignedSite = "";
+
+        // Pending Approval Action State
+        let pendingActionObj = null;
+
+        // Sample Employee Data with "docs" & "position_type" (Erection / Sheeting / Both)
+        const defaultEmployees = [
+            { 
+                id: "ATR-EMP-001", name: "Amitabha Roy", designation: "Primary Contractor", position_type: "Both (Erection & Sheeting)", father_name: "Subhash Roy", religion: "Hinduism", dob: "1990-05-12", village: "Dum Dum", post: "Dum Dum", ps: "Dum Dum", district: "North 24 Parganas", pin: "700028", 
+                aadhaar: "[Aadhaar Redacted]", uan: "100200300400", personal_number: "09876543210", whatsapp_number: "09876543210", emergency_contact: "9123456789", bank_name: "SBI", account_holder: "Amitabha Roy", account_number: "012345678901", ifsc_code: "SBIN0001234", status: "Active", photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150", 
+                subIds: ["ATR-SUB-001", "ATR-SUB-002"], current_site: "Kolkata Metro Project - Line 6",
+                docs: { registration: "Reg_Form_Amitabha.pdf", aadhaar: "Aadhaar_Amitabha.pdf", pan: "PAN_Amitabha.jpg", other: "" } 
+            },
+            { 
+                id: "ATR-EMP-002", name: "Sayan Karmakar", designation: "Quality Supervisor", position_type: "Erection", father_name: "Bimal Karmakar", religion: "Hinduism", dob: "1992-08-20", village: "Market Para", post: "Durgapur", ps: "Durgapur", district: "Paschim Bardhaman", pin: "713201", 
+                aadhaar: "[Aadhaar Redacted]", uan: "100987654322", personal_number: "9830000003", whatsapp_number: "9830000003", emergency_contact: "9830000004", bank_name: "HDFC Bank", account_holder: "Sayan Karmakar", account_number: "98765432109", ifsc_code: "HDFC0001234", status: "Active", photo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150", 
+                subIds: [], current_site: "Dum Dum Warehouse Construction",
+                docs: { registration: "", aadhaar: "Aadhaar_Sayan.pdf", pan: "", other: "Experience_Cert.pdf" }
+            }
+        ];
+
+        let employees = [];
+
+        function normalizePositionType(rawPos) {
+            if (!rawPos) return "Both (Erection & Sheeting)";
+            const val = String(rawPos).trim().toLowerCase();
+            if (val.includes("both") || val.includes("দুটোই") || (val.includes("erection") && (val.includes("sheeting") || val.includes("sitting")))) {
+                return "Both (Erection & Sheeting)";
+            }
+            if (val.includes("erection") || val.includes("ইরেকশন")) {
+                return "Erection";
+            }
+            if (val.includes("sheeting") || val.includes("sitting") || val.includes("সিটিং") || val.includes("শিটিং")) {
+                return "Sheeting";
+            }
+            return String(rawPos).trim();
+        }
+
+        function loadAndNormalizeEmployees() {
+            let stored = JSON.parse(localStorage.getItem('atr_employees')) || defaultEmployees;
+            employees = stored.map(emp => ({
+                ...emp,
+                status: emp.status || "Active",
+                position_type: emp.position_type || emp.position || emp.work_type || "Both (Erection & Sheeting)",
+                current_site: emp.current_site !== undefined ? emp.current_site : (emp.site && emp.site !== "Unassigned" ? emp.site : ""),
+                subIds: Array.isArray(emp.subIds) ? emp.subIds : [],
+                docs: emp.docs || { registration: "", aadhaar: "", pan: "", other: "" }
+            }));
+            localStorage.setItem('atr_employees', JSON.stringify(employees));
+        }
+        
+        let currentTab = 'Active';
+        let currentUploadEmpIndex = null;
+        let currentUploadDocKey = null;
+        let isDocTreeOpen = false; 
+
+        function checkPortalPermissions() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewParam = (urlParams.get('view') || '').toLowerCase();
+            const roleBadge = document.getElementById('userRoleBadge');
+            const addBtn = document.getElementById('btnAddNewEmp');
+            const tagBtn = document.getElementById('btnTagEmp');
+            const backBtn = document.getElementById('btnBackDashboard');
+            const modalTitle = document.getElementById('approvalModalTitle');
+            const modalDesc = document.getElementById('approvalModalDesc');
+
+            let parentPath = "";
+            try {
+                if (window.parent && window.parent !== window) {
+                    parentPath = (window.parent.location.pathname || '').toLowerCase();
+                }
+            } catch (e) {}
+
+            if (viewParam === 'office' || parentPath.includes('officedashboard')) {
+                currentPortalMode = 'office';
+                loggedUserId = urlParams.get('userId') || sessionStorage.getItem('atr_logged_office_id') || localStorage.getItem('atr_logged_office_id') || "OFF-101";
+                loggedUserName = urlParams.get('userName') || "Office Staff";
+
+                if (roleBadge) {
+                    roleBadge.innerText = `🏢 Office Mode: ${loggedUserName} (Approvals via ApproveOffice.html)`;
+                    roleBadge.style.borderColor = "#ffc107";
+                    roleBadge.style.color = "#ffc107";
+                }
+                if (addBtn) {
+                    addBtn.style.display = 'inline-block';
+                    addBtn.href = `EmployeeJoining.html?view=office&userId=${encodeURIComponent(loggedUserId)}&userName=${encodeURIComponent(loggedUserName)}`;
+                }
+                if (tagBtn) tagBtn.href = `SiteTagging.html?view=office&userId=${encodeURIComponent(loggedUserId)}&userName=${encodeURIComponent(loggedUserName)}`;
+                if (backBtn) backBtn.href = "office/office_dashboard_home.html";
+                if (modalTitle) modalTitle.innerText = "🏢 Send Request to ApproveOffice.html";
+                if (modalDesc) modalDesc.innerHTML = "অফিস পোর্টাল থেকে কোনো এমপ্লয়ির স্ট্যাটাস পরিবর্তন, ডকুমেন্ট এডিট/ডিলিট বা রেকর্ড ডিলিট করতে চাইলে তা অ্যাডমিনের <strong>ApproveOffice.html</strong>-এ পাঠানো হবে।";
+
+            } else if (viewParam === 'supervisor' || parentPath.includes('supervisordashboard')) {
+                currentPortalMode = 'supervisor';
+                assignedSite = (urlParams.get('site') || sessionStorage.getItem('atr_supervisor_site') || "Salt Lake Sector V").trim();
+                loggedUserId = urlParams.get('supId') || "SUP-003";
+                loggedUserName = urlParams.get('supName') || "Supervisor";
+
+                if (roleBadge) {
+                    roleBadge.innerText = `🛡️ Supervisor Mode (🔒 Site: ${assignedSite})`;
+                    roleBadge.style.borderColor = "#ffc107";
+                    roleBadge.style.color = "#ffc107";
+                }
+                if (addBtn) {
+                    addBtn.style.display = 'none';
+                }
+                if (tagBtn) tagBtn.href = `SiteTagging.html?view=supervisor&site=${encodeURIComponent(assignedSite)}`;
+                if (backBtn) backBtn.href = "supervisor/supervisor_dashboard_home.html";
+                if (modalTitle) modalTitle.innerText = "🛡️ Send Request to ApproveSupervisor.html";
+                if (modalDesc) modalDesc.innerHTML = `সুপারভাইজার পোর্টাল (${assignedSite}) থেকে কোনো এমপ্লয়ির তথ্য বা স্ট্যাটাস পরিবর্তন করতে চাইলে তা অ্যাডমিনের <strong>ApproveSupervisor.html</strong>-এ পাঠানো হবে।`;
+
+            } else {
+                currentPortalMode = 'admin';
+                if (roleBadge) roleBadge.innerText = "Role: Super Admin";
+                if (addBtn) {
+                    addBtn.style.display = 'inline-block';
+                    addBtn.href = "EmployeeJoining.html";
+                }
+                if (tagBtn) tagBtn.href = "SiteTagging.html";
+                if (backBtn) backBtn.href = "dashboard_home.html";
+            }
+        }
+
+        function handleBackToDashboard(event) {
+            if (currentPortalMode === 'office') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.loadOfficeWorkspaceHome === 'function') {
+                        window.parent.loadOfficeWorkspaceHome();
+                        return;
+                    }
+                } catch (e) {}
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "office_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "office/office_dashboard_home.html";
+            } else if (currentPortalMode === 'supervisor') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window) {
+                        const parentHomeLink = window.parent.document.querySelector('.dashboard-home-link');
+                        if (parentHomeLink) {
+                            window.location.href = parentHomeLink.href;
+                            return;
+                        }
+                    }
+                } catch (e) {}
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "supervisor_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "supervisor/supervisor_dashboard_home.html";
+            }
+        }
+
+        window.onload = function() {
+            checkPortalPermissions();
+            loadAndNormalizeEmployees();
+            populateSiteDropdown();
+            renderTable();
+        };
+
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'atr_employees') {
+                loadAndNormalizeEmployees();
+                populateSiteDropdown();
+                renderTable();
+            }
+        });
+
+        function populateSiteDropdown() {
+            const siteFilter = document.getElementById('siteFilter');
+            const prevSelection = siteFilter.value;
+            siteFilter.innerHTML = `
+                <option value="all">All Active Employees</option>
+                <option value="untagged">Untagged Employees (No Site)</option>
+                <option disabled>──────────</option>
+            `;
+
+            const uniqueSites = [...new Set(employees.filter(emp => emp.current_site).map(emp => emp.current_site))];
+            if (currentPortalMode === 'supervisor' && assignedSite && !uniqueSites.includes(assignedSite)) {
+                uniqueSites.unshift(assignedSite);
+            }
+
+            uniqueSites.forEach(site => {
+                const option = document.createElement('option');
+                option.value = site;
+                option.text = site;
+                siteFilter.appendChild(option);
+            });
+
+            if (currentPortalMode === 'supervisor' && assignedSite) {
+                siteFilter.value = assignedSite;
+                siteFilter.disabled = true;
+            } else if (prevSelection && (prevSelection === 'all' || prevSelection === 'untagged' || uniqueSites.includes(prevSelection))) {
+                siteFilter.value = prevSelection;
+            }
+        }
+
+        function switchTab(tabName) {
+            currentTab = tabName;
+            document.getElementById('btnActiveTab').classList.toggle('active', tabName === 'Active');
+            document.getElementById('btnDeactiveTab').classList.toggle('active', tabName === 'Deactive');
+            
+            const siteFilter = document.getElementById('siteFilter');
+            if(tabName === 'Deactive') {
+                if (currentPortalMode !== 'supervisor') {
+                    siteFilter.value = 'all';
+                }
+                siteFilter.disabled = true;
+                siteFilter.parentElement.style.opacity = '0.5';
+            } else {
+                if (currentPortalMode === 'supervisor' && assignedSite) {
+                    siteFilter.value = assignedSite;
+                    siteFilter.disabled = true;
+                } else {
+                    siteFilter.disabled = false;
+                }
+                siteFilter.parentElement.style.opacity = '1';
+            }
+            renderTable();
+        }
+
+        function getFilteredEmployees() {
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase().trim();
+            const selectedSite = (currentPortalMode === 'supervisor' && assignedSite) ? assignedSite : document.getElementById('siteFilter').value;
+
+            const baseAccessible = (currentPortalMode === 'supervisor' && assignedSite)
+                ? employees.filter(e => e.current_site === assignedSite)
+                : employees;
+
+            let filtered = baseAccessible.filter(e =>
+                e.status === currentTab &&
+                (
+                    e.id.toLowerCase().includes(searchQuery) ||
+                    e.name.toLowerCase().includes(searchQuery) ||
+                    (e.designation && e.designation.toLowerCase().includes(searchQuery)) ||
+                    (e.position_type && e.position_type.toLowerCase().includes(searchQuery))
+                )
+            );
+
+            if (currentTab === 'Active' && currentPortalMode !== 'supervisor') {
+                if (selectedSite === 'untagged') {
+                    filtered = filtered.filter(e => !e.current_site || e.current_site.trim() === "");
+                } else if (selectedSite !== 'all') {
+                    filtered = filtered.filter(e => e.current_site === selectedSite);
+                }
+            }
+            return filtered;
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('employeeTableBody');
+            tbody.innerHTML = '';
+
+            const baseAccessible = (currentPortalMode === 'supervisor' && assignedSite)
+                ? employees.filter(e => e.current_site === assignedSite)
+                : employees;
+
+            document.getElementById('activeCount').innerText = baseAccessible.filter(e => e.status === 'Active').length;
+            document.getElementById('deactiveCount').innerText = baseAccessible.filter(e => e.status === 'Deactive').length;
+
+            const filtered = getFilteredEmployees();
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 25px;">No records found.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach((emp) => {
+                const originalIndex = employees.findIndex(e => e.id === emp.id);
+                const photoUrl = emp.photo || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150';
+                const isAct = emp.status === 'Active';
+                const toggleBtnClass = isAct ? 'btn-toggle-deact' : 'btn-toggle-act';
+                const toggleBtnText = isAct ? 'Deactivate' : 'Activate';
+                const siteBadge = emp.current_site ? `<span style="color:var(--theme-color); font-weight:600; font-size:12px;">📍 ${emp.current_site}</span>` : `<span style="color:#ffc107; font-size:12px; font-style:italic;">Untagged</span>`;
+                const pendingBadgeHtml = emp.pendingStatus ? `<br><span class="status-badge pending-hold">⏳ ${emp.pendingStatus}</span>` : '';
+                const posTypeBadge = emp.position_type ? `<br><span class="pos-type-pill">⚙️ ${emp.position_type}</span>` : '';
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td><img src="${photoUrl}" class="emp-tbl-avatar" onclick="viewFullImage('${photoUrl}')" title="Click to zoom"></td>
+                        <td><strong>${emp.id}</strong><br>${emp.name}</td>
+                        <td><strong>${emp.designation || 'N/A'}</strong>${posTypeBadge}</td>
+                        <td>${siteBadge}</td>
+                        <td>${emp.subIds?.length || 0} Sub ID(s)</td>
+                        <td>${emp.personal_number}</td>
+                        <td>
+                            <span class="status-badge ${emp.status.toLowerCase()}">${emp.status}</span>${pendingBadgeHtml}
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn-action btn-view" onclick="openProfileModal(${originalIndex})">View</button>
+                                <button class="btn-action btn-edit" onclick="editEmployeeRedirect(${originalIndex})">Edit</button>
+                                <button class="btn-action ${toggleBtnClass}" onclick="toggleStatus(${originalIndex})">${toggleBtnText}</button>
+                                <button class="btn-action btn-delete" onclick="deleteEmp(${originalIndex})">Delete</button>
+                            </div>
+                        </td>
+                    </tr>`;
+            });
+        }
+
+        // =========================================================================================
+        // 2. ROLE-AWARE ACTIONS (STATUS TOGGLE, EDIT REDIRECT, DELETE, & DOCUMENT MANAGEMENT)
+        // =========================================================================================
+        function toggleStatus(index) {
+            const emp = employees[index];
+            if (!emp) return;
+            const newStatus = emp.status === 'Active' ? 'Deactive' : 'Active';
+
+            if (currentPortalMode !== 'admin') {
+                openRoleApprovalModal({
+                    type: 'STATUS_TOGGLE',
+                    empIndex: index,
+                    actionLabel: `${newStatus === 'Active' ? 'ACTIVATE' : 'DEACTIVATE'} EMPLOYEE`,
+                    summary: `${emp.id} - ${emp.name} (Status: ${emp.status} → ${newStatus})`,
+                    oldData: { ...emp },
+                    newData: { ...emp, status: newStatus }
+                });
+                return;
+            }
+
+            employees[index].status = newStatus;
+            employees[index].pendingStatus = null;
+            localStorage.setItem('atr_employees', JSON.stringify(employees));
+            renderTable();
+            showToast(`✅ Employee status changed to ${newStatus}!`);
+        }
+
+        function openProfileModal(index) {
+            isDocTreeOpen = false;
+            viewProfile(index);
+        }
+
+        function viewProfile(index) {
+            const emp = employees[index];
+            document.getElementById('modalEmpName').innerText = `${emp.name} (${emp.id})`;
+            
+            const siteInfo = emp.current_site ? `<p style="color:var(--theme-color); font-weight:bold; font-size:14px; margin-bottom:15px;">📍 Tagged Site: ${emp.current_site}</p>` : `<p style="color:#ffc107; font-style:italic; margin-bottom:15px;">📍 Site: Not Tagged</p>`;
+
+            document.getElementById('profileDetails').innerHTML = `
+                <div class="profile-pic-col">
+                    <img src="${emp.photo || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}" alt="Profile Picture">
+                    <p style="margin-top: 15px; text-align: center;"><span class="status-badge ${emp.status.toLowerCase()}">${emp.status}</span></p>
+                </div>
+                <div class="profile-info-col">
+                    ${siteInfo}
+                    <p><strong>Designation:</strong> ${emp.designation || 'N/A'}</p>
+                    <p><strong>Position Type:</strong> <span style="color:#17a2b8; font-weight:700;">${emp.position_type || 'Both (Erection & Sheeting)'}</span></p>
+                    <p><strong>Father's Name:</strong> ${emp.father_name || 'N/A'}</p>
+                    <p><strong>Religion:</strong> ${emp.religion || 'N/A'}</p>
+                    <p><strong>DOB:</strong> ${emp.dob || 'N/A'}</p>
+                    <p><strong>Personal Mobile:</strong> ${emp.personal_number || 'N/A'}</p>
+                    <p><strong>WhatsApp:</strong> ${emp.whatsapp_number || 'N/A'}</p>
+                    <p><strong>Emergency No:</strong> ${emp.emergency_contact || 'N/A'}</p>
+                    <p><strong>Address:</strong> ${emp.village || ''}, P.O: ${emp.post || ''}, P.S: ${emp.ps || ''}, Dist: ${emp.district || ''} - ${emp.pin || ''}</p>
+                    <p><strong>Aadhaar No:</strong> ${emp.aadhaar || 'N/A'}</p>
+                    <p><strong>UAN No:</strong> ${emp.uan || 'N/A'}</p>
+                    <p><strong>Bank Name:</strong> ${emp.bank_name || 'N/A'}</p>
+                    <p><strong>Account Holder:</strong> ${emp.account_holder || 'N/A'}</p>
+                    <p><strong>Account No:</strong> ${emp.account_number || 'N/A'}</p>
+                    <p><strong>IFSC Code:</strong> ${emp.ifsc_code || 'N/A'}</p>
+                </div>
+            `;
+
+            const docs = emp.docs || { registration: "", aadhaar: "", pan: "", other: "" };
+            
+            const renderTreeNode = (title, docKey, fileName, empIdx) => {
+                if (fileName) {
+                    return `
+                    <div class="tree-node uploaded">
+                        <div>
+                            <span class="doc-title">${title}</span>
+                            <span class="doc-subtitle">File: ${fileName}</span>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn-action btn-view" onclick="viewAttachedDoc('${fileName}')">👁 View</button>
+                            <button class="btn-action btn-edit" onclick="triggerDocUpload(${empIdx}, '${docKey}')">✏️ Edit</button>
+                            <button class="btn-action btn-delete" onclick="deleteDoc(${empIdx}, '${docKey}')">🗑️ Delete</button>
+                        </div>
+                    </div>`;
+                } else {
+                    return `
+                    <div class="tree-node missing">
+                        <div>
+                            <span class="doc-title" style="color: var(--text-muted);">${title}</span>
+                            <span class="doc-missing-text">❌ Not Uploaded</span>
+                        </div>
+                        <div>
+                            <button class="btn-tree-upload" onclick="triggerDocUpload(${empIdx}, '${docKey}')">📁 Upload Now</button>
+                        </div>
+                    </div>`;
+                }
+            };
+
+            let displayState = isDocTreeOpen ? 'block' : 'none';
+            let iconState = isDocTreeOpen ? '▲' : '▼';
+
+            let docHtml = `
+                <div class="accordion-header" onclick="toggleDocTree()">
+                    <h4 style="color: #17a2b8; margin: 0; font-size: 15px;">📁 Attached Documents</h4>
+                    <span id="docTreeIcon" style="color: #17a2b8; font-size: 15px;">${iconState}</span>
+                </div>
+                
+                <div id="docTreeContent" class="accordion-content" style="display: ${displayState};">
+                    <div class="doc-tree-container">
+                        <div class="doc-tree-line"></div>
+                        ${renderTreeNode('Registration Form', 'registration', docs.registration, index)}
+                        ${renderTreeNode('Aadhaar Card', 'aadhaar', docs.aadhaar, index)}
+                        ${renderTreeNode('PAN Card', 'pan', docs.pan, index)}
+                        ${renderTreeNode('Other Document', 'other', docs.other, index)}
+                    </div>
+                </div>
+            `;
+            document.getElementById('documentSection').innerHTML = docHtml;
+
+            const subIdCount = emp.subIds ? emp.subIds.length : 0;
+            const subIdDiv = document.getElementById('subIdSection');
+            if (subIdCount > 0) {
+                let subIdHtml = `<h4 style="color: #ffc107; margin-bottom: 15px; font-size: 15px;">📋 Assigned Sub IDs (${subIdCount})</h4>`;
+                subIdHtml += `<div style="display: grid; gap: 10px; max-height: 200px; overflow-y: auto; padding-right: 5px;">`;
+                emp.subIds.forEach(subId => {
+                    subIdHtml += `
+                        <div style="display: flex; justify-content: space-between; align-items: center; background: var(--input-bg); padding: 12px 15px; border-radius: 6px; border-left: 4px solid var(--theme-color);">
+                            <span style="font-weight: 600; font-size: 13px;">${subId}</span>
+                            <button class="btn-action btn-view" onclick="alert('Viewing: ${subId}')">👁️ View</button>
+                        </div>
+                    `;
+                });
+                subIdHtml += `</div>`;
+                subIdDiv.innerHTML = subIdHtml;
+            } else {
+                subIdDiv.innerHTML = `<h4 style="color: #ffc107; margin-bottom: 10px; font-size: 15px;">📋 Assigned Sub IDs (0)</h4><p style="color: var(--text-muted); font-size: 13px; font-style: italic;">No Sub IDs have been created for this employee yet.</p>`;
+            }
+
+            document.getElementById('profileModal').style.display = 'flex';
+        }
+
+        function toggleDocTree() {
+            isDocTreeOpen = !isDocTreeOpen;
+            const content = document.getElementById('docTreeContent');
+            const icon = document.getElementById('docTreeIcon');
+            
+            if (isDocTreeOpen) {
+                content.style.display = 'block';
+                icon.innerText = '▲';
+            } else {
+                content.style.display = 'none';
+                icon.innerText = '▼';
+            }
+        }
+
+        function triggerDocUpload(empIndex, docKey) {
+            currentUploadEmpIndex = empIndex;
+            currentUploadDocKey = docKey;
+            document.getElementById('hiddenDocInput').click();
+        }
+
+        function handleDocUpload(event) {
+            const file = event.target.files[0];
+            if(file && currentUploadEmpIndex !== null && currentUploadDocKey !== null) {
+                const emp = employees[currentUploadEmpIndex];
+                if(!emp.docs) {
+                    emp.docs = { registration: "", aadhaar: "", pan: "", other: "" };
+                }
+
+                const oldFileName = emp.docs[currentUploadDocKey] || "";
+
+                if (currentPortalMode !== 'admin' && oldFileName !== "") {
+                    const updatedDocs = { ...emp.docs, [currentUploadDocKey]: file.name };
+                    openRoleApprovalModal({
+                        type: 'DOC_EDIT',
+                        empIndex: currentUploadEmpIndex,
+                        docKey: currentUploadDocKey,
+                        newFileName: file.name,
+                        actionLabel: `EDIT ATTACHED DOCUMENT (${currentUploadDocKey.toUpperCase()})`,
+                        summary: `${emp.id} - ${emp.name} | Doc (${currentUploadDocKey}): ${oldFileName} → ${file.name}`,
+                        oldData: { ...emp },
+                        newData: { ...emp, docs: updatedDocs }
+                    });
+                    event.target.value = "";
+                    return;
+                }
+                
+                emp.docs[currentUploadDocKey] = file.name;
+                localStorage.setItem('atr_employees', JSON.stringify(employees));
+
+                if (currentPortalMode === 'office') {
+                    logOfficeWork(
+                        "Employee Records (RegisteredEmployeeRecords.html)",
+                        emp.id,
+                        `Uploaded ${currentUploadDocKey.toUpperCase()} document (${file.name}) for ${emp.name}`,
+                        "Completed"
+                    );
+                }
+                
+                viewProfile(currentUploadEmpIndex);
+                showToast(`✅ Document '${file.name}' uploaded successfully!`);
+            }
+            event.target.value = "";
+        }
+
+        function deleteDoc(empIndex, docKey) {
+            const emp = employees[empIndex];
+            if (!emp || !emp.docs) return;
+            const oldFileName = emp.docs[docKey];
+
+            if (currentPortalMode !== 'admin') {
+                const updatedDocs = { ...emp.docs, [docKey]: "" };
+                openRoleApprovalModal({
+                    type: 'DOC_DELETE',
+                    empIndex: empIndex,
+                    docKey: docKey,
+                    actionLabel: `DELETE ATTACHED DOCUMENT (${docKey.toUpperCase()})`,
+                    summary: `${emp.id} - ${emp.name} | Remove Doc (${docKey}): ${oldFileName}`,
+                    oldData: { ...emp },
+                    newData: { ...emp, docs: updatedDocs }
+                });
+                return;
+            }
+
+            if(confirm("Are you sure you want to delete this document?")) {
+                employees[empIndex].docs[docKey] = "";
+                localStorage.setItem('atr_employees', JSON.stringify(employees));
+                viewProfile(empIndex);
+                showToast("🗑️ Document deleted successfully!");
+            }
+        }
+
+        function viewAttachedDoc(fileName) { 
+            alert("👁️ Document Viewer\n\nViewing Document: " + fileName); 
+        }
+
+        function viewFullImage(src) {
+            document.getElementById('zoomedImage').src = src;
+            document.getElementById('imageZoomModal').style.display = 'flex';
+        }
+
+        function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
+
+        function editEmployeeRedirect(index) {
+            localStorage.setItem('edit_employee_data', JSON.stringify(employees[index]));
+            if (currentPortalMode === 'office') {
+                window.location.href = `EmployeeJoining.html?mode=edit&view=office&userId=${encodeURIComponent(loggedUserId)}&userName=${encodeURIComponent(loggedUserName)}`;
+            } else if (currentPortalMode === 'supervisor') {
+                window.location.href = `EmployeeJoining.html?mode=edit&view=supervisor&site=${encodeURIComponent(assignedSite)}`;
+            } else {
+                window.location.href = "EmployeeJoining.html?mode=edit";
+            }
+        }
+
+        function deleteEmp(index) {
+            const emp = employees[index];
+            if (!emp) return;
+
+            if (currentPortalMode !== 'admin') {
+                openRoleApprovalModal({
+                    type: 'EMP_DELETE',
+                    empIndex: index,
+                    actionLabel: "DELETE EMPLOYEE RECORD",
+                    summary: `Delete Employee: ${emp.id} - ${emp.name} (${emp.designation} | Site: ${emp.current_site || 'Untagged'})`,
+                    oldData: { ...emp },
+                    newData: null
+                });
+                return;
+            }
+
+            const empName = emp.name;
+            const empId = emp.id;
+            const adminPass = prompt(`⚠️ AUTHORIZATION REQUIRED\n\nYou are attempting to permanently delete the record for:\nName: ${empName}\nID: ${empId}\n\nPlease enter the Administrator Password to proceed:`);
+            if (adminPass === null) return; 
+            if (adminPass === "admin123") {
+                employees.splice(index, 1);
+                localStorage.setItem('atr_employees', JSON.stringify(employees));
+                populateSiteDropdown(); 
+                renderTable();
+                showToast(`🗑️ Record for ${empName} permanently deleted.`, true);
+            } else {
+                alert("❌ Access Denied: Incorrect administrator password. Deletion cancelled.");
+            }
+        }
+
+        // =========================================================================================
+        // 3. OFFICE / SUPERVISOR APPROVAL MODAL ENGINE
+        // =========================================================================================
+        function openRoleApprovalModal(actionPayload) {
+            pendingActionObj = actionPayload;
+            document.getElementById('approvalTargetSummary').value = `${actionPayload.actionLabel} — ${actionPayload.summary}`;
+            document.getElementById('approvalReasonInput').value = '';
+            document.getElementById('roleApprovalModal').style.display = 'flex';
+            setTimeout(() => document.getElementById('approvalReasonInput').focus(), 50);
+        }
+
+        function closeRoleApprovalModal() {
+            document.getElementById('roleApprovalModal').style.display = 'none';
+            pendingActionObj = null;
+        }
+
+        function confirmRoleApprovalSubmit() {
+            const reason = document.getElementById('approvalReasonInput').value.trim();
+            if (!reason) {
+                alert("⚠️ Please enter a valid reason for Admin Approval.");
+                return;
+            }
+            if (!pendingActionObj) return;
+
+            const empIdx = pendingActionObj.empIndex;
+            if (employees[empIdx]) {
+                if (pendingActionObj.type === 'STATUS_TOGGLE') {
+                    employees[empIdx].pendingStatus = "Status Pending";
+                } else if (pendingActionObj.type === 'EMP_DELETE') {
+                    employees[empIdx].pendingStatus = "Delete Pending";
+                } else if (pendingActionObj.type === 'DOC_EDIT' || pendingActionObj.type === 'DOC_DELETE') {
+                    employees[empIdx].pendingStatus = "Doc Change Pending";
+                }
+                localStorage.setItem('atr_employees', JSON.stringify(employees));
+            }
+
+            if (currentPortalMode === 'supervisor') {
+                const supQueue = JSON.parse(localStorage.getItem('atr_supervisor_approvals')) || [];
+                supQueue.unshift({
+                    id: "SUP-REQ-" + Date.now().toString().slice(-5),
+                    module: "RegisteredEmployeeRecords.html",
+                    action: pendingActionObj.actionLabel,
+                    site: assignedSite,
+                    requestedBy: loggedUserName,
+                    reason: reason,
+                    summary: pendingActionObj.summary,
+                    requestedAt: new Date().toISOString(),
+                    status: "Pending",
+                    oldData: pendingActionObj.oldData,
+                    newData: pendingActionObj.newData
+                });
+                localStorage.setItem('atr_supervisor_approvals', JSON.stringify(supQueue));
+            } else {
+                const newReq = {
+                    reqId: "OFF-" + Date.now().toString().slice(-5),
+                    userId: loggedUserId,
+                    userName: loggedUserName,
+                    designation: "Office Staff",
+                    module: "RegisteredEmployeeRecords.html",
+                    action: pendingActionObj.actionLabel,
+                    summary: pendingActionObj.summary,
+                    oldData: pendingActionObj.oldData,
+                    newData: pendingActionObj.newData,
+                    reason: reason,
+                    timestamp: new Date().toLocaleString('en-IN'),
+                    status: "Pending"
+                };
+
+                const officeQueue = JSON.parse(localStorage.getItem('atr_office_approvals')) || [];
+                officeQueue.unshift(newReq);
+                localStorage.setItem('atr_office_approvals', JSON.stringify(officeQueue));
+                localStorage.setItem('approve_office_requests', JSON.stringify(officeQueue));
+                localStorage.setItem('ApproveOffice_requests', JSON.stringify(officeQueue));
+
+                logOfficeWork(
+                    "Employee Joining / Records (RegisteredEmployeeRecords.html)",
+                    pendingActionObj.oldData ? pendingActionObj.oldData.id : newReq.reqId,
+                    `${pendingActionObj.actionLabel}: ${pendingActionObj.summary}`,
+                    "Sent for Approval"
+                );
+
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.refreshNotificationsUI === 'function') {
+                        window.parent.refreshNotificationsUI();
+                    }
+                } catch (e) {}
+            }
+
+            const targetApprovalPage = currentPortalMode === 'supervisor' ? 'ApproveSupervisor.html' : 'ApproveOffice.html';
+            closeRoleApprovalModal();
+            renderTable();
+            showToast(`📤 Request sent to ${targetApprovalPage} for Admin Approval!`);
+        }
+
+        function logOfficeWork(moduleName, refNo, desc, status) {
+            const workLogs = JSON.parse(localStorage.getItem('atr_office_daily_work')) || [];
+            const todayStr = new Date().toISOString().split('T')[0];
+            const nowTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+            workLogs.unshift({
+                id: "WRK-" + Date.now().toString().slice(-5),
+                userId: loggedUserId,
+                userName: loggedUserName,
+                date: todayStr,
+                time: nowTime,
+                module: moduleName,
+                refNo: refNo,
+                desc: desc,
+                status: status
+            });
+            localStorage.setItem('atr_office_daily_work', JSON.stringify(workLogs));
+        }
+
+        function showToast(msg, isDanger = false) {
+            const toast = document.getElementById('toastPopup');
+            toast.innerText = msg;
+            toast.style.backgroundColor = isDanger ? "#dc3545" : "var(--theme-color)";
+            toast.classList.add('show');
+            setTimeout(() => { toast.classList.remove('show'); }, 3500);
+        }
+
+        // =========================================================================================
+        // 4. PRE-FORMATTED EXCEL TEMPLATE GENERATOR & BULK EXCEL IMPORT ENGINE
+        // =========================================================================================
+        const TEMPLATE_HEADERS = [
+            "Employee ID",
+            "Designation",
+            "Full Name",
+            "Father's Name",
+            "Religion",
+            "Date of Birth",
+            "Village",
+            "Post Office",
+            "Police Station",
+            "District",
+            "PIN Code",
+            "Aadhaar Number",
+            "UAN Number",
+            "Mobile Number",
+            "WhatsApp Number",
+            "Emergency Number",
+            "Bank Account Name",
+            "Account Holder Name",
+            "Account Number",
+            "IFSC Code",
+            "Position (Erection / Sheeting / Both)",
+            "Current Site"
+        ];
+
+        function downloadEmpTemplate() {
+            const templateRows = [
+                TEMPLATE_HEADERS,
+                [
+                    "ATR-EMP-SAMPLE",
+                    "Site Welder / Fitter",
+                    "Sample Employee Name",
+                    "Sample Father Name",
+                    "Hinduism",
+                    "1994-06-15",
+                    "Plassey",
+                    "Plassey",
+                    "Kaliganj",
+                    "Nadia",
+                    "741156",
+                    "[Aadhaar Redacted]",
+                    "100200300400",
+                    "09876543210",
+                    "09876543210",
+                    "09123456789",
+                    "State Bank of India",
+                    "Sample Employee Name",
+                    "012345678901",
+                    "SBIN0001234",
+                    "Both (Erection & Sheeting)",
+                    "Salt Lake Sector V"
+                ]
+            ];
+
+            // Pre-allocate 100 empty rows formatted as Text ('@') so Excel never strips leading zeros when typing
+            for (let r = 0; r < 100; r++) {
+                templateRows.push(new Array(TEMPLATE_HEADERS.length).fill(""));
+            }
+
+            const ws = XLSX.utils.aoa_to_sheet(templateRows);
+
+            for (let cellKey in ws) {
+                if (cellKey[0] === '!') continue;
+                ws[cellKey].t = 's';
+                ws[cellKey].z = '@';
+            }
+
+            ws['!cols'] = [
+                { wch: 16 }, // Employee ID
+                { wch: 20 }, // Designation
+                { wch: 22 }, // Full Name
+                { wch: 20 }, // Father's Name
+                { wch: 14 }, // Religion
+                { wch: 15 }, // Date of Birth
+                { wch: 18 }, // Village
+                { wch: 16 }, // Post Office
+                { wch: 16 }, // Police Station
+                { wch: 20 }, // District
+                { wch: 12 }, // PIN Code
+                { wch: 18 }, // Aadhaar Number
+                { wch: 18 }, // UAN Number
+                { wch: 18 }, // Mobile Number
+                { wch: 18 }, // WhatsApp Number
+                { wch: 18 }, // Emergency Number
+                { wch: 20 }, // Bank Account Name
+                { wch: 22 }, // Account Holder Name
+                { wch: 20 }, // Account Number
+                { wch: 15 }, // IFSC Code
+                { wch: 28 }, // Position (Erection / Sheeting / Both)
+                { wch: 24 }  // Current Site
+            ];
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Employee_Import_Template");
+            XLSX.writeFile(wb, "ATR_Employee_Bulk_Import_Template.xlsx");
+            showToast("📋 Employee Import Template Downloaded!");
+        }
+
+        function parseExcelDOB(rawVal) {
+            if (!rawVal) return "";
+            if (!isNaN(rawVal) && typeof rawVal === 'number') {
+                const excelEpoch = new Date(1899, 11, 30);
+                const jsDate = new Date(excelEpoch.getTime() + rawVal * 86400000);
+                const yyyy = jsDate.getFullYear();
+                const mm = String(jsDate.getMonth() + 1).padStart(2, '0');
+                const dd = String(jsDate.getDate()).padStart(2, '0');
+                return `${yyyy}-${mm}-${dd}`;
+            }
+            const str = String(rawVal).trim();
+            if (/^\d{1,2}[-/]\d{1,2}[-/]\d{4}$/.test(str)) {
+                const parts = str.split(/[-/]/);
+                return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+            }
+            return str;
+        }
+
+        function generateNextEmployeeId() {
+            let maxNum = 0;
+            employees.forEach(e => {
+                const match = String(e.id || '').match(/(\d+)$/);
+                if (match) {
+                    const num = parseInt(match[1], 10);
+                    if (num > maxNum) maxNum = num;
+                }
+            });
+            return "ATR-EMP-" + String(maxNum + 1).padStart(3, '0');
+        }
+
+        function importEmployeesFromExcel(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+
+                    // raw: false ensures formatted text/numbers with leading zeros are read as exact strings
+                    const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false, defval: "" });
+
+                    if (rows.length <= 1) {
+                        alert("⚠️ The uploaded Excel sheet is empty!");
+                        return;
+                    }
+
+                    let addedCount = 0;
+                    let updatedCount = 0;
+
+                    for (let i = 1; i < rows.length; i++) {
+                        const row = rows[i];
+                        if (!row || row.length === 0) continue;
+
+                        const rawId = String(row[0] ?? "").trim();
+                        const designation = String(row[1] ?? "").trim();
+                        const fullName = String(row[2] ?? "").trim();
+
+                        // Skip empty rows or the instructional sample row
+                        if (!fullName && !designation) continue;
+                        if (rawId.toUpperCase() === "ATR-EMP-SAMPLE" || fullName.toLowerCase() === "sample employee name") continue;
+
+                        const empId = rawId || generateNextEmployeeId();
+                        const fatherName = String(row[3] ?? "").trim();
+                        const religion = String(row[4] ?? "").trim();
+                        const dob = parseExcelDOB(row[5]);
+                        const village = String(row[6] ?? "").trim();
+                        const post = String(row[7] ?? "").trim();
+                        const ps = String(row[8] ?? "").trim();
+                        const district = String(row[9] ?? "").trim();
+                        const pin = String(row[10] ?? "").trim();
+                        const aadhaar = String(row[11] ?? "").trim();
+                        const uan = String(row[12] ?? "").trim();
+                        const mobile = String(row[13] ?? "").trim();
+                        const whatsapp = String(row[14] ?? "").trim() || mobile;
+                        const emergency = String(row[15] ?? "").trim();
+                        const bankName = String(row[16] ?? "").trim();
+                        const accountHolder = String(row[17] ?? "").trim() || fullName;
+                        const accountNumber = String(row[18] ?? "").trim();
+                        const ifscCode = String(row[19] ?? "").trim().toUpperCase();
+                        const positionType = normalizePositionType(row[20]);
+                        const importedSite = (currentPortalMode === 'supervisor' && assignedSite)
+                            ? assignedSite
+                            : String(row[21] ?? "").trim();
+
+                        const existingIdx = employees.findIndex(emp => String(emp.id).toUpperCase() === empId.toUpperCase());
+
+                        if (existingIdx > -1) {
+                            const prev = employees[existingIdx];
+                            employees[existingIdx] = {
+                                ...prev,
+                                name: fullName || prev.name,
+                                designation: designation || prev.designation,
+                                position_type: positionType || prev.position_type,
+                                father_name: fatherName || prev.father_name,
+                                religion: religion || prev.religion,
+                                dob: dob || prev.dob,
+                                village: village || prev.village,
+                                post: post || prev.post,
+                                ps: ps || prev.ps,
+                                district: district || prev.district,
+                                pin: pin || prev.pin,
+                                aadhaar: aadhaar || prev.aadhaar,
+                                uan: uan || prev.uan,
+                                personal_number: mobile || prev.personal_number,
+                                whatsapp_number: whatsapp || prev.whatsapp_number,
+                                emergency_contact: emergency || prev.emergency_contact,
+                                bank_name: bankName || prev.bank_name,
+                                account_holder: accountHolder || prev.account_holder,
+                                account_number: accountNumber || prev.account_number,
+                                ifsc_code: ifscCode || prev.ifsc_code,
+                                current_site: importedSite || prev.current_site,
+                                pendingStatus: currentPortalMode !== 'admin' ? "Import Update Pending" : null
+                            };
+                            updatedCount++;
+                        } else {
+                            employees.push({
+                                id: empId,
+                                name: fullName,
+                                designation: designation || "Site Worker",
+                                position_type: positionType,
+                                father_name: fatherName,
+                                religion: religion,
+                                dob: dob,
+                                village: village,
+                                post: post,
+                                ps: ps,
+                                district: district,
+                                pin: pin,
+                                aadhaar: aadhaar,
+                                uan: uan,
+                                personal_number: mobile,
+                                whatsapp_number: whatsapp,
+                                emergency_contact: emergency,
+                                bank_name: bankName,
+                                account_holder: accountHolder,
+                                account_number: accountNumber,
+                                ifsc_code: ifscCode,
+                                status: "Active",
+                                photo: `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=28a745&color=fff`,
+                                subIds: [],
+                                current_site: importedSite,
+                                pendingStatus: currentPortalMode !== 'admin' ? "Import Pending" : null,
+                                docs: { registration: "", aadhaar: "", pan: "", other: "" }
+                            });
+                            addedCount++;
+                        }
+                    }
+
+                    localStorage.setItem('atr_employees', JSON.stringify(employees));
+                    populateSiteDropdown();
+                    renderTable();
+
+                    if (currentPortalMode === 'office' && (addedCount > 0 || updatedCount > 0)) {
+                        const newReq = {
+                            reqId: "OFF-IMP-" + Date.now().toString().slice(-5),
+                            userId: loggedUserId,
+                            userName: loggedUserName,
+                            designation: "Office Staff",
+                            module: "RegisteredEmployeeRecords.html",
+                            action: "BULK EXCEL EMPLOYEE IMPORT",
+                            summary: `Imported ${addedCount} new employee(s) & updated ${updatedCount} existing employee(s) from ${file.name}`,
+                            oldData: null,
+                            newData: { fileName: file.name, addedCount, updatedCount },
+                            reason: `Bulk Excel Import by ${loggedUserName}`,
+                            timestamp: new Date().toLocaleString('en-IN'),
+                            status: "Pending"
+                        };
+                        const officeQueue = JSON.parse(localStorage.getItem('atr_office_approvals')) || [];
+                        officeQueue.unshift(newReq);
+                        localStorage.setItem('atr_office_approvals', JSON.stringify(officeQueue));
+                        localStorage.setItem('approve_office_requests', JSON.stringify(officeQueue));
+                        localStorage.setItem('ApproveOffice_requests', JSON.stringify(officeQueue));
+
+                        logOfficeWork(
+                            "Employee Joining / Records (RegisteredEmployeeRecords.html)",
+                            newReq.reqId,
+                            `Bulk Excel Import: Added ${addedCount}, Updated ${updatedCount} (${file.name})`,
+                            "Sent for Approval"
+                        );
+                    }
+
+                    showToast(`✅ Imported: ${addedCount} Added, ${updatedCount} Updated!`);
+                    alert(`✅ Bulk Employee Excel Import Complete!\n\n• Newly Added Employees: ${addedCount}\n• Updated Existing Employees: ${updatedCount}`);
+                } catch (err) {
+                    console.error(err);
+                    alert("❌ Failed to read Excel file. Please use the provided Template format.");
+                } finally {
+                    event.target.value = "";
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // =========================================================================================
+        // 5. COMPLETE EXPORT DATA ENGINE (STRICT TEXT '@' FORMAT FOR ALL NUMBERS & LEADING ZEROS)
+        // =========================================================================================
+        function exportData(type) {
+            const activeEmployees = getFilteredEmployees();
+            if(activeEmployees.length === 0) {
+                alert("⚠️ No records available in the current view to export!");
+                return;
+            }
+
+            if (type === 'pdf') {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('l', 'mm', 'a4');
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(14);
+                doc.text(`ATR Construction - Complete Employee Records (${currentTab})`, 14, 15);
+                
+                const tableData = activeEmployees.map(e => [
+                    String(e.id || ''),
+                    String(e.designation || ''),
+                    String(e.name || ''),
+                    String(e.position_type || 'Both'),
+                    String(e.current_site || 'Untagged'),
+                    String(e.father_name || ''),
+                    String(e.dob || ''),
+                    String(e.aadhaar || ''),
+                    String(e.uan || ''),
+                    String(e.personal_number || ''),
+                    String(e.emergency_contact || ''),
+                    `${e.bank_name || ''} | A/C: ${e.account_number || ''} | IFSC: ${e.ifsc_code || ''}`,
+                    String(e.status || '')
+                ]);
+
+                doc.autoTable({
+                    head: [['Emp ID', 'Designation', 'Full Name', 'Position', 'Site Name', 'Father Name', 'DOB', 'Aadhaar No', 'UAN No', 'Mobile No', 'Emergency No', 'Bank Details', 'Status']],
+                    body: tableData,
+                    startY: 22,
+                    theme: 'grid',
+                    styles: { fontSize: 7.2, cellPadding: 2 },
+                    headStyles: { fillColor: [40, 167, 69] }
+                });
+
+                doc.save(`ATR_Employee_Records_${currentTab}.pdf`);
+
+            } else if (type === 'csv' || type === 'xlsx') {
+                const headers = [
+                    ...TEMPLATE_HEADERS,
+                    "Assigned Sub IDs",
+                    "Status"
+                ];
+
+                const sheetRows = [headers];
+
+                activeEmployees.forEach(e => {
+                    sheetRows.push([
+                        String(e.id ?? ''),
+                        String(e.designation ?? ''),
+                        String(e.name ?? ''),
+                        String(e.father_name ?? ''),
+                        String(e.religion ?? ''),
+                        String(e.dob ?? ''),
+                        String(e.village ?? ''),
+                        String(e.post ?? ''),
+                        String(e.ps ?? ''),
+                        String(e.district ?? ''),
+                        String(e.pin ?? ''),
+                        String(e.aadhaar ?? ''),
+                        String(e.uan ?? ''),
+                        String(e.personal_number ?? ''),
+                        String(e.whatsapp_number ?? ''),
+                        String(e.emergency_contact ?? ''),
+                        String(e.bank_name ?? ''),
+                        String(e.account_holder ?? ''),
+                        String(e.account_number ?? ''),
+                        String(e.ifsc_code ?? ''),
+                        String(e.position_type || 'Both (Erection & Sheeting)'),
+                        String(e.current_site ? e.current_site : 'Untagged'),
+                        Array.isArray(e.subIds) && e.subIds.length > 0 ? e.subIds.join(', ') : 'None',
+                        String(e.status ?? '')
+                    ]);
+                });
+
+                const worksheet = XLSX.utils.aoa_to_sheet(sheetRows);
+
+                // Strictly lock EVERY cell to Text ('s') format ('@') so leading zeros (0) in Aadhaar, UAN, Mobile, Emergency, PIN & Bank Account numbers are never stripped
+                for (let cellKey in worksheet) {
+                    if (cellKey[0] === '!') continue;
+                    worksheet[cellKey].t = 's';
+                    worksheet[cellKey].z = '@';
+                    if (worksheet[cellKey].v !== undefined && worksheet[cellKey].v !== null) {
+                        worksheet[cellKey].v = String(worksheet[cellKey].v);
+                        worksheet[cellKey].w = String(worksheet[cellKey].v);
+                    }
+                }
+
+                worksheet['!cols'] = [
+                    { wch: 16 }, // Employee ID
+                    { wch: 20 }, // Designation
+                    { wch: 22 }, // Full Name
+                    { wch: 20 }, // Father's Name
+                    { wch: 14 }, // Religion
+                    { wch: 15 }, // Date of Birth
+                    { wch: 18 }, // Village
+                    { wch: 16 }, // Post Office
+                    { wch: 16 }, // Police Station
+                    { wch: 20 }, // District
+                    { wch: 12 }, // PIN Code
+                    { wch: 18 }, // Aadhaar Number
+                    { wch: 18 }, // UAN Number
+                    { wch: 18 }, // Mobile Number
+                    { wch: 18 }, // WhatsApp Number
+                    { wch: 18 }, // Emergency Number
+                    { wch: 20 }, // Bank Account Name
+                    { wch: 22 }, // Account Holder Name
+                    { wch: 20 }, // Account Number
+                    { wch: 15 }, // IFSC Code
+                    { wch: 28 }, // Position (Erection / Sheeting / Both)
+                    { wch: 24 }, // Current Site
+                    { wch: 22 }, // Assigned Sub IDs
+                    { wch: 12 }  // Status
+                ];
+
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, "Employees");
+
+                if(type === 'csv') {
+                    XLSX.writeFile(workbook, `ATR_Employee_Records_${currentTab}.csv`, { bookType: 'csv' });
+                } else {
+                    XLSX.writeFile(workbook, `ATR_Employee_Records_${currentTab}.xlsx`);
+                }
+            }
+        }
+    </script>
+</body>
+</html>

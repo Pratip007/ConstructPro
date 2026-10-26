@@ -1,0 +1,1864 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Employee Registration</title>
+    <!-- jsPDF & html2pdf Library for Professional PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <!-- Cropper.js for Image Cropping -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    
+    <!-- PDF.js for converting PDF to Image before cropping -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+
+    <!-- Sync theme with Master Dashboard -->
+    <script>
+        const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        window.addEventListener('storage', function(e) {
+            if(e.key === 'atr_theme') { document.documentElement.setAttribute('data-theme', e.newValue); }
+        });
+        // Set workerSrc for pdf.js
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap');
+
+        :root {
+            --bg-body: transparent; 
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.1);
+            
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(0, 0, 0, 0.2);
+            --input-focus-bg: rgba(0, 0, 0, 0.4);
+            
+            --shadow: 0 4px 15px rgba(0,0,0,0.3);
+            
+            --theme-color: #28a745;
+            --theme-glow: rgba(40, 167, 69, 0.4);
+            --theme-transition: all 0.4s ease;
+        }
+
+        [data-theme="light"] {
+            --bg-body: transparent;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #555555;
+            --border-color: rgba(0, 0, 0, 0.1);
+            
+            --glass-bg: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --input-bg: rgba(255, 255, 255, 0.5);
+            --input-focus-bg: #ffffff;
+            
+            --shadow: 0 8px 25px rgba(0,0,0,0.05);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; scroll-behavior: smooth; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(136, 136, 136, 0.3); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(136, 136, 136, 0.6); }
+
+        body { background-color: var(--bg-body); color: var(--text-main); display: flex; min-height: 100vh; transition: var(--theme-transition); }
+        .main-content { flex: 1; padding: 40px; overflow-y: auto; }
+
+        .header-section { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid var(--border-color); padding-bottom: 20px; flex-wrap: wrap; gap: 15px; transition: var(--theme-transition); }
+        .header-section h1 { font-size: 24px; color: var(--text-main); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .header-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+        
+        .role-mode-badge {
+            display: none;
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 700;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-records-link { background-color: var(--theme-color); color: #ffffff; text-decoration: none; padding: 9px 16px; border-radius: 6px; font-weight: 700; font-size: 13px; text-transform: uppercase; transition: all 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .btn-records-link:hover { transform: translateY(-2px); box-shadow: 0 6px 15px var(--theme-glow); }
+        
+        .btn-back-dash {
+            background-color: var(--glass-bg);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            text-decoration: none;
+            padding: 9px 16px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 13px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .btn-back-dash:hover {
+            background-color: var(--theme-color);
+            color: #fff;
+            border-color: var(--theme-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px var(--theme-glow);
+        }
+
+        .user-info { font-size: 13px; color: var(--theme-color); background: var(--theme-glow); padding: 8px 15px; border-radius: 20px; border: 1px solid var(--theme-color); font-weight: bold; }
+
+        /* Glassy Neo Form Style */
+        .glassy-form-wrapper {
+            background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border); border-top: 4px solid var(--theme-color);
+            border-radius: 12px; padding: 35px; box-shadow: var(--shadow); max-width: 1000px; margin: 0 auto;
+            transition: var(--theme-transition);
+        }
+        
+        .glassy-form-wrapper h2 { font-size: 20px; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--theme-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .next-id-pill { font-size: 12px; background: rgba(0, 123, 255, 0.15); color: #4dabf7; border: 1px solid rgba(0, 123, 255, 0.35); padding: 5px 12px; border-radius: 20px; font-weight: 700; text-transform: none; }
+
+        .sub-section-title { font-size: 13px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--theme-color); margin: 25px 0 15px 0; padding-bottom: 5px; border-bottom: 1px dashed var(--border-color); font-weight: 700; }
+
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 15px; }
+        .form-group { display: flex; flex-direction: column; gap: 8px; position: relative; }
+        .form-group.full-width { grid-column: 1 / -1; }
+        
+        label { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; transition: color 0.3s; }
+        .required-star { color: #ff4d4d; margin-left: 3px; }
+
+        input[type="password"]::-ms-reveal,
+        input[type="password"]::-ms-clear { display: none; }
+
+        input[type="text"], input[type="number"], input[type="date"], input[type="file"], input[type="password"], textarea, select { 
+            background-color: var(--input-bg); border: 1px solid var(--border-color); padding: 12px 15px; border-radius: 6px; 
+            color: var(--text-main); font-size: 14px; transition: all 0.3s ease; width: 100%; outline: none; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); color-scheme: dark;
+        }
+        [data-theme="light"] input[type="date"] { color-scheme: light; }
+        input:focus, textarea:focus, select:focus { border-color: var(--theme-color); background-color: var(--input-focus-bg); box-shadow: 0 0 10px var(--theme-glow), inset 0 2px 4px rgba(0,0,0,0.05); }
+        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        .form-group:focus-within label { color: var(--theme-color); }
+
+        .age-display { font-size: 12px; color: #ffc107; margin-top: 4px; font-weight: 600; }
+        .warning-text { color: #ff4d4d; font-size: 12px; margin-top: 4px; display: none; font-weight: bold; background: rgba(255, 77, 77, 0.1); padding: 8px; border-radius: 4px; border: 1px solid rgba(255, 77, 77, 0.3); }
+
+        .checkbox-console { display: flex; flex-wrap: wrap; gap: 20px; padding: 5px 0; }
+        .console-label { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 14px; color: var(--text-main); font-weight: 500; transition: var(--theme-transition); }
+        .console-label input[type="checkbox"], .console-label input[type="radio"] { width: 18px; height: 18px; accent-color: var(--theme-color); cursor: pointer; }
+
+        /* Generic Custom Searchable Dropdown Styles */
+        .custom-select-wrapper { position: relative; width: 100%; user-select: none; }
+        .custom-select { background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 12px 15px; border-radius: 6px; font-size: 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); }
+        .custom-select:hover { border-color: var(--theme-color); }
+        
+        .custom-options { position: absolute; top: 100%; left: 0; right: 0; background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; box-shadow: var(--shadow); z-index: 100; display: none; max-height: 220px; overflow-y: auto; margin-top: 5px; }
+        .custom-options.show { display: block; }
+        .search-box { padding: 8px; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; background: var(--bg-card); z-index: 2; }
+        .search-box input { width: 100%; background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 8px 10px; border-radius: 4px; outline: none; font-size: 13px; }
+        .search-box input:focus { border-color: var(--theme-color); }
+        .dropdown-item { padding: 10px 15px; font-size: 13px; color: var(--text-main); cursor: pointer; border-bottom: 1px solid var(--border-color); transition: background 0.2s; }
+        .dropdown-item:hover { background-color: var(--theme-color); color: #fff; }
+        .add-new-item { font-weight: bold; color: var(--theme-color); text-align: center; background: var(--glass-bg); border-top: 1px dashed var(--theme-color); position: sticky; bottom: 0; }
+        .add-new-item:hover { background-color: var(--theme-color); color: #fff; }
+
+        /* Custom Modals */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.65); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(5px); padding: 20px; }
+        .modal-box { background: var(--bg-card); padding: 30px; border-radius: 12px; border-top: 4px solid var(--theme-color); width: 100%; max-width: 440px; box-shadow: var(--shadow); border-left: 1px solid var(--border-color); border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); }
+        .modal-box h3 { color: var(--theme-color); margin-bottom: 20px; font-size: 18px; text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
+
+        .terms-container { background: var(--glass-bg); padding: 15px; border-radius: 8px; border: 1px dashed var(--border-color); margin-top: 30px; }
+        
+        .btn-submit-form { background-color: var(--theme-color); color: #ffffff; border: 1px solid rgba(255,255,255,0.1); padding: 14px 30px; border-radius: 6px; font-weight: 700; font-size: 14px; cursor: pointer; text-transform: uppercase; transition: all 0.3s; margin-top: 25px; width: 100%; box-shadow: 0 4px 15px rgba(0,0,0,0.2); letter-spacing: 1px;}
+        .btn-submit-form:hover { transform: translateY(-2px); box-shadow: 0 8px 20px var(--theme-glow); }
+        .btn-submit-form:active { transform: translateY(1px); }
+
+        .success-actions-box { display: none; background: rgba(40, 167, 69, 0.1); border: 2px solid var(--theme-color); padding: 25px; border-radius: 10px; margin-top: 25px; text-align: center; animation: fadeIn 0.3s ease-in-out; }
+        .success-actions-box h3 { color: var(--theme-color); margin-bottom: 10px; font-size: 20px; }
+        .action-btn-group { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
+        .btn-action { padding: 10px 20px; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; text-transform: uppercase; border: none; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        .btn-pdf { background-color: #dc3545; color: white; }
+        .btn-print { background-color: #ffc107; color: #121212; }
+        .btn-new { background-color: #007bff; color: white; }
+        .btn-action:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+
+        /* ================= SECURE DOUBLE CONFIRMATION CSS ================= */
+        .secure-input-group { position: relative; }
+        .input-blurred { filter: blur(5px); pointer-events: none; opacity: 0.6; transition: all 0.3s ease; }
+        .confirm-box { display: none; background: rgba(255, 193, 7, 0.1); border: 1px dashed #ffc107; padding: 10px; border-radius: 6px; margin-top: 8px; animation: fadeIn 0.3s ease; position: relative; }
+        .confirm-box label { color: #ffc107; font-size: 11px; margin-bottom: 5px; display: block; }
+        .confirm-status { position: absolute; right: 12px; top: 38px; font-size: 16px; pointer-events: none; }
+        
+        .manual-close-btn { position: absolute; top: 8px; right: 10px; cursor: pointer; color: #ff4d4d; font-size: 14px; transition: transform 0.2s; font-weight: bold; background: rgba(255, 77, 77, 0.1); width: 22px; height: 22px; display: flex; justify-content: center; align-items: center; border-radius: 50%; }
+        .manual-close-btn:hover { background: #ff4d4d; color: white; transform: scale(1.1); }
+
+        /* ================= IMAGE CROPPER MODAL CSS ================= */
+        #cropModal .modal-box { max-width: 600px; display: flex; flex-direction: column; align-items: center;}
+        .img-container { width: 100%; max-height: 400px; background-color: #000; margin-bottom: 15px; display: flex; justify-content: center; align-items: center; overflow: hidden; border-radius: 8px;}
+        .img-container img { max-width: 100%; max-height: 100%; }
+        #photoPreviewContainer { display: none; margin-top: 10px; width: 120px; height: 120px; border-radius: 50%; border: 3px solid var(--theme-color); overflow: hidden; justify-content: center; align-items: center; background: #333; box-shadow: var(--shadow);}
+        #photoPreviewContainer img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* ================= A4 PROFESSIONAL PRINT & PDF CSS ================= */
+        .print-container { display: none; }
+
+        @media print, .pdf-mode {
+            @page { size: A4 portrait; margin: 0; }
+            body { background: #f9f9f9 !important; margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            
+            .main-content, .header-section, .glassy-form-wrapper, #desigModal, #roleApprovalModal, #adminVerifyModal, #cropModal { display: none !important; }
+            
+            .print-container { display: flex !important; flex-direction: column; width: 794px !important; min-height: 1123px !important; margin: 0 auto; background: #fff; position: relative; box-sizing: border-box; overflow: hidden; }
+            
+            .print-header { width: 100%; height: 120px; background-color: #f0f0f0; border-bottom: 2px solid #333; display: flex; justify-content: center; align-items: center; color: #666; font-size: 14px; background-size: cover; background-position: center; }
+            .print-footer { width: 100%; height: 80px; background-color: #f0f0f0; border-top: 2px solid #333; position: absolute; bottom: 0; display: flex; justify-content: center; align-items: center; color: #666; font-size: 12px; background-size: cover; background-position: center; }
+
+            .print-body { padding: 25px 35px; flex: 1; position: relative; }
+            
+            .print-title { text-align: center; font-size: 22px; font-weight: 800; color: #1a1a1a !important; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 2px dashed #ccc; padding-bottom: 10px;}
+            
+            /* Add Photo Box in Print */
+            .print-photo-box { position: absolute; top: 25px; right: 35px; width: 100px; height: 100px; border: 2px solid #ccc; border-radius: 8px; overflow: hidden; display: flex; justify-content: center; align-items: center; background: #f8f9fa;}
+            .print-photo-box img { width: 100%; height: 100%; object-fit: cover; }
+            .print-photo-placeholder { font-size: 10px; color: #999; text-align: center; }
+
+            .print-section-card { border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px; background: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.03); page-break-inside: avoid; overflow: hidden; }
+            
+            .print-section-head { padding: 8px 15px !important; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #fff !important; }
+            
+            .head-pos { background: linear-gradient(135deg, #0dcaf0, #0aa2c0) !important; color: #000 !important; }
+            .head-personal { background: linear-gradient(135deg, #28a745, #1e7e34) !important; }
+            .head-address { background: linear-gradient(135deg, #6f42c1, #59339d) !important; }
+            .head-kyc { background: linear-gradient(135deg, #fd7e14, #d96400) !important; }
+            .head-contact { background: linear-gradient(135deg, #e83e8c, #bd2130) !important; }
+            .head-bank { background: linear-gradient(135deg, #007bff, #0056b3) !important; }
+
+            .print-row { display: flex; border-bottom: 1px solid #eee; }
+            .print-row:last-child { border-bottom: none; }
+            
+            .print-label { flex: 0 0 35%; background: #f8f9fa !important; padding: 8px 15px; font-weight: 600; font-size: 12px; color: #555 !important; border-right: 1px solid #eee; display: flex; align-items: center;}
+            .print-val { flex: 1; padding: 8px 15px; font-size: 12px; font-weight: 700; color: #111 !important; display: flex; align-items: center;}
+            
+            .print-terms-page { page-break-before: always; padding: 25px 35px; position: relative; min-height: calc(1123px - 200px); }
+            .print-terms { background: #fcf8e3 !important; border: 1px dashed #faebcc; padding: 15px; border-radius: 6px; font-size: 12px; text-align: justify; color: #8a6d3b !important; line-height: 1.6; margin-top: 10px; page-break-inside: avoid;}
+
+            .signature-box { display: flex; justify-content: space-between; position: absolute; bottom: 30px; width: calc(100% - 70px); padding: 0; }
+            .sig-line { border-top: 1.5px solid #333; width: 220px; text-align: center; padding-top: 8px; font-weight: 700; font-size: 12px; color: #333 !important;}
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <!-- 1. Designation Form Modal -->
+    <div class="modal-overlay" id="desigModal">
+        <div class="modal-box">
+            <h3>➕ Add New Designation</h3>
+            <div class="form-group" id="desigPassGroup" style="margin-bottom: 15px;">
+                <label>Admin Password <span class="required-star">*</span></label>
+                <input type="password" id="desigAdminPass" placeholder="Enter admin password (admin123)">
+            </div>
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label>Designation Title <span class="required-star">*</span></label>
+                <input type="text" id="desigName" placeholder="e.g. Site Supervisor">
+            </div>
+            <div class="form-group" style="margin-bottom: 25px;">
+                <label>Assigned Working Days <span class="required-star">*</span></label>
+                <input type="number" id="desigDays" placeholder="e.g. 26 or 30">
+            </div>
+            <div style="display:flex; gap: 10px;">
+                <button type="button" class="btn-submit-form" style="margin-top:0; flex: 1;" onclick="submitDesignationModal()">✅ Save</button>
+                <button type="button" class="btn-submit-form" style="margin-top:0; flex: 1; background:#dc3545;" onclick="closeDesignationModal()">❌ Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Admin Password Verification Modal -->
+    <div class="modal-overlay" id="adminVerifyModal">
+        <div class="modal-box" style="border-top-color: #dc3545;">
+            <h3 style="color: #dc3545;">🔒 Admin Authorization Required</h3>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.5;">
+                Existing Employee-এর রেকর্ড আপডেট করার জন্য অনুগ্রহ করে অ্যাডমিন পাসওয়ার্ড দিন।
+            </p>
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label>Admin Password <span class="required-star">*</span></label>
+                <input type="password" id="adminUpdatePassInput" placeholder="Password (admin123)" onkeydown="if(event.key==='Enter') confirmAdminExistingUpdate()">
+            </div>
+            <div style="display:flex; gap: 10px;">
+                <button type="button" class="btn-submit-form" style="margin-top:0; flex: 1; background:#dc3545;" onclick="confirmAdminExistingUpdate()">🔓 Verify & Update</button>
+                <button type="button" class="btn-submit-form" style="margin-top:0; flex: 1; background:var(--glass-bg); color:var(--text-main); border:1px solid var(--border-color);" onclick="closeAdminVerifyModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Role Approval Modal -->
+    <div class="modal-overlay" id="roleApprovalModal">
+        <div class="modal-box" style="border-top-color: #ffc107; max-width: 480px;">
+            <h3 id="roleApprovalModalTitle" style="color: #ffc107;">🏢 Send Update for Admin Approval</h3>
+            <p id="roleApprovalModalDesc" style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.5;">
+                পুরোনো এমপ্লয়ির (`Existing Employee`) তথ্য এডিট করলে তা অ্যাডমিন অ্যাপ্রুভালের জন্য পাঠানো হবে। অ্যাডমিন অ্যাপ্রুভ করলেই এটি মাস্টার ডেটাবেসে আপডেট হবে।
+            </p>
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label>Target Employee</label>
+                <input type="text" id="officeEditEmpSummary" readonly style="color: #ffc107; font-weight: 700;">
+            </div>
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label>Reason for Updating Employee Record <span class="required-star">*</span></label>
+                <textarea id="officeEditReason" rows="3" placeholder="Explain what details were modified and why..." style="resize: none;"></textarea>
+            </div>
+            <div style="display:flex; gap: 10px;">
+                <button type="button" class="btn-submit-form" style="margin-top:0; flex: 1; background:#ffc107; color:#121212;" onclick="confirmRoleExistingUpdate()">📤 Send for Approval</button>
+                <button type="button" class="btn-submit-form" style="margin-top:0; flex: 1; background:#dc3545;" onclick="closeRoleApprovalModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Image Cropper Modal -->
+    <div class="modal-overlay" id="cropModal">
+        <div class="modal-box">
+            <h3 style="color: var(--theme-color);">✂️ Crop Photo</h3>
+            <div class="img-container">
+                <img id="imageToCrop" src="" alt="Picture">
+            </div>
+            <div style="display:flex; gap: 10px;">
+                <button type="button" class="btn-submit-form" style="margin-top:0; flex: 1;" onclick="cropAndSaveImage()">✅ Crop & Save</button>
+                <button type="button" class="btn-submit-form" style="margin-top:0; flex: 1; background:#dc3545;" onclick="closeCropModal()">❌ Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="header-section no-print">
+            <h1>
+                👥 Employee Registration
+                <span id="roleModeBadge" class="role-mode-badge">🏢 Office Mode</span>
+            </h1>
+            <div class="header-actions">
+                <a href="RegisteredEmployeeRecords.html" id="btnViewRecords" class="btn-records-link">📋 View Records</a>
+                <a href="dashboard_home.html" id="btnBackDashboard" class="btn-back-dash" onclick="handleBackToDashboard(event)">← Back to Dashboard</a>
+                <div class="user-info" id="userActionBadge">Action: New Registration</div>
+            </div>
+        </div>
+
+        <div class="glassy-form-wrapper no-print">
+            <h2>
+                <span>📝 Fill Registration Form</span>
+                <span class="next-id-pill" id="nextEmpIdBadge">⚡ Next Auto ID: ATR-EMP-003</span>
+            </h2>
+            
+            <form id="employeeForm" data-office-hooked="true" onsubmit="handleSubmit(event)">
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Registration Type</label>
+                        <div class="checkbox-console">
+                            <label class="console-label"><input type="radio" name="emp_status" value="New" checked onclick="toggleEmpSelection(false)"> New Employee</label>
+                            <label class="console-label"><input type="radio" name="emp_status" value="Existing" onclick="toggleEmpSelection(true)"> Existing</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group" id="empFieldContainer">
+                        <label id="empLabel">Employee ID (Multi-User Auto Sequence)</label>
+                        <input type="text" id="emp_id_input" name="emp_id" placeholder="Auto-generated on Submit" disabled style="font-weight: 700; color: var(--theme-color);">
+                        
+                        <div class="custom-select-wrapper" id="existingEmpWrapper" style="display: none;">
+                            <input type="text" id="empSearchInput" placeholder="🔍 Type name or ID..." onfocus="refreshLiveDatabase(); renderExistingEmpList(); document.getElementById('empDropdownList').classList.add('show')" oninput="filterExistingEmp(this.value)">
+                            <div class="custom-options" id="empDropdownList"><div id="empListItems"></div></div>
+                            <input type="hidden" id="selected_existing_id" name="existing_emp_id">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Designation <span class="required-star">*</span></label>
+                        <div class="custom-select-wrapper" id="designationWrapper">
+                            <div class="custom-select" onclick="toggleDropdown('designation')">
+                                <span id="designationText">Select Designation</span> <span>▼</span>
+                            </div>
+                            <div class="custom-options" id="designationOptions">
+                                <div class="search-box"><input type="text" placeholder="Search designation..." onkeyup="filterCustomList('designation', this.value)"></div>
+                                <div id="designationList"></div>
+                                <div class="dropdown-item add-new-item" id="addNewDesigBtn" onclick="openDesignationModal()">+ Add New Designation</div>
+                            </div>
+                            <input type="hidden" id="designation" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sub-section-title">Personal Profiles & Photo</div>
+                <div class="form-grid">
+                    <!-- Photograph Input for Cropping -->
+                    <div class="form-group">
+                        <label>Photograph (Image/PDF)</label>
+                        <input type="file" id="emp_photo" accept="image/*,application/pdf" onchange="handlePhotoUpload(event)">
+                        <input type="hidden" id="croppedImageData">
+                        <div id="photoPreviewContainer">
+                            <img id="photoPreview" src="" alt="Cropped Photo">
+                        </div>
+                    </div>
+
+                    <div class="form-group"><label>Full Name <span class="required-star">*</span></label><input type="text" id="name" required placeholder="Enter full name"></div>
+                    <div class="form-group"><label>Father's Name <span class="required-star">*</span></label><input type="text" id="father_name" required placeholder="Enter father's name"></div>
+                    <div class="form-group">
+                        <label>Religion <span class="required-star">*</span></label>
+                        <div class="custom-select-wrapper" id="religionWrapper">
+                            <div class="custom-select" onclick="toggleDropdown('religion')"><span id="religionText">Select Religion</span> <span>▼</span></div>
+                            <div class="custom-options" id="religionOptions">
+                                <div class="search-box"><input type="text" placeholder="Search religion..." onkeyup="filterCustomList('religion', this.value)"></div>
+                                <div id="religionList"></div>
+                            </div>
+                            <input type="hidden" id="religion" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
+                    <div class="form-group">
+                        <label>Date of Birth (DOB) <span class="required-star">*</span></label>
+                        <input type="date" id="dob" required onchange="calculateAge(this.value)">
+                        <div id="ageResult" class="age-display"></div>
+                    </div>
+                </div>
+
+                <div class="sub-section-title">Address & Demographics</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Village / Street <span class="required-star">*</span></label>
+                        <div class="custom-select-wrapper" id="villageWrapper">
+                            <div class="custom-select" onclick="toggleDropdown('village')"><span id="villageText">Select Village / Street</span> <span>▼</span></div>
+                            <div class="custom-options" id="villageOptions">
+                                <div class="search-box"><input type="text" placeholder="Search..." onkeyup="filterCustomList('village', this.value)"></div>
+                                <div id="villageList"></div><div class="dropdown-item add-new-item" onclick="addNewDemographic('village')">➕ Add New Entry</div>
+                            </div>
+                            <input type="hidden" id="village" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Post Office (P.O) <span class="required-star">*</span></label>
+                        <div class="custom-select-wrapper" id="postWrapper">
+                            <div class="custom-select" onclick="toggleDropdown('post')"><span id="postText">Select Post Office</span> <span>▼</span></div>
+                            <div class="custom-options" id="postOptions">
+                                <div class="search-box"><input type="text" placeholder="Search..." onkeyup="filterCustomList('post', this.value)"></div>
+                                <div id="postList"></div><div class="dropdown-item add-new-item" onclick="addNewDemographic('post')">➕ Add New Entry</div>
+                            </div>
+                            <input type="hidden" id="post" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Police Station (P.S) <span class="required-star">*</span></label>
+                        <div class="custom-select-wrapper" id="psWrapper">
+                            <div class="custom-select" onclick="toggleDropdown('ps')"><span id="psText">Select Police Station</span> <span>▼</span></div>
+                            <div class="custom-options" id="psOptions">
+                                <div class="search-box"><input type="text" placeholder="Search..." onkeyup="filterCustomList('ps', this.value)"></div>
+                                <div id="psList"></div><div class="dropdown-item add-new-item" onclick="addNewDemographic('ps')">➕ Add New Entry</div>
+                            </div>
+                            <input type="hidden" id="ps" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));">
+                    <div class="form-group">
+                        <label>District <span class="required-star">*</span></label>
+                        <div class="custom-select-wrapper" id="districtWrapper">
+                            <div class="custom-select" onclick="toggleDropdown('district')"><span id="districtText">Select District</span> <span>▼</span></div>
+                            <div class="custom-options" id="districtOptions">
+                                <div class="search-box"><input type="text" placeholder="Search..." onkeyup="filterCustomList('district', this.value)"></div>
+                                <div id="districtList"></div><div class="dropdown-item add-new-item" onclick="addNewDemographic('district')">➕ Add New Entry</div>
+                            </div>
+                            <input type="hidden" id="district" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>PIN Code <span class="required-star">*</span></label>
+                        <div class="custom-select-wrapper" id="pinWrapper">
+                            <div class="custom-select" onclick="toggleDropdown('pin')"><span id="pinText">Select PIN Code</span> <span>▼</span></div>
+                            <div class="custom-options" id="pinOptions">
+                                <div class="search-box"><input type="text" placeholder="Search..." onkeyup="filterCustomList('pin', this.value)"></div>
+                                <div id="pinList"></div><div class="dropdown-item add-new-item" onclick="addNewDemographic('pin')">➕ Add New Entry</div>
+                            </div>
+                            <input type="hidden" id="pin" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sub-section-title">Statutory KYC Details</div>
+                <div class="form-grid">
+                    
+                    <!-- SECURE AADHAAR INPUT -->
+                    <div class="form-group secure-input-group">
+                        <label>Aadhaar Number <span class="required-star">*</span></label>
+                        <input type="text" inputmode="numeric" id="aadhaar" required placeholder="12-digit Aadhaar No" maxlength="12"
+                               oninput="liveAadhaarCheck(this.value);" 
+                               onblur="triggerSecureConfirm('aadhaar', 'confirmAadhaarBox', 'confirmAadhaar')">
+                        <span id="aadhaarStatus" class="confirm-status"></span>
+                        
+                        <div id="confirmAadhaarBox" class="confirm-box">
+                            <span class="manual-close-btn" onclick="closeConfirmBox('aadhaar', 'confirmAadhaarBox')" title="Edit Main Aadhaar Input">✖</span>
+                            <label>🔐 Confirm Aadhaar Number</label>
+                            <input type="password" inputmode="numeric" id="confirmAadhaar" maxlength="12" placeholder="Re-enter 12 digits to unlock" oninput="verifySecureMatch('aadhaar', 'confirmAadhaar', 'aadhaarStatus', 'confirmAadhaarBox')">
+                        </div>
+                        <div id="aadhaarWarning" class="warning-text"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>UAN Number (PF)</label>
+                        <input type="number" id="uan" placeholder="12-digit UAN No" oninput="if(this.value.length > 12) this.value = this.value.slice(0, 12);">
+                    </div>
+                </div>
+
+                <div class="sub-section-title">Contact & Communication Metrics</div>
+                <div class="form-grid">
+                    <div class="form-group"><label>Personal Mobile <span class="required-star">*</span></label><input type="number" id="personal_number" required placeholder="Primary contact" oninput="if(this.value.length > 10) this.value = this.value.slice(0, 10);"></div>
+                    <div class="form-group"><label>WhatsApp Number</label><input type="number" id="whatsapp_number" placeholder="WhatsApp active" oninput="if(this.value.length > 10) this.value = this.value.slice(0, 10);"></div>
+                    <div class="form-group"><label>Emergency Contact</label><input type="number" id="emergency_contact" placeholder="Family/Guardian" oninput="if(this.value.length > 10) this.value = this.value.slice(0, 10);"></div>
+                </div>
+
+                <div class="sub-section-title">Bank Remittance Framework</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Bank Name <span class="required-star">*</span></label>
+                        <div class="custom-select-wrapper" id="bank_nameWrapper">
+                            <div class="custom-select" onclick="toggleDropdown('bank_name')"><span id="bank_nameText">Select Bank</span> <span>▼</span></div>
+                            <div class="custom-options" id="bank_nameOptions">
+                                <div class="search-box"><input type="text" placeholder="Search bank..." onkeyup="filterCustomList('bank_name', this.value)"></div>
+                                <div id="bank_nameList"></div><div class="dropdown-item add-new-item" onclick="addNewDemographic('bank_name')">➕ Add New Bank</div>
+                            </div>
+                            <input type="hidden" id="bank_name" required>
+                        </div>
+                    </div>
+                    <div class="form-group"><label>Account Holder Name <span class="required-star">*</span></label><input type="text" id="account_holder" required placeholder="Name as per bank ledger"></div>
+                </div>
+                <div class="form-grid">
+                    
+                    <!-- SECURE BANK ACCOUNT INPUT -->
+                    <div class="form-group secure-input-group">
+                        <label>Account Number <span class="required-star">*</span></label>
+                        <input type="text" inputmode="numeric" id="account_number" required placeholder="Enter bank account no" 
+                               oninput="liveAccountCheck(this.value)"
+                               onblur="triggerSecureConfirm('account_number', 'confirmAccountBox', 'confirmAccount')">
+                        <span id="accountStatus" class="confirm-status"></span>
+                        
+                        <div id="confirmAccountBox" class="confirm-box">
+                            <span class="manual-close-btn" onclick="closeConfirmBox('account_number', 'confirmAccountBox')" title="Edit Main Account Input">✖</span>
+                            <label>🔐 Confirm Account Number</label>
+                            <input type="password" inputmode="numeric" id="confirmAccount" placeholder="Re-enter account no to unlock" oninput="verifySecureMatch('account_number', 'confirmAccount', 'accountStatus', 'confirmAccountBox')">
+                        </div>
+                        <div id="accountWarning" class="warning-text"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>IFSC Code <span class="required-star">*</span></label>
+                        <div class="custom-select-wrapper" id="ifsc_codeWrapper">
+                            <div class="custom-select" onclick="toggleDropdown('ifsc_code')"><span id="ifsc_codeText">Select IFSC Code</span> <span>▼</span></div>
+                            <div class="custom-options" id="ifsc_codeOptions">
+                                <div class="search-box"><input type="text" placeholder="Search IFSC..." onkeyup="filterCustomList('ifsc_code', this.value)"></div>
+                                <div id="ifsc_codeList"></div><div class="dropdown-item add-new-item" onclick="addNewDemographic('ifsc_code')">➕ Add New IFSC</div>
+                            </div>
+                            <input type="hidden" id="ifsc_code" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sub-section-title">On-Site Core Functional Position</div>
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label>Working Position Allocations (Select at least one) <span class="required-star">*</span></label>
+                        <div class="checkbox-console" style="margin-top: 10px;">
+                            <label class="console-label"><input type="checkbox" name="working_position[]" value="Erection" class="work-pos-checkbox"> 🏗️ Erection Unit Operations</label>
+                            <label class="console-label"><input type="checkbox" name="working_position[]" value="Sheeting" class="work-pos-checkbox"> 🧱 Sheeting Panel Operations</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="terms-container">
+                    <label class="console-label"><input type="checkbox" id="termsCheck" required> I hereby declare that all information uploaded above is authenticated, verified, and adheres to standard ATR Construction compliance guidelines. <span class="required-star">*</span></label>
+                </div>
+
+                <button type="submit" class="btn-submit-form" id="submitBtn">Submit & Sync to Master Database</button>
+            </form>
+
+            <div class="success-actions-box" id="successBox">
+                <h3 id="successBoxTitle">✅ Registration Successfully Synced!</h3>
+                <p id="successBoxDesc" style="margin-bottom: 20px; font-size: 14px; color: var(--text-muted);">Employee data has been added directly to the Live Master Database.</p>
+                <div class="action-btn-group">
+                    <button type="button" class="btn-action btn-pdf" onclick="generateProfessionalReport(true)">📥 Download PDF</button>
+                    <button type="button" class="btn-action btn-print" onclick="generateProfessionalReport(false)">🖨️ Print Form</button>
+                    <button type="button" class="btn-action btn-new" onclick="resetForNewEntry(false)">➕ Add Another Employee</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MODERN PROFESSIONAL PRINT / PDF CONTAINER ================= -->
+    <div id="printContainer" class="print-container">
+        <!-- PAGE 1: User Details -->
+        <div style="position: relative; min-height: 1123px; width: 100%;">
+            <div class="print-header" style="background-image: url('assets/images/header.png');">
+                [Add 'header.png' (794x120px) in assets/images/ folder.]
+            </div>
+
+            <div class="print-body">
+                <div class="print-title">Employee Registration Form</div>
+                
+                <div class="print-photo-box">
+                    <img id="pr_photo_img" src="" alt="" style="display: none;">
+                    <div class="print-photo-placeholder" id="pr_photo_placeholder">Photo Not Attached</div>
+                </div>
+
+                <div class="print-section-card" style="border-color: #0aa2c0; margin-top: 50px;">
+                    <div class="print-section-head head-pos">On-Site Core Functional Position</div>
+                    <div class="print-row">
+                        <div class="print-label">Allocated Roles</div>
+                        <div class="print-val" id="pr_workPos"></div>
+                    </div>
+                </div>
+
+                <div class="print-section-card" style="border-color: #28a745;">
+                    <div class="print-section-head head-personal">Personal Profiles</div>
+                    <div class="print-row"><div class="print-label">Employee ID</div><div class="print-val" id="pr_empId"></div></div>
+                    <div class="print-row"><div class="print-label">Registration Date</div><div class="print-val" id="pr_regDate"></div></div>
+                    <div class="print-row"><div class="print-label">Full Name</div><div class="print-val" id="pr_name"></div></div>
+                    <div class="print-row"><div class="print-label">Father's Name</div><div class="print-val" id="pr_father"></div></div>
+                    <div class="print-row"><div class="print-label">Date of Birth</div><div class="print-val" id="pr_dob"></div></div>
+                    <div class="print-row"><div class="print-label">Religion</div><div class="print-val" id="pr_religion"></div></div>
+                    <div class="print-row"><div class="print-label">Designation</div><div class="print-val" id="pr_desig"></div></div>
+                </div>
+                
+                <div class="print-section-card" style="border-color: #6f42c1;">
+                    <div class="print-section-head head-address">Address & Demographics</div>
+                    <div class="print-row"><div class="print-label">Village / Street</div><div class="print-val" id="pr_village"></div></div>
+                    <div class="print-row"><div class="print-label">Post Office (P.O) & P.S</div><div class="print-val" id="pr_po_ps"></div></div>
+                    <div class="print-row"><div class="print-label">District & PIN Code</div><div class="print-val" id="pr_dist_pin"></div></div>
+                </div>
+
+                <div class="print-section-card" style="border-color: #fd7e14;">
+                    <div class="print-section-head head-kyc">Statutory KYC Details</div>
+                    <div class="print-row"><div class="print-label">Aadhaar Number</div><div class="print-val" id="pr_aadhaar"></div></div>
+                    <div class="print-row"><div class="print-label">UAN (PF) Number</div><div class="print-val" id="pr_uan"></div></div>
+                </div>
+
+                <div class="print-section-card" style="border-color: #bd2130;">
+                    <div class="print-section-head head-contact">Contact & Communication</div>
+                    <div class="print-row"><div class="print-label">Personal Mobile</div><div class="print-val" id="pr_mobile"></div></div>
+                    <div class="print-row"><div class="print-label">WhatsApp / Emergency</div><div class="print-val" id="pr_whatsapp_emerg"></div></div>
+                </div>
+
+                <div class="print-section-card" style="border-color: #007bff;">
+                    <div class="print-section-head head-bank">Bank Remittance Framework</div>
+                    <div class="print-row"><div class="print-label">Bank Name</div><div class="print-val" id="pr_bank"></div></div>
+                    <div class="print-row"><div class="print-label">Account Holder Name</div><div class="print-val" id="pr_accHolder"></div></div>
+                    <div class="print-row"><div class="print-label">Account Number</div><div class="print-val" id="pr_accNumber"></div></div>
+                    <div class="print-row"><div class="print-label">IFSC Code</div><div class="print-val" id="pr_ifsc"></div></div>
+                </div>
+            </div>
+
+            <div class="print-footer" style="background-image: url('assets/images/footer.png');">
+                [Add 'footer.png' (794x80px) in assets/images/ folder.]
+            </div>
+        </div>
+
+        <!-- PAGE 2: Declaration & Signatures -->
+        <div class="print-terms-page">
+            <div class="print-title" style="border:none; margin-bottom: 10px;">Terms & Conditions</div>
+            <div class="print-terms">
+                <b>Declaration:</b> I hereby declare that all the information provided in this registration form is true, correct, and authenticated to the best of my knowledge and belief. I understand that any misrepresentation of facts will lead to immediate termination of my engagement. I agree to abide by the standard compliance guidelines, safety protocols, rules, and regulations set forth by <b>ATR Construction</b>.
+            </div>
+
+            <div class="signature-box">
+                <div class="sig-line">Signature / Thumb Impression<br>of the Employee</div>
+                <div class="sig-line">Authorized Signatory<br>ATR Construction</div>
+            </div>
+
+            <div class="print-footer" style="background-image: url('assets/images/footer.png');">
+                [Add 'footer.png' (794x80px) in assets/images/ folder.]
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Logic Engine -->
+    <script>
+        // =========================================================================================
+        // 0. VERHOEFF ALGORITHM FOR AADHAAR CHECKSUM VALIDATION
+        // =========================================================================================
+        const d = [
+            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+            [1, 2, 3, 4, 0, 6, 7, 8, 9, 5],
+            [2, 3, 4, 0, 1, 7, 8, 9, 5, 6],
+            [3, 4, 0, 1, 2, 8, 9, 5, 6, 7],
+            [4, 0, 1, 2, 3, 9, 5, 6, 7, 8],
+            [5, 9, 8, 7, 6, 0, 4, 3, 2, 1],
+            [6, 5, 9, 8, 7, 1, 0, 4, 3, 2],
+            [7, 6, 5, 9, 8, 2, 1, 0, 4, 3],
+            [8, 7, 6, 5, 9, 3, 2, 1, 0, 4],
+            [9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
+        ];
+        const p = [
+            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+            [1, 5, 7, 6, 2, 8, 3, 0, 9, 4],
+            [5, 8, 0, 3, 7, 9, 6, 1, 4, 2],
+            [8, 9, 1, 6, 0, 4, 3, 5, 2, 7],
+            [9, 4, 5, 3, 1, 2, 6, 8, 7, 0],
+            [4, 2, 8, 6, 5, 7, 3, 9, 0, 1],
+            [2, 7, 9, 3, 8, 0, 6, 4, 1, 5],
+            [7, 0, 4, 6, 9, 1, 3, 2, 5, 8]
+        ];
+
+        function validateAadhaar(aadhaarNo) {
+            if (!/^\d{12}$/.test(aadhaarNo)) return false;
+            let c = 0;
+            let invertedArray = aadhaarNo.split('').reverse().map(Number);
+            for (let i = 0; i < invertedArray.length; i++) {
+                c = d[c][p[i % 8][invertedArray[i]]];
+            }
+            return c === 0;
+        }
+
+        // =========================================================================================
+        // 0.1 CROPPER JS & IMAGE UPLOAD ENGINE
+        // =========================================================================================
+        let cropper;
+
+        function handlePhotoUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (file.type === 'application/pdf') {
+                convertPDFToImage(file);
+            } else if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    openCropModal(e.target.result);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                alert("Please upload a valid Image or PDF file.");
+                event.target.value = "";
+            }
+        }
+
+        async function convertPDFToImage(file) {
+            try {
+                const fileURL = URL.createObjectURL(file);
+                const pdf = await pdfjsLib.getDocument(fileURL).promise;
+                const page = await pdf.getPage(1);
+                const scale = 2.0; 
+                const viewport = page.getViewport({ scale: scale });
+                
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                await page.render({ canvasContext: context, viewport: viewport }).promise;
+                const imgData = canvas.toDataURL('image/jpeg', 0.9);
+                openCropModal(imgData);
+            } catch (error) {
+                console.error("PDF Conversion Error:", error);
+                alert("Failed to read PDF. Please upload an image instead.");
+                document.getElementById('emp_photo').value = "";
+            }
+        }
+
+        function openCropModal(imageSrc) {
+            const image = document.getElementById('imageToCrop');
+            image.src = imageSrc;
+            document.getElementById('cropModal').style.display = 'flex';
+            
+            if (cropper) { cropper.destroy(); }
+            
+            setTimeout(() => {
+                cropper = new Cropper(image, {
+                    aspectRatio: 1, 
+                    viewMode: 2,
+                    autoCropArea: 0.8,
+                    background: false
+                });
+            }, 100);
+        }
+
+        function closeCropModal() {
+            document.getElementById('cropModal').style.display = 'none';
+            if (cropper) { cropper.destroy(); cropper = null; }
+            document.getElementById('emp_photo').value = "";
+            document.getElementById('croppedImageData').value = "";
+            document.getElementById('photoPreviewContainer').style.display = 'none';
+        }
+
+        function cropAndSaveImage() {
+            if (!cropper) return;
+            const canvas = cropper.getCroppedCanvas({ width: 400, height: 400 });
+            const base64Img = canvas.toDataURL('image/jpeg', 0.9);
+            
+            document.getElementById('croppedImageData').value = base64Img;
+            document.getElementById('photoPreview').src = base64Img;
+            document.getElementById('photoPreviewContainer').style.display = 'flex';
+            
+            document.getElementById('cropModal').style.display = 'none';
+            cropper.destroy(); cropper = null;
+        }
+
+
+        // =========================================================================================
+        // 1. 3-IN-1 PORTAL ROLE ENGINE (ADMIN / OFFICE STAFF / SUPERVISOR)
+        // =========================================================================================
+        let currentPortalMode = "admin"; 
+        let loggedUserId = "ADMIN";
+        let loggedUserName = "Admin";
+        let assignedSite = "";
+        let pendingExistingUpdatePayload = null;
+
+        const initialMockEmployees = [
+            { id: "ATR-EMP-001", name: "Amitabha Roy", site: "Dum Dum Project", aadhaar: "[Aadhaar Redacted]", account_number: "12345678901", bank_name: "State Bank of India", ifsc_code: "SBIN0001234", designation: "Senior Site Engineer (26 Days)", working_positions: "Erection" },
+            { id: "ATR-EMP-002", name: "Sayan Karmakar", site: "Salt Lake Sector V", aadhaar: "[Aadhaar Redacted]", account_number: "98765432109", bank_name: "HDFC Bank", ifsc_code: "HDFC0001234", designation: "Quality Supervisor (30 Days)", working_positions: "Sheeting" }
+        ];
+
+        let liveDatabase = JSON.parse(localStorage.getItem('atr_employees')) || initialMockEmployees;
+
+        function refreshLiveDatabase() {
+            const latest = JSON.parse(localStorage.getItem('atr_employees'));
+            if (Array.isArray(latest) && latest.length > 0) {
+                liveDatabase = latest;
+            } else if (!localStorage.getItem('atr_employees')) {
+                localStorage.setItem('atr_employees', JSON.stringify(initialMockEmployees));
+                liveDatabase = [...initialMockEmployees];
+            }
+            return liveDatabase;
+        }
+
+        function getNextAvailableEmpNumber(reserveNow = false) {
+            refreshLiveDatabase();
+            let maxSeq = parseInt(localStorage.getItem('atr_emp_id_counter') || '0', 10);
+
+            liveDatabase.forEach(emp => {
+                const match = String(emp.id || '').match(/(\d+)$/);
+                if (match) {
+                    const num = parseInt(match[1], 10);
+                    if (num > maxSeq) maxSeq = num;
+                }
+            });
+
+            const officeQueue = JSON.parse(localStorage.getItem('atr_office_approvals')) || [];
+            officeQueue.forEach(req => {
+                if (req.newData && req.newData.id) {
+                    const match = String(req.newData.id).match(/(\d+)$/);
+                    if (match) {
+                        const num = parseInt(match[1], 10);
+                        if (num > maxSeq) maxSeq = num;
+                    }
+                }
+            });
+
+            const supQueue = JSON.parse(localStorage.getItem('atr_supervisor_approvals')) || [];
+            supQueue.forEach(req => {
+                if (req.newData && req.newData.id) {
+                    const match = String(req.newData.id).match(/(\d+)$/);
+                    if (match) {
+                        const num = parseInt(match[1], 10);
+                        if (num > maxSeq) maxSeq = num;
+                    }
+                }
+            });
+
+            const nextSeq = maxSeq + 1;
+            if (reserveNow) {
+                localStorage.setItem('atr_emp_id_counter', String(nextSeq));
+            }
+            return `ATR-EMP-${String(nextSeq).padStart(3, '0')}`;
+        }
+
+        function updateNextEmpIdPreview() {
+            const nextId = getNextAvailableEmpNumber(false);
+            const badge = document.getElementById('nextEmpIdBadge');
+            const inputField = document.getElementById('emp_id_input');
+            if (badge) badge.innerText = `⚡ Next Auto ID: ${nextId}`;
+            if (inputField && !selectedExistingId) {
+                inputField.value = `${nextId} (Auto-Assigned on Submit)`;
+            }
+        }
+
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'atr_employees' || e.key === 'atr_emp_id_counter' || e.key === 'atr_office_approvals' || e.key === 'atr_supervisor_approvals') {
+                refreshLiveDatabase();
+                renderExistingEmpList();
+                updateNextEmpIdPreview();
+                const curAadhaar = document.getElementById('aadhaar').value;
+                const curAcc = document.getElementById('account_number').value;
+                if (curAadhaar) checkDuplicateAadhaarOnly(curAadhaar);
+                if (curAcc) checkDuplicateAccountOnly(curAcc);
+            }
+            if (e.key === 'atr_employee_categories' || e.key === 'atr_designations' || e.key === 'atr_demographics_custom') {
+                syncStoredDesignationsAndDemographics();
+                populateAllDropdowns();
+            }
+        });
+
+        let listData = {
+            designation: ["Senior Site Engineer (26 Days)", "Quality Supervisor (30 Days)", "Primary Contractor (26 Days)", "Helper (26 Days)"],
+            religion: ["Hinduism", "Islam", "Christianity", "Sikhism", "Buddhism", "Jainism", "Other"],
+            village: ["Station Road", "Market Para", "Main Street", "Station Para"],
+            post: ["Barrackpore", "Durgapur", "Kolkata", "Howrah"],
+            ps: ["Barrackpore", "Durgapur", "Park Street", "Howrah"],
+            district: ["North 24 Parganas", "Paschim Bardhaman", "Kolkata", "Howrah"],
+            pin: ["700120", "713201", "700016", "711101"],
+            bank_name: ["State Bank of India", "HDFC Bank", "Axis Bank", "ICICI Bank", "Punjab National Bank", "Bank of Baroda"],
+            ifsc_code: ["SBIN0001234", "HDFC0001234", "UTIB0000123", "ICIC0001234", "PUNB0001234", "BARB0001234"]
+        };
+
+        let isAgeValid = true;
+        let hasDuplicateAadhaar = false;
+        let hasInvalidAadhaarMath = false;
+        let hasDuplicateAccount = false;
+        let selectedExistingId = null;
+
+        let isAadhaarConfirmed = false;
+        let isAccountConfirmed = false;
+        let lastConfirmedAadhaarValue = "";
+        let lastConfirmedAccountValue = "";
+
+        function checkPortalPermissions() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewParam = (urlParams.get('view') || '').toLowerCase();
+            const badge = document.getElementById('roleModeBadge');
+            const backBtn = document.getElementById('btnBackDashboard');
+            const recordsLink = document.getElementById('btnViewRecords');
+            const desigAddBtn = document.getElementById('addNewDesigBtn');
+            const submitBtn = document.getElementById('submitBtn');
+            const modalTitle = document.getElementById('roleApprovalModalTitle');
+            const modalDesc = document.getElementById('roleApprovalModalDesc');
+
+            let parentPath = "";
+            try {
+                if (window.parent && window.parent !== window) {
+                    parentPath = (window.parent.location.pathname || '').toLowerCase();
+                }
+            } catch (e) {}
+
+            if (viewParam === 'office' || parentPath.includes('officedashboard')) {
+                currentPortalMode = 'office';
+                loggedUserId = urlParams.get('userId') || sessionStorage.getItem('atr_logged_office_id') || localStorage.getItem('atr_logged_office_id') || "OFF-101";
+                loggedUserName = urlParams.get('userName') || "Office Staff";
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🏢 Office Mode (${loggedUserName}) — Synced with ApproveOffice.html`;
+                }
+                if (recordsLink) {
+                    recordsLink.href = `RegisteredEmployeeRecords.html?view=office&userId=${encodeURIComponent(loggedUserId)}&userName=${encodeURIComponent(loggedUserName)}`;
+                }
+                if (backBtn) {
+                    backBtn.href = "office/office_dashboard_home.html";
+                }
+                if (desigAddBtn) {
+                    desigAddBtn.innerText = "+ Add New Designation (Send to ApproveOffice)";
+                }
+                if (submitBtn) {
+                    submitBtn.innerText = "📤 Submit New Joining & Sync to ApproveOffice.html";
+                }
+                if (modalTitle) modalTitle.innerText = "🏢 Send Update to ApproveOffice.html";
+                if (modalDesc) modalDesc.innerHTML = "অফিস পোর্টাল থেকে পুরোনো এমপ্লয়ির (<code>Existing Employee</code>) তথ্য এডিট করলে তা অ্যাডমিনের <strong>ApproveOffice.html</strong>-এ পাঠানো হবে।";
+
+            } else if (viewParam === 'supervisor' || parentPath.includes('supervisordashboard')) {
+                currentPortalMode = 'supervisor';
+                assignedSite = (urlParams.get('site') || sessionStorage.getItem('atr_supervisor_site') || "Salt Lake Sector V").trim();
+                loggedUserId = urlParams.get('supId') || "SUP-003";
+                loggedUserName = urlParams.get('supName') || "Supervisor";
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🛡️ Supervisor Mode (🔒 Site: ${assignedSite}) — Routes to ApproveSupervisor.html`;
+                }
+                if (recordsLink) {
+                    recordsLink.href = `RegisteredEmployeeRecords.html?view=supervisor&site=${encodeURIComponent(assignedSite)}`;
+                }
+                if (backBtn) {
+                    backBtn.href = "supervisor/supervisor_dashboard_home.html";
+                }
+                if (desigAddBtn) {
+                    desigAddBtn.innerText = "+ Add New Designation (Send to ApproveSupervisor)";
+                }
+                if (submitBtn) {
+                    submitBtn.innerText = `📤 Submit Joining for ${assignedSite} (ApproveSupervisor)`;
+                }
+                if (modalTitle) modalTitle.innerText = "🛡️ Send Update to ApproveSupervisor.html";
+                if (modalDesc) modalDesc.innerHTML = `সুপারভাইজার পোর্টাল (${assignedSite}) থেকে পুরোনো এমপ্লয়ির তথ্য এডিট করলে তা অ্যাডমিনের <strong>ApproveSupervisor.html</strong>-এ পাঠানো হবে।`;
+
+            } else {
+                currentPortalMode = 'admin';
+                if (backBtn) {
+                    backBtn.href = "dashboard_home.html";
+                }
+            }
+        }
+
+        function handleBackToDashboard(event) {
+            if (currentPortalMode === 'office') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.loadOfficeWorkspaceHome === 'function') {
+                        window.parent.loadOfficeWorkspaceHome();
+                        return;
+                    }
+                } catch (e) {}
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "office_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "office/office_dashboard_home.html";
+            } else if (currentPortalMode === 'supervisor') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window) {
+                        const parentHomeLink = window.parent.document.querySelector('.dashboard-home-link');
+                        if (parentHomeLink) {
+                            window.location.href = parentHomeLink.href;
+                            return;
+                        }
+                    }
+                } catch (e) {}
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "supervisor_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "supervisor/supervisor_dashboard_home.html";
+            }
+        }
+
+        function syncStoredDesignationsAndDemographics() {
+            let empCategories = JSON.parse(localStorage.getItem('atr_employee_categories') || '[]');
+            empCategories.forEach(c => {
+                if (c.position && c.days) {
+                    let formatted = `${c.position} (${c.days} Days)`;
+                    if (!listData.designation.includes(formatted)) listData.designation.push(formatted);
+                }
+            });
+
+            let storedDesig = JSON.parse(localStorage.getItem('atr_designations') || '[]');
+            storedDesig.forEach(d => {
+                let name = `${d.name} (${d.days} Days)`;
+                if(!listData.designation.includes(name)) listData.designation.push(name);
+            });
+
+            let customDemo = JSON.parse(localStorage.getItem('atr_demographics_custom') || '{}');
+            Object.keys(customDemo).forEach(field => {
+                if (listData[field] && Array.isArray(customDemo[field])) {
+                    customDemo[field].forEach(val => {
+                        if (!listData[field].includes(val)) listData[field].push(val);
+                    });
+                }
+            });
+        }
+
+        window.onload = function() {
+            checkPortalPermissions();
+            refreshLiveDatabase();
+            syncStoredDesignationsAndDemographics();
+            populateAllDropdowns();
+            renderExistingEmpList();
+            updateNextEmpIdPreview();
+
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('mode') === 'edit') {
+                const editData = JSON.parse(localStorage.getItem('edit_employee_data'));
+                if (editData) {
+                    document.querySelector('input[name="emp_status"][value="Existing"]').checked = true;
+                    toggleEmpSelection(true);
+                    selectExistingEmployee(editData);
+                }
+            }
+        };
+
+        // --- Custom Dropdown Engine ---
+        function populateAllDropdowns() { Object.keys(listData).forEach(field => renderDropdownList(field)); }
+
+        function renderDropdownList(field) {
+            const container = document.getElementById(`${field}List`);
+            if(!container) return;
+            container.innerHTML = "";
+            listData[field].forEach(val => {
+                const div = document.createElement("div");
+                div.className = "dropdown-item"; div.innerText = val;
+                div.onclick = () => selectDropdownValue(field, val);
+                container.appendChild(div);
+            });
+        }
+
+        function toggleDropdown(field, event) {
+            if(event) event.stopPropagation();
+            document.querySelectorAll('.custom-options').forEach(el => { if(el.id !== `${field}Options`) el.classList.remove('show'); });
+            document.getElementById(`${field}Options`).classList.toggle('show');
+        }
+
+        function selectDropdownValue(field, value) {
+            document.getElementById(field).value = value;
+            document.getElementById(`${field}Text`).innerText = value;
+            document.getElementById(`${field}Options`).classList.remove('show');
+        }
+
+        function filterCustomList(field, query) {
+            query = query.toLowerCase();
+            document.querySelectorAll(`#${field}List .dropdown-item`).forEach(item => {
+                item.style.display = item.innerText.toLowerCase().includes(query) ? "" : "none";
+            });
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.custom-select-wrapper')) {
+                document.querySelectorAll('.custom-options').forEach(o => o.classList.remove('show'));
+            }
+        });
+
+        function addNewDemographic(field) {
+            let label = field.replace('_', ' ').toUpperCase();
+            let newVal = prompt(`Enter new ${label} entry:`);
+            if (!newVal || newVal.trim() === "") return;
+            newVal = newVal.trim();
+            if(field === 'ifsc_code') newVal = newVal.toUpperCase();
+            if (listData[field].map(i => i.toLowerCase()).includes(newVal.toLowerCase())) { alert(`⚠️ This ${label} already exists in the list!`); return; }
+            listData[field].push(newVal);
+
+            let customDemo = JSON.parse(localStorage.getItem('atr_demographics_custom') || '{}');
+            if (!customDemo[field]) customDemo[field] = [];
+            customDemo[field].push(newVal);
+            localStorage.setItem('atr_demographics_custom', JSON.stringify(customDemo));
+
+            renderDropdownList(field);
+            selectDropdownValue(field, newVal);
+        }
+
+        function openDesignationModal() {
+            document.getElementById('desigModal').style.display = 'flex';
+            document.getElementById('designationOptions').classList.remove('show');
+            document.getElementById('desigPassGroup').style.display = currentPortalMode === 'admin' ? 'flex' : 'none';
+            document.getElementById('desigAdminPass').value = '';
+            document.getElementById('desigName').value = '';
+            document.getElementById('desigDays').value = '';
+        }
+        function closeDesignationModal() { document.getElementById('desigModal').style.display = 'none'; }
+        
+        function submitDesignationModal() {
+            if (currentPortalMode === 'admin') {
+                const enteredPass = document.getElementById('desigAdminPass').value;
+                if (enteredPass !== 'admin123' && enteredPass !== 'admin') {
+                    alert("❌ Incorrect Admin Password! (Use admin123)");
+                    return;
+                }
+            }
+
+            let name = document.getElementById('desigName').value.trim();
+            let days = document.getElementById('desigDays').value.trim();
+            if(!name || !days) { alert("⚠️ Please fill out both Designation Title and Working Days."); return; }
+            
+            let newVal = `${name} (${days} Days)`;
+            if (listData.designation.includes(newVal)) { alert("⚠️ Designation already exists!"); return; }
+
+            listData.designation.push(newVal);
+            let stored = JSON.parse(localStorage.getItem('atr_designations') || '[]');
+            stored.push({ name: name, days: days });
+            localStorage.setItem('atr_designations', JSON.stringify(stored));
+
+            if (currentPortalMode !== 'admin') {
+                pushRequestToRoleApprovalQueue(
+                    "NEW DESIGNATION",
+                    `Added Designation: ${newVal}`,
+                    null,
+                    { position: name, days: parseInt(days, 10) },
+                    `Added during Employee Registration by ${loggedUserName}`
+                );
+            }
+
+            renderDropdownList('designation');
+            selectDropdownValue('designation', newVal);
+            closeDesignationModal();
+        }
+
+        // =========================================================================================
+        // 2. FIXED DOUBLE CONFIRMATION SECURITY ENGINE & VERHOEFF VALIDATION
+        // =========================================================================================
+        function closeConfirmBox(mainInputId, confirmBoxId) {
+            document.getElementById(confirmBoxId).style.display = 'none';
+            const mainInput = document.getElementById(mainInputId);
+            mainInput.classList.remove('input-blurred');
+            mainInput.focus();
+        }
+
+        function triggerSecureConfirm(mainInputId, confirmBoxId, confirmInputId) {
+            const mainInput = document.getElementById(mainInputId);
+            const cleanVal = mainInput.value.replace(/[^0-9]/g, '');
+            mainInput.value = cleanVal;
+
+            if (cleanVal.length === 0) return;
+
+            if (mainInputId === 'aadhaar' && isAadhaarConfirmed && cleanVal === lastConfirmedAadhaarValue) {
+                return;
+            }
+            if (mainInputId === 'account_number' && isAccountConfirmed && cleanVal === lastConfirmedAccountValue) {
+                return;
+            }
+
+            if (mainInputId === 'aadhaar' && cleanVal.length < 12) {
+                const warning = document.getElementById('aadhaarWarning');
+                warning.style.display = 'block';
+                warning.innerHTML = `⚠️ Aadhaar Number must be exactly 12 digits (Currently: ${cleanVal.length} digits).`;
+                return;
+            }
+
+            mainInput.classList.add('input-blurred');
+            document.getElementById(confirmBoxId).style.display = 'block';
+            
+            if (mainInputId === 'aadhaar') isAadhaarConfirmed = false;
+            if (mainInputId === 'account_number') isAccountConfirmed = false;
+
+            if (confirmInputId) {
+                setTimeout(() => {
+                    const confEl = document.getElementById(confirmInputId);
+                    if (confEl) confEl.focus();
+                }, 50);
+            }
+        }
+
+        function verifySecureMatch(mainInputId, confirmInputId, statusId, confirmBoxId) {
+            const mainInput = document.getElementById(mainInputId);
+            const confirmInput = document.getElementById(confirmInputId);
+            const statusIcon = document.getElementById(statusId);
+
+            const mainVal = mainInput.value.replace(/[^0-9]/g, '');
+            let confirmVal = confirmInput.value.replace(/[^0-9]/g, '');
+            if (mainInputId === 'aadhaar' && confirmVal.length > 12) {
+                confirmVal = confirmVal.slice(0, 12);
+            }
+            confirmInput.value = confirmVal;
+            
+            if (confirmVal.length > 0) {
+                if (mainVal === confirmVal) {
+                    
+                    // Double check Math validity for Aadhaar
+                    if (mainInputId === 'aadhaar' && !validateAadhaar(mainVal)) {
+                        statusIcon.innerHTML = "❌";
+                        isAadhaarConfirmed = false;
+                        return;
+                    }
+
+                    statusIcon.innerHTML = "✅";
+                    mainInput.classList.remove('input-blurred');
+                    document.getElementById(confirmBoxId).style.display = 'none';
+                    confirmInput.value = ""; 
+                    
+                    if (mainInputId === 'aadhaar') {
+                        isAadhaarConfirmed = true;
+                        lastConfirmedAadhaarValue = mainVal;
+                    }
+                    if (mainInputId === 'account_number') {
+                        isAccountConfirmed = true;
+                        lastConfirmedAccountValue = mainVal;
+                    }
+                } else {
+                    statusIcon.innerHTML = "❌";
+                    if (mainInputId === 'aadhaar') isAadhaarConfirmed = false;
+                    if (mainInputId === 'account_number') isAccountConfirmed = false;
+                }
+            } else {
+                statusIcon.innerHTML = "";
+            }
+        }
+
+        function checkDuplicateAadhaarOnly(val) {
+            refreshLiveDatabase();
+            const warning = document.getElementById('aadhaarWarning');
+            hasDuplicateAadhaar = false;
+            hasInvalidAadhaarMath = false;
+
+            if (val.length === 12) {
+                // 1. Math Verification
+                if (!validateAadhaar(val)) {
+                    warning.style.display = 'block';
+                    warning.innerHTML = `🛑 <b>INVALID AADHAAR:</b> এই আধার নম্বরটি গাণিতিকভাবে ভুল (Checksum Failed)। সঠিক নম্বর দিন।`;
+                    hasInvalidAadhaarMath = true;
+                    document.getElementById('aadhaarStatus').innerHTML = "❌";
+                    return;
+                }
+
+                // 2. Duplicate Verification
+                let match = liveDatabase.find(emp => emp.aadhaar === val && emp.id !== selectedExistingId);
+                if (match) {
+                    warning.style.display = 'block';
+                    warning.innerHTML = `🛑 DUPLICATE ALERT: This Aadhaar is assigned to <br><b>👤 ${match.name} (ID: ${match.id})</b>`;
+                    hasDuplicateAadhaar = true;
+                } else {
+                    warning.style.display = 'none';
+                }
+            } else {
+                warning.style.display = 'none';
+            }
+        }
+
+        function checkDuplicateAccountOnly(val) {
+            refreshLiveDatabase();
+            const warning = document.getElementById('accountWarning');
+            if (val.length >= 8) {
+                let match = liveDatabase.find(emp => emp.account_number === val && emp.id !== selectedExistingId);
+                if (match) {
+                    warning.style.display = 'block';
+                    warning.innerHTML = `🛑 DUPLICATE ALERT: This Bank A/C is assigned to <br><b>👤 ${match.name} (ID: ${match.id})</b> <br>🏦 Bank: ${match.bank_name || 'N/A'}`;
+                    hasDuplicateAccount = true;
+                } else {
+                    warning.style.display = 'none';
+                    hasDuplicateAccount = false;
+                }
+            } else {
+                warning.style.display = 'none';
+                hasDuplicateAccount = false;
+            }
+        }
+
+        function liveAadhaarCheck(val) {
+            let cleanVal = val.replace(/[^0-9]/g, '');
+            if (cleanVal.length > 12) cleanVal = cleanVal.slice(0, 12);
+            document.getElementById('aadhaar').value = cleanVal;
+
+            if (cleanVal !== lastConfirmedAadhaarValue) {
+                isAadhaarConfirmed = false;
+                if(cleanVal.length !== 12) document.getElementById('aadhaarStatus').innerHTML = "";
+            }
+            checkDuplicateAadhaarOnly(cleanVal);
+        }
+
+        function liveAccountCheck(val) {
+            let cleanVal = val.replace(/[^0-9]/g, '');
+            document.getElementById('account_number').value = cleanVal;
+
+            if (cleanVal !== lastConfirmedAccountValue) {
+                isAccountConfirmed = false;
+                document.getElementById('accountStatus').innerHTML = "";
+            }
+            checkDuplicateAccountOnly(cleanVal);
+        }
+
+        // --- Existing Employee Engine ---
+        function renderExistingEmpList() {
+            refreshLiveDatabase();
+            const container = document.getElementById('empListItems');
+            container.innerHTML = "";
+
+            const accessibleEmployees = (currentPortalMode === 'supervisor' && assignedSite)
+                ? liveDatabase.filter(emp => !emp.site || emp.site === assignedSite)
+                : liveDatabase;
+
+            if (accessibleEmployees.length === 0) {
+                container.innerHTML = `<div class="dropdown-item" style="color:var(--text-muted); cursor:default;">No employees found${currentPortalMode === 'supervisor' ? ' for ' + assignedSite : ''}</div>`;
+                return;
+            }
+
+            accessibleEmployees.forEach(emp => {
+                const div = document.createElement("div");
+                div.className = "dropdown-item";
+                div.innerText = `${emp.id} - ${emp.name}${emp.site ? ' (' + emp.site + ')' : ''}`;
+                div.onclick = () => { selectExistingEmployee(emp); document.getElementById('empDropdownList').classList.remove('show'); };
+                container.appendChild(div);
+            });
+        }
+
+        function filterExistingEmp(query) {
+            query = query.toLowerCase();
+            document.querySelectorAll('#empListItems .dropdown-item').forEach(item => {
+                item.style.display = item.innerText.toLowerCase().includes(query) ? "" : "none";
+            });
+        }
+
+        function toggleEmpSelection(isExisting) {
+            const inputField = document.getElementById('emp_id_input');
+            const existingWrapper = document.getElementById('existingEmpWrapper');
+            const actionBadge = document.getElementById('userActionBadge');
+            const submitBtn = document.getElementById('submitBtn');
+
+            if (isExisting) {
+                document.getElementById('empLabel').innerText = currentPortalMode === 'supervisor'
+                    ? `Search & Select Existing Employee (${assignedSite})`
+                    : "Search & Select Existing Employee";
+                inputField.style.display = 'none';
+                existingWrapper.style.display = 'block';
+                if (actionBadge) actionBadge.innerText = "Action: Update Existing Employee";
+                if (submitBtn) {
+                    if (currentPortalMode === 'admin') {
+                        submitBtn.innerText = "🔒 Verify & Update Existing Employee";
+                    } else if (currentPortalMode === 'supervisor') {
+                        submitBtn.innerText = "📤 Send Employee Update to ApproveSupervisor.html";
+                    } else {
+                        submitBtn.innerText = "📤 Send Employee Update to ApproveOffice.html";
+                    }
+                }
+            } else {
+                document.getElementById('empLabel').innerText = "Employee ID (Multi-User Auto Sequence)";
+                existingWrapper.style.display = 'none';
+                inputField.style.display = 'block';
+                if (actionBadge) actionBadge.innerText = "Action: New Registration";
+                if (submitBtn) {
+                    if (currentPortalMode === 'admin') {
+                        submitBtn.innerText = "Submit & Sync to Master Database";
+                    } else if (currentPortalMode === 'supervisor') {
+                        submitBtn.innerText = `📤 Submit Joining for ${assignedSite} (ApproveSupervisor)`;
+                    } else {
+                        submitBtn.innerText = "📤 Submit New Joining & Sync to ApproveOffice.html";
+                    }
+                }
+                selectedExistingId = null;
+                resetForNewEntry(true);
+            }
+        }
+
+        function selectExistingEmployee(data) {
+            if (currentPortalMode === 'supervisor' && assignedSite && data.site && data.site !== assignedSite) {
+                alert("❌ Unauthorized: You can only view or update employees assigned to your site.");
+                return;
+            }
+
+            document.getElementById('empSearchInput').value = `${data.id} - ${data.name}`;
+            selectedExistingId = data.id;
+
+            // Load Cropped Image if exists
+            if(data.photo) {
+                document.getElementById('croppedImageData').value = data.photo;
+                document.getElementById('photoPreview').src = data.photo;
+                document.getElementById('photoPreviewContainer').style.display = 'flex';
+            } else {
+                document.getElementById('croppedImageData').value = "";
+                document.getElementById('photoPreviewContainer').style.display = 'none';
+            }
+
+            document.getElementById('name').value = data.name || '';
+            document.getElementById('father_name').value = data.father_name || '';
+            document.getElementById('dob').value = data.dob || '';
+            if (data.dob) calculateAge(data.dob);
+
+            ['designation', 'religion', 'village', 'post', 'ps', 'district', 'pin', 'bank_name', 'ifsc_code'].forEach(field => {
+                if(data[field]) selectDropdownValue(field, data[field]);
+            });
+
+            const existingAadhaar = (data.aadhaar && !String(data.aadhaar).includes('Redacted')) ? String(data.aadhaar).replace(/[^0-9]/g, '') : '';
+            const existingAccount = data.account_number ? String(data.account_number).replace(/[^0-9]/g, '') : '';
+
+            document.getElementById('aadhaar').value = existingAadhaar;
+            document.getElementById('uan').value = data.uan || '';
+            document.getElementById('personal_number').value = data.personal_number || '';
+            document.getElementById('whatsapp_number').value = data.whatsapp_number || '';
+            document.getElementById('emergency_contact').value = data.emergency_contact || '';
+            document.getElementById('account_holder').value = data.account_holder || '';
+            document.getElementById('account_number').value = existingAccount;
+
+            const posStr = (data.working_positions || '').toLowerCase();
+            document.querySelectorAll('.work-pos-checkbox').forEach(cb => {
+                cb.checked = posStr.includes(cb.value.toLowerCase());
+            });
+            
+            document.getElementById('aadhaar').classList.remove('input-blurred');
+            document.getElementById('account_number').classList.remove('input-blurred');
+            document.getElementById('confirmAadhaarBox').style.display = 'none';
+            document.getElementById('confirmAccountBox').style.display = 'none';
+            document.getElementById('aadhaarStatus').innerHTML = existingAadhaar.length === 12 ? "✅" : "";
+            document.getElementById('accountStatus').innerHTML = existingAccount.length > 0 ? "✅" : "";
+            isAadhaarConfirmed = (existingAadhaar.length === 12);
+            isAccountConfirmed = (existingAccount.length > 0);
+            lastConfirmedAadhaarValue = existingAadhaar;
+            lastConfirmedAccountValue = existingAccount;
+
+            document.getElementById('aadhaarWarning').style.display = 'none';
+            document.getElementById('accountWarning').style.display = 'none';
+            hasDuplicateAadhaar = false; hasDuplicateAccount = false; hasInvalidAadhaarMath = false;
+        }
+
+        function calculateAge(dobValue) {
+            if (!dobValue) return;
+            const dob = new Date(dobValue); const today = new Date();
+            let years = today.getFullYear() - dob.getFullYear();
+            let months = today.getMonth() - dob.getMonth();
+            let days = today.getDate() - dob.getDate();
+            if (days < 0) { months--; days += new Date(today.getFullYear(), today.getMonth(), 0).getDate(); }
+            if (months < 0) { years--; months += 12; }
+            document.getElementById('ageResult').innerText = `Current Age: ${years} Years, ${months} Months, ${days} Days`;
+            if (years < 18) {
+                if (!confirm(`⚠️ Warning: Underage (${years} Yrs)!\nProceed?`)) {
+                    document.getElementById('dob').value = ""; document.getElementById('ageResult').innerText = ""; isAgeValid = false; return;
+                }
+            }
+            isAgeValid = true;
+        }
+
+        // =========================================================================================
+        // 3. FINAL SUBMISSION ENGINE
+        // =========================================================================================
+        function handleSubmit(event) {
+            event.preventDefault();
+
+            const currentAadhaar = document.getElementById('aadhaar').value.replace(/[^0-9]/g, '');
+            const currentAccount = document.getElementById('account_number').value.replace(/[^0-9]/g, '');
+
+            checkDuplicateAadhaarOnly(currentAadhaar);
+            checkDuplicateAccountOnly(currentAccount);
+
+            if (currentAadhaar.length !== 12) {
+                alert("⚠️ Aadhaar Number must be exactly 12 digits.");
+                document.getElementById('aadhaar').focus();
+                return;
+            }
+
+            if (!validateAadhaar(currentAadhaar)) {
+                alert("🛑 Invalid Aadhaar Number! (Mathematical Checksum Failed).\nPlease enter a genuine 12-digit Aadhaar number.");
+                document.getElementById('aadhaar').focus();
+                return;
+            }
+
+            if (!isAadhaarConfirmed) {
+                alert("🛑 Please confirm the Aadhaar Number in the yellow box to unlock the field.");
+                triggerSecureConfirm('aadhaar', 'confirmAadhaarBox', 'confirmAadhaar');
+                return;
+            }
+            if (!isAccountConfirmed) {
+                alert("🛑 Please confirm the Bank Account Number in the yellow box to unlock the field.");
+                triggerSecureConfirm('account_number', 'confirmAccountBox', 'confirmAccount');
+                return;
+            }
+
+            if (!document.getElementById('designation').value) { alert("⚠️ Please select a Designation."); return; }
+            if (!document.getElementById('religion').value) { alert("⚠️ Please select a Religion."); return; }
+            if (!document.getElementById('village').value || !document.getElementById('post').value || !document.getElementById('ps').value || !document.getElementById('district').value || !document.getElementById('pin').value) {
+                alert("⚠️ Please complete all Address & Demographics fields.");
+                return;
+            }
+            if (!document.getElementById('bank_name').value || !document.getElementById('ifsc_code').value) {
+                alert("⚠️ Please select both Bank Name and IFSC Code.");
+                return;
+            }
+
+            if (document.querySelectorAll('.work-pos-checkbox:checked').length === 0) { alert("⚠️ Select at least one Working Position."); return; }
+            if (!isAgeValid) { alert("⚠️ Age validation failed."); return; }
+            if (hasDuplicateAadhaar) { alert("🛑 Duplicate Aadhaar detected! Another employee already has this Aadhaar."); document.getElementById('aadhaar').focus(); return; }
+            if (hasDuplicateAccount) { alert("🛑 Duplicate Bank Account detected! Another employee already has this Bank A/C."); document.getElementById('account_number').focus(); return; }
+
+            let workPos = [];
+            document.querySelectorAll('.work-pos-checkbox:checked').forEach(cb => workPos.push(cb.value));
+
+            let builtEmpData = {
+                id: selectedExistingId || "",
+                photo: document.getElementById('croppedImageData').value, // Add Base64 Cropped Photo
+                name: document.getElementById('name').value.trim(),
+                father_name: document.getElementById('father_name').value.trim(),
+                religion: document.getElementById('religion').value,
+                dob: document.getElementById('dob').value,
+                village: document.getElementById('village').value,
+                post: document.getElementById('post').value,
+                ps: document.getElementById('ps').value,
+                district: document.getElementById('district').value,
+                pin: document.getElementById('pin').value,
+                aadhaar: currentAadhaar,
+                uan: document.getElementById('uan').value.trim(),
+                personal_number: document.getElementById('personal_number').value.trim(),
+                whatsapp_number: document.getElementById('whatsapp_number').value.trim(),
+                emergency_contact: document.getElementById('emergency_contact').value.trim(),
+                bank_name: document.getElementById('bank_name').value,
+                account_holder: document.getElementById('account_holder').value.trim(),
+                account_number: currentAccount,
+                ifsc_code: document.getElementById('ifsc_code').value,
+                designation: document.getElementById('designation').value,
+                working_positions: workPos.join(', '),
+                site: (currentPortalMode === 'supervisor' && assignedSite) ? assignedSite : "Unassigned",
+                registeredBy: loggedUserName,
+                registeredAt: new Date().toLocaleString('en-IN')
+            };
+
+            if (selectedExistingId) {
+                pendingExistingUpdatePayload = builtEmpData;
+                if (currentPortalMode === 'admin') {
+                    document.getElementById('adminUpdatePassInput').value = '';
+                    document.getElementById('adminVerifyModal').style.display = 'flex';
+                    setTimeout(() => document.getElementById('adminUpdatePassInput').focus(), 50);
+                } else {
+                    document.getElementById('officeEditEmpSummary').value = `${builtEmpData.id} — ${builtEmpData.name} (${builtEmpData.designation})`;
+                    document.getElementById('officeEditReason').value = '';
+                    document.getElementById('roleApprovalModal').style.display = 'flex';
+                    setTimeout(() => document.getElementById('officeEditReason').focus(), 50);
+                }
+                return;
+            }
+
+            const assignedAtomicId = getNextAvailableEmpNumber(true);
+            builtEmpData.id = assignedAtomicId;
+
+            refreshLiveDatabase();
+
+            if (currentPortalMode === 'admin') {
+                builtEmpData.pendingStatus = null;
+                liveDatabase.push(builtEmpData);
+                localStorage.setItem('atr_employees', JSON.stringify(liveDatabase));
+
+                document.getElementById('successBoxTitle').innerText = `✅ Registration Successfully Synced! (ID: ${assignedAtomicId})`;
+                document.getElementById('successBoxDesc').innerText = `Employee ${builtEmpData.name} (${assignedAtomicId}) has been added directly to the Live Master Database.`;
+            } else {
+                const targetApprovalFile = currentPortalMode === 'supervisor' ? 'ApproveSupervisor.html' : 'ApproveOffice.html';
+                builtEmpData.pendingStatus = `Pending in ${targetApprovalFile}`;
+                liveDatabase.push(builtEmpData);
+                localStorage.setItem('atr_employees', JSON.stringify(liveDatabase));
+
+                pushRequestToRoleApprovalQueue(
+                    "NEW EMPLOYEE JOINING",
+                    `New Joining: ${builtEmpData.name} (Assigned ID: ${assignedAtomicId} | ${builtEmpData.designation})`,
+                    null,
+                    builtEmpData,
+                    `New Employee Registration submitted by ${loggedUserName}`
+                );
+
+                document.getElementById('successBoxTitle').innerText = `📤 Assigned ID: ${assignedAtomicId} & Sent to ${targetApprovalFile}!`;
+                document.getElementById('successBoxDesc').innerText = `Employee ID ${assignedAtomicId} has been reserved and sent to ${targetApprovalFile} for Admin Approval. You can download or print the Registration Form below.`;
+            }
+
+            document.getElementById('emp_id_input').value = assignedAtomicId;
+            updateNextEmpIdPreview();
+            populatePrintTemplateAndShowSuccess(builtEmpData);
+        }
+
+        function closeAdminVerifyModal() {
+            document.getElementById('adminVerifyModal').style.display = 'none';
+            pendingExistingUpdatePayload = null;
+        }
+
+        function confirmAdminExistingUpdate() {
+            const pass = document.getElementById('adminUpdatePassInput').value;
+            if (pass !== 'admin123' && pass !== 'admin') {
+                alert("❌ Incorrect Admin Password!");
+                return;
+            }
+            if (!pendingExistingUpdatePayload) return;
+
+            refreshLiveDatabase();
+            const idx = liveDatabase.findIndex(e => e.id === pendingExistingUpdatePayload.id);
+            if (idx > -1) {
+                pendingExistingUpdatePayload.site = liveDatabase[idx].site || pendingExistingUpdatePayload.site;
+                pendingExistingUpdatePayload.pendingStatus = null;
+                liveDatabase[idx] = pendingExistingUpdatePayload;
+                localStorage.setItem('atr_employees', JSON.stringify(liveDatabase));
+            }
+
+            const updatedData = { ...pendingExistingUpdatePayload };
+            closeAdminVerifyModal();
+            document.getElementById('successBoxTitle').innerText = `✅ Employee Record Updated! (${updatedData.id})`;
+            document.getElementById('successBoxDesc').innerText = `Changes for ${updatedData.name} have been saved to the Master Database.`;
+            populatePrintTemplateAndShowSuccess(updatedData);
+        }
+
+        function closeRoleApprovalModal() {
+            document.getElementById('roleApprovalModal').style.display = 'none';
+            pendingExistingUpdatePayload = null;
+        }
+
+        function confirmRoleExistingUpdate() {
+            const reason = document.getElementById('officeEditReason').value.trim();
+            if (!reason) {
+                alert("⚠️ Please enter the reason for updating this employee record.");
+                return;
+            }
+            if (!pendingExistingUpdatePayload) return;
+
+            refreshLiveDatabase();
+            const idx = liveDatabase.findIndex(e => e.id === pendingExistingUpdatePayload.id);
+            let oldEmpRecord = null;
+            if (idx > -1) {
+                oldEmpRecord = { ...liveDatabase[idx] };
+                pendingExistingUpdatePayload.site = liveDatabase[idx].site || pendingExistingUpdatePayload.site;
+                liveDatabase[idx].pendingStatus = "Edit Pending";
+                localStorage.setItem('atr_employees', JSON.stringify(liveDatabase));
+            }
+
+            pushRequestToRoleApprovalQueue(
+                "EDIT EMPLOYEE RECORD",
+                `Update Employee: ${pendingExistingUpdatePayload.id} - ${pendingExistingUpdatePayload.name} (${pendingExistingUpdatePayload.designation})`,
+                oldEmpRecord,
+                pendingExistingUpdatePayload,
+                reason
+            );
+
+            const targetApprovalFile = currentPortalMode === 'supervisor' ? 'ApproveSupervisor.html' : 'ApproveOffice.html';
+            const updatedData = { ...pendingExistingUpdatePayload };
+            closeRoleApprovalModal();
+            document.getElementById('successBoxTitle').innerText = `📤 Update Request Sent to ${targetApprovalFile}!`;
+            document.getElementById('successBoxDesc').innerText = `Your edited details for ${updatedData.name} (${updatedData.id}) are pending Admin Approval in ${targetApprovalFile}.`;
+            populatePrintTemplateAndShowSuccess(updatedData);
+        }
+
+        function pushRequestToRoleApprovalQueue(actionType, summaryText, oldDataObj, newDataObj, reasonText) {
+            if (currentPortalMode === 'supervisor') {
+                const supQueue = JSON.parse(localStorage.getItem('atr_supervisor_approvals')) || [];
+                supQueue.unshift({
+                    id: "SUP-REQ-" + Date.now().toString().slice(-5),
+                    module: "EmployeeJoining.html",
+                    action: actionType,
+                    site: assignedSite,
+                    requestedBy: loggedUserName,
+                    reason: reasonText,
+                    summary: summaryText,
+                    requestedAt: new Date().toISOString(),
+                    status: "Pending",
+                    oldData: oldDataObj,
+                    newData: newDataObj
+                });
+                localStorage.setItem('atr_supervisor_approvals', JSON.stringify(supQueue));
+            } else {
+                const newReq = {
+                    reqId: "OFF-" + Date.now().toString().slice(-5),
+                    userId: loggedUserId,
+                    userName: loggedUserName,
+                    designation: "Office Staff",
+                    module: "EmployeeJoining.html",
+                    action: actionType,
+                    summary: summaryText,
+                    oldData: oldDataObj,
+                    newData: newDataObj,
+                    reason: reasonText,
+                    timestamp: new Date().toLocaleString('en-IN'),
+                    status: "Pending"
+                };
+
+                const officeQueue = JSON.parse(localStorage.getItem('atr_office_approvals')) || [];
+                officeQueue.unshift(newReq);
+                localStorage.setItem('atr_office_approvals', JSON.stringify(officeQueue));
+                localStorage.setItem('approve_office_requests', JSON.stringify(officeQueue));
+                localStorage.setItem('ApproveOffice_requests', JSON.stringify(officeQueue));
+
+                const workLogs = JSON.parse(localStorage.getItem('atr_office_daily_work')) || [];
+                const todayStr = new Date().toISOString().split('T')[0];
+                const nowTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+                workLogs.unshift({
+                    id: "WRK-" + Date.now().toString().slice(-5),
+                    userId: loggedUserId,
+                    userName: loggedUserName,
+                    date: todayStr,
+                    time: nowTime,
+                    module: "Employee Joining (EmployeeJoining.html)",
+                    refNo: newDataObj && newDataObj.id ? newDataObj.id : newReq.reqId,
+                    desc: summaryText,
+                    status: "Sent for Approval"
+                });
+                localStorage.setItem('atr_office_daily_work', JSON.stringify(workLogs));
+
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.refreshNotificationsUI === 'function') {
+                        window.parent.refreshNotificationsUI();
+                    }
+                } catch (e) {}
+            }
+        }
+
+        function populatePrintTemplateAndShowSuccess(newEmpData) {
+            document.getElementById('pr_empId').innerText = newEmpData.id;
+            const todayDate = new Date();
+            document.getElementById('pr_regDate').innerText = `${todayDate.getDate()}-${todayDate.getMonth()+1}-${todayDate.getFullYear()}`;
+            document.getElementById('pr_name').innerText = newEmpData.name;
+            document.getElementById('pr_father').innerText = newEmpData.father_name;
+            document.getElementById('pr_dob').innerText = newEmpData.dob;
+            document.getElementById('pr_religion').innerText = newEmpData.religion;
+            document.getElementById('pr_desig').innerText = newEmpData.designation;
+            
+            document.getElementById('pr_village').innerText = newEmpData.village;
+            document.getElementById('pr_po_ps').innerText = `P.O: ${newEmpData.post} | P.S: ${newEmpData.ps}`;
+            document.getElementById('pr_dist_pin').innerText = `Dist: ${newEmpData.district} | PIN: ${newEmpData.pin}`;
+            
+            document.getElementById('pr_mobile').innerText = newEmpData.personal_number;
+            document.getElementById('pr_whatsapp_emerg').innerText = `WA: ${newEmpData.whatsapp_number || 'N/A'} | Emerg: ${newEmpData.emergency_contact || 'N/A'}`;
+            
+            document.getElementById('pr_aadhaar').innerText = newEmpData.aadhaar;
+            document.getElementById('pr_uan').innerText = newEmpData.uan || 'N/A';
+            document.getElementById('pr_bank').innerText = newEmpData.bank_name;
+            document.getElementById('pr_accHolder').innerText = newEmpData.account_holder;
+            document.getElementById('pr_accNumber').innerText = newEmpData.account_number;
+            document.getElementById('pr_ifsc').innerText = newEmpData.ifsc_code;
+            document.getElementById('pr_workPos').innerText = newEmpData.working_positions;
+
+            // Display Cropped Photo in Print Form
+            const printPhotoImg = document.getElementById('pr_photo_img');
+            const printPhotoPlaceholder = document.getElementById('pr_photo_placeholder');
+            if(newEmpData.photo) {
+                printPhotoImg.src = newEmpData.photo;
+                printPhotoImg.style.display = 'block';
+                printPhotoPlaceholder.style.display = 'none';
+            } else {
+                printPhotoImg.src = "";
+                printPhotoImg.style.display = 'none';
+                printPhotoPlaceholder.style.display = 'block';
+            }
+
+            document.getElementById('submitBtn').style.display = 'none';
+            document.getElementById('successBox').style.display = 'block';
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }
+
+        // --- PDF AND PRINT LOGIC ---
+        function generateProfessionalReport(isPDF) {
+            const printElement = document.getElementById('printContainer');
+            printElement.style.display = "flex";
+            document.body.classList.add('pdf-mode'); 
+
+            if(isPDF) {
+                const opt = {
+                    margin:       0,
+                    filename:     `${(document.getElementById('name').value || 'Employee').replace(/\s+/g, '_')}_Registration_Form.pdf`,
+                    image:        { type: 'jpeg', quality: 1 },
+                    html2canvas:  { scale: 2, useCORS: true },
+                    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                };
+
+                html2pdf().set(opt).from(printElement).save().then(() => {
+                    document.body.classList.remove('pdf-mode');
+                    printElement.style.display = "none";
+                });
+            } else {
+                window.print();
+                setTimeout(() => { 
+                    document.body.classList.remove('pdf-mode'); 
+                    printElement.style.display = "none";
+                }, 1000);
+            }
+        }
+
+        function resetForNewEntry(preserveRadio = false) {
+            document.getElementById('employeeForm').reset();
+            if(!preserveRadio) document.querySelector('input[name="emp_status"][value="New"]').checked = true;
+            
+            // Reset Cropped Image UI
+            document.getElementById('croppedImageData').value = "";
+            document.getElementById('photoPreviewContainer').style.display = 'none';
+
+            document.getElementById('successBox').style.display = 'none';
+            document.getElementById('submitBtn').style.display = 'block';
+            document.getElementById('ageResult').innerText = "";
+            document.getElementById('aadhaarWarning').style.display = 'none';
+            document.getElementById('accountWarning').style.display = 'none';
+            
+            document.getElementById('aadhaar').classList.remove('input-blurred');
+            document.getElementById('account_number').classList.remove('input-blurred');
+            document.getElementById('confirmAadhaarBox').style.display = 'none';
+            document.getElementById('confirmAccountBox').style.display = 'none';
+            document.getElementById('aadhaarStatus').innerHTML = "";
+            document.getElementById('accountStatus').innerHTML = "";
+            isAadhaarConfirmed = false;
+            isAccountConfirmed = false;
+            lastConfirmedAadhaarValue = "";
+            lastConfirmedAccountValue = "";
+
+            ['designation', 'religion', 'village', 'post', 'ps', 'district', 'pin', 'bank_name', 'ifsc_code'].forEach(field => {
+                let textLabel = field === 'ifsc_code' ? 'IFSC Code' : field.replace('_',' ').replace(/\b\w/g, c => c.toUpperCase());
+                document.getElementById(`${field}Text`).innerText = `Select ${textLabel}`;
+                document.getElementById(field).value = "";
+            });
+            hasDuplicateAadhaar = false; hasDuplicateAccount = false; hasInvalidAadhaarMath = false; selectedExistingId = null;
+            updateNextEmpIdPreview();
+            renderExistingEmpList();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>

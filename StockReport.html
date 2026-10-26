@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Stock Report View Page</title>
+    
+    <!-- Sync theme with Master Dashboard -->
+    <script>
+        function applyDashboardTheme() {
+            const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        }
+        applyDashboardTheme();
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'atr_theme' || !e.key) {
+                applyDashboardTheme();
+            }
+        });
+    </script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- SheetJS CDN for XLSX Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        :root {
+            --bg-body: transparent; 
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #b0b0b0;
+            --border-color: rgba(255, 255, 255, 0.12);
+            
+            /* Dynamic Glass & Input Variables */
+            --glass-bg: rgba(30, 30, 30, 0.75);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --input-bg: rgba(15, 15, 15, 0.6);
+            --input-focus-bg: rgba(20, 20, 20, 0.9);
+            
+            --shadow: 0 4px 20px rgba(0,0,0,0.4);
+            
+            /* Primary Theme Color (#9c27b0) */
+            --theme-color: #9c27b0;
+            --theme-glow: rgba(156, 39, 176, 0.3);
+            --theme-transition: all 0.3s ease;
+        }
+
+        [data-theme="light"] {
+            --bg-body: transparent;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #666666;
+            --border-color: rgba(0, 0, 0, 0.12);
+            
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(0, 0, 0, 0.1);
+            --input-bg: rgba(240, 240, 240, 0.8);
+            --input-focus-bg: #ffffff;
+            
+            --shadow: 0 8px 25px rgba(0,0,0,0.06);
+        }
+
+        /* Crisp Font Rendering */
+        * { 
+            margin: 0; padding: 0; box-sizing: border-box; 
+            font-family: 'Montserrat', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+        }
+        
+        body { background-color: var(--bg-body); color: var(--text-main); height: 100vh; overflow: hidden; display: flex; flex-direction: column; transition: var(--theme-transition); }
+        .main-content { padding: 20px 40px; width: 100%; max-width: 1600px; margin: 0 auto; flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* FIXED HEADER */
+        .header { 
+            flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; 
+            margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; 
+            flex-wrap: wrap; gap: 15px; transition: var(--theme-transition); 
+        }
+        .header-left { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+        .header h1 { font-size: 22px; color: var(--theme-color); font-weight: 700; white-space: nowrap; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        
+        .role-mode-badge {
+            display: none;
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 700;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-back-dash { 
+            background-color: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color); 
+            text-decoration: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; font-size: 12px; 
+            transition: all 0.3s; display: flex; align-items: center; width: max-content; cursor: pointer;
+        }
+        .btn-back-dash:hover { background-color: var(--theme-color); color: #ffffff; border-color: var(--theme-color); transform: translateY(-2px); box-shadow: 0 4px 10px var(--theme-glow); }
+
+        .header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        
+        .search-input { 
+            background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main); 
+            padding: 10px 15px; border-radius: 6px; font-size: 13px; font-weight: 500; outline: none; transition: 0.3s; 
+            width: 220px; height: 41px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); 
+        }
+        .search-input:focus { border-color: var(--theme-color); box-shadow: 0 0 8px var(--theme-glow); }
+
+        /* TOTALS SUMMARY BAR */
+        .summary-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 15px; flex-shrink: 0; }
+        .summary-card { 
+            background-color: var(--bg-card); padding: 15px 20px; border-radius: 10px; 
+            border: 1px solid var(--border-color); border-left: 4px solid var(--theme-color); 
+            box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 5px; transition: var(--theme-transition);
+        }
+        .summary-card.added { border-left-color: #28a745; }
+        .summary-card.damaged { border-left-color: #dc3545; }
+        .summary-card.available { border-left-color: var(--theme-color); }
+        .summary-title { font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: bold; letter-spacing: 1px; }
+        .summary-value { font-size: 22px; font-weight: bold; color: var(--text-main); }
+
+        /* FILTER BAR & TABLE PANEL (With Proper Z-Index Layering so Dropdowns Never Clip) */
+        .filter-section { 
+            background: var(--bg-card); padding: 15px 20px; border-radius: 10px 10px 0 0; 
+            display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color); 
+            border-left: 4px solid var(--theme-color); box-shadow: var(--shadow); flex-shrink: 0; gap: 15px; 
+            flex-wrap: wrap; transition: var(--theme-transition); position: relative; z-index: 50;
+        }
+        .filter-title { font-size: 14px; font-weight: bold; color: var(--theme-color); text-transform: uppercase; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+
+        .table-container { 
+            flex: 1; background: var(--bg-card); border-radius: 0 0 10px 10px; border: 1px solid var(--border-color); 
+            border-top: none; box-shadow: var(--shadow); display: flex; flex-direction: column; 
+            overflow: hidden; min-height: 0; transition: var(--theme-transition); margin-bottom: 20px; position: relative; z-index: 1;
+        }
+        .table-scroll { flex: 1; overflow-y: auto; padding: 0 15px; }
+        
+        .table-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+        .table-scroll::-webkit-scrollbar-track { background: transparent; }
+        .table-scroll::-webkit-scrollbar-thumb { background: rgba(156, 39, 176, 0.3); border-radius: 4px; }
+        .table-scroll::-webkit-scrollbar-thumb:hover { background: var(--theme-color); }
+
+        /* BUTTONS */
+        .btn { 
+            padding: 10px 18px; border-radius: 6px; font-weight: 700; font-size: 12px; cursor: pointer; border: none; 
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-transform: uppercase; 
+            transition: all 0.3s; height: 41px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+        }
+        .btn:hover { transform: translateY(-2px); }
+        .btn-export { background: rgba(25, 135, 84, 0.15); color: #198754; border: 1px solid rgba(25, 135, 84, 0.4); }
+        .btn-export:hover { background-color: #198754; color: #ffffff; }
+
+        /* TABLES & STICKY HEADER */
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        thead th { 
+            position: sticky; top: 0; background-color: var(--input-bg); z-index: 5; padding: 15px 10px; 
+            color: var(--theme-color); font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; 
+            border-bottom: 2px solid var(--theme-color); white-space: nowrap; transition: var(--theme-transition); 
+        }
+        tbody td { 
+            padding: 12px 10px; border-bottom: 1px solid var(--border-color); font-size: 13px; color: var(--text-main); 
+            vertical-align: middle; transition: var(--theme-transition); font-weight: 500; 
+        }
+        tbody tr:hover { background: var(--glass-bg); }
+        .empty-row { text-align: center; padding: 40px; color: var(--text-muted); font-size: 14px; font-weight: 600; }
+
+        /* CUSTOM ULTRA-SMOOTH SEARCHABLE DROPDOWN */
+        .custom-select { position: relative; min-width: 220px; user-select: none; }
+        .select-header { 
+            background: var(--input-bg); border: 1px solid var(--border-color); padding: 10px 15px; border-radius: 6px; 
+            cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s ease; 
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); font-size: 13px; font-weight: 600; color: var(--text-main); height: 41px; 
+        }
+        .select-header:hover { border-color: rgba(156, 39, 176, 0.5); }
+        .select-header.active { border-color: var(--theme-color); box-shadow: 0 0 8px var(--theme-glow); background: var(--input-focus-bg); }
+        .select-header .arrow { transition: transform 0.3s ease; font-size: 14px; }
+        .select-header.active .arrow { transform: rotate(180deg); color: var(--theme-color); }
+        .select-header.locked-dropdown {
+            background: rgba(255, 193, 7, 0.08);
+            border-color: rgba(255, 193, 7, 0.4);
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        
+        .select-options-container { 
+            position: absolute; top: calc(100% + 8px); left: 0; width: 100%; background: var(--bg-card); 
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--theme-color); 
+            border-radius: 8px; box-shadow: 0 15px 35px rgba(0,0,0,0.65); z-index: 999; opacity: 0; visibility: hidden; 
+            transform: translateY(-10px); transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); overflow: hidden; 
+        }
+        [data-theme="light"] .select-options-container { box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
+        .select-options-container.active { opacity: 1; visibility: visible; transform: translateY(0); }
+        
+        .select-search { padding: 10px; border-bottom: 1px solid var(--border-color); background: rgba(0,0,0,0.2); }
+        [data-theme="light"] .select-search { background: rgba(255,255,255,0.5); }
+        .select-search input { 
+            width: 100%; padding: 8px 12px; background: var(--input-bg); border: 1px solid var(--border-color); 
+            border-radius: 4px; color: var(--text-main); font-size: 13px; font-weight: 500; outline: none; transition: 0.3s; 
+        }
+        .select-search input:focus { border-color: var(--theme-color); }
+        
+        .select-options { max-height: 220px; overflow-y: auto; list-style: none; margin: 0; padding: 5px 0; }
+        .select-options::-webkit-scrollbar { width: 6px; }
+        .select-options::-webkit-scrollbar-thumb { background: rgba(156, 39, 176, 0.4); border-radius: 3px; }
+        .select-options li { 
+            padding: 10px 15px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text-main); 
+            transition: background 0.2s; border-bottom: 1px solid rgba(255,255,255,0.02); 
+        }
+        .select-options li:hover { background: var(--theme-color); color: #ffffff; }
+        .option-office { color: #ffc107; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="main-content">
+        <!-- HEADER -->
+        <div class="header">
+            <div class="header-left">
+                <a href="dashboard_home.html" id="btnBackDashboard" class="btn-back-dash" onclick="handleBackToDashboard(event)">← Back to Dashboard</a>
+                <h1>
+                    📊 Stock Report (View Only)
+                    <span id="roleModeBadge" class="role-mode-badge">🏢 Office Mode</span>
+                </h1>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-export" onclick="exportStockReportToExcel()">📤 Export Report (XLSX)</button>
+            </div>
+        </div>
+
+        <!-- TOTALS SUMMARY BAR -->
+        <div class="summary-bar">
+            <div class="summary-card added">
+                <span class="summary-title">Total Added Stock</span>
+                <span class="summary-value" id="totalAddedSum">0</span>
+            </div>
+            <div class="summary-card damaged">
+                <span class="summary-title">Total Damaged Stock</span>
+                <span class="summary-value" id="totalDamagedSum">0</span>
+            </div>
+            <div class="summary-card available">
+                <span class="summary-title">Net Available Stock</span>
+                <span class="summary-value" id="totalAvailableSum">0</span>
+            </div>
+        </div>
+
+        <!-- TABLE PANEL WITH FILTER BAR -->
+        <div class="filter-section">
+            <div class="filter-title">📦 Complete Site-wise Stock Report</div>
+            
+            <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                <!-- Site-wise Custom Searchable Dropdown Filter -->
+                <div class="custom-select" id="reportSiteFilterDropdown">
+                    <div class="select-header" id="reportSiteHeader">
+                        <span class="selected-text" id="reportSiteText">🌍 All Sites</span>
+                        <span class="arrow" id="reportSiteArrow">▼</span>
+                    </div>
+                    <div class="select-options-container">
+                        <div class="select-search">
+                            <input type="text" placeholder="Filter site..." class="search-input-dropdown">
+                        </div>
+                        <ul class="select-options" id="reportSiteList">
+                            <!-- Populated via JS -->
+                        </ul>
+                    </div>
+                </div>
+                <input type="hidden" id="selectedReportSiteFilter" value="">
+
+                <!-- Search Box -->
+                <input type="text" id="reportSearchInput" class="search-input" placeholder="🔍 Search item, site..." onkeyup="renderStockReportTable()">
+            </div>
+        </div>
+        
+        <div class="table-container">
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Location / Site</th>
+                            <th>Item Name</th>
+                            <th>Unit</th>
+                            <th style="color:#28a745;">Total Added (Stock)</th>
+                            <th style="color:#dc3545;">Total Damaged</th>
+                            <th style="color:var(--theme-color); font-weight:bold;">Net Available Stock</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reportTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================================================
+        // 1. PORTAL ROLE DETECTION (ADMIN / OFFICE STAFF / SUPERVISOR) & BACK TO DASHBOARD
+        // =========================================================================================
+        let currentPortalMode = "admin"; // 'admin', 'office', or 'supervisor'
+        let isSupervisorMode = false;
+        let assignedSite = "";
+
+        const defaultStockEntries = [
+            { site: "🏢 Office Stock (Main)", itemName: "Ambuja Cement PPC", unit: "Bags", qty: 300 },
+            { site: "🏢 Office Stock (Main)", itemName: "Tata Tiscon TMT Bar 8mm", unit: "Kg", qty: 1500 },
+            { site: "Dum Dum Project", itemName: "Red Bricks", unit: "Pcs", qty: 5000 },
+            { site: "Dum Dum Project", itemName: "Ambuja Cement PPC", unit: "Bags", qty: 100 },
+            { site: "Barasat Highway", itemName: "River Sand", unit: "Cft", qty: 1200 },
+            { site: "Salt Lake Sector V", itemName: "Ambuja Cement PPC", unit: "Bags", qty: 250 }
+        ];
+
+        const defaultDamageEntries = [
+            { site: "🏢 Office Stock (Main)", itemName: "Ambuja Cement PPC", unit: "Bags", qty: 20 },
+            { site: "Dum Dum Project", itemName: "Red Bricks", unit: "Pcs", qty: 250 }
+        ];
+
+        const sites = [
+            "🏢 Office Stock (Main)", 
+            "Dum Dum Project", 
+            "Commercial Complex B3", 
+            "Barasat Highway", 
+            "Rajarhat Extension",
+            "Salt Lake Sector V",
+            "New Town Action Area 1"
+        ];
+
+        let stockEntries = [];
+        let damageEntries = [];
+
+        function loadAndSyncReportData() {
+            const storedStocks = JSON.parse(localStorage.getItem('atr_submitted_stocks_db'));
+            if (Array.isArray(storedStocks) && storedStocks.length > 0) {
+                stockEntries = [...defaultStockEntries];
+                storedStocks.forEach(s => {
+                    if (!s.site || !s.itemName) return;
+                    stockEntries.push({
+                        site: s.site,
+                        itemName: s.itemName,
+                        unit: s.unit || "Unit",
+                        qty: Number(s.qty) || 0
+                    });
+                    if (!sites.includes(s.site)) sites.push(s.site);
+                });
+            } else {
+                stockEntries = JSON.parse(JSON.stringify(defaultStockEntries));
+            }
+
+            const storedDamages = JSON.parse(localStorage.getItem('atr_damaged_stocks_db'));
+            if (Array.isArray(storedDamages) && storedDamages.length > 0) {
+                damageEntries = [...defaultDamageEntries];
+                storedDamages.forEach(d => {
+                    if (!d.site || !d.itemName) return;
+                    damageEntries.push({
+                        site: d.site,
+                        itemName: d.itemName,
+                        unit: d.unit || "Unit",
+                        qty: Number(d.qty) || 0
+                    });
+                    if (!sites.includes(d.site)) sites.push(d.site);
+                });
+            } else {
+                damageEntries = JSON.parse(JSON.stringify(defaultDamageEntries));
+            }
+        }
+
+        function checkPortalPermissions() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewParam = (urlParams.get('view') || '').toLowerCase();
+            const siteParam = urlParams.get('site');
+
+            let parentPath = "";
+            try {
+                if (window.parent && window.parent !== window) {
+                    parentPath = (window.parent.location.pathname || '').toLowerCase();
+                }
+            } catch (e) {}
+
+            const badge = document.getElementById('roleModeBadge');
+            const backBtn = document.getElementById('btnBackDashboard');
+            const siteHeader = document.getElementById('reportSiteHeader');
+            const siteText = document.getElementById('reportSiteText');
+            const siteArrow = document.getElementById('reportSiteArrow');
+            const siteHidden = document.getElementById('selectedReportSiteFilter');
+
+            if (viewParam === 'supervisor' || parentPath.includes('supervisordashboard')) {
+                currentPortalMode = 'supervisor';
+                isSupervisorMode = true;
+                assignedSite = (siteParam || sessionStorage.getItem('atr_supervisor_site') || "Salt Lake Sector V").trim();
+
+                if (!sites.includes(assignedSite)) sites.push(assignedSite);
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🔒 Site Locked: ${assignedSite}`;
+                }
+                if (siteHidden && siteText && siteHeader) {
+                    siteHidden.value = assignedSite;
+                    siteText.innerText = `📍 ${assignedSite}`;
+                    siteText.style.color = "#ffc107";
+                    siteHeader.classList.add('locked-dropdown');
+                    if (siteArrow) siteArrow.innerText = "🔒";
+                }
+                if (backBtn) {
+                    backBtn.href = "supervisor/supervisor_dashboard_home.html";
+                }
+            } else if (viewParam === 'office' || parentPath.includes('officedashboard')) {
+                currentPortalMode = 'office';
+                isSupervisorMode = false;
+                assignedSite = "";
+                const userName = urlParams.get('userName') || "Office Staff";
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🏢 Office Mode (${userName})`;
+                }
+                if (backBtn) {
+                    backBtn.href = "office/office_dashboard_home.html";
+                }
+            } else {
+                currentPortalMode = 'admin';
+                isSupervisorMode = false;
+                assignedSite = "";
+                if (backBtn) {
+                    backBtn.href = "dashboard_home.html";
+                }
+            }
+        }
+
+        function handleBackToDashboard(event) {
+            if (currentPortalMode === 'office') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.loadOfficeWorkspaceHome === 'function') {
+                        window.parent.loadOfficeWorkspaceHome();
+                        return;
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "office_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "office/office_dashboard_home.html";
+            } else if (currentPortalMode === 'supervisor') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window) {
+                        const parentHomeLink = window.parent.document.querySelector('.dashboard-home-link');
+                        if (parentHomeLink) {
+                            if (typeof window.parent.clearTreeActiveLinks === 'function') {
+                                window.parent.clearTreeActiveLinks();
+                            }
+                            window.location.href = parentHomeLink.href;
+                            return;
+                        }
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "supervisor_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "supervisor/supervisor_dashboard_home.html";
+            }
+        }
+
+        window.onload = () => {
+            checkPortalPermissions();
+            loadAndSyncReportData();
+            populateReportSiteFilter();
+            initCustomDropdowns();
+            renderStockReportTable();
+        };
+
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'atr_submitted_stocks_db' || e.key === 'atr_damaged_stocks_db') {
+                loadAndSyncReportData();
+                populateReportSiteFilter();
+                renderStockReportTable();
+            }
+        });
+
+        function initCustomDropdowns() {
+            setupDropdown('reportSiteFilterDropdown', 'selectedReportSiteFilter', renderStockReportTable);
+            
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.custom-select')) {
+                    document.querySelectorAll('.select-options-container.active').forEach(c => c.classList.remove('active'));
+                    document.querySelectorAll('.select-header.active').forEach(h => h.classList.remove('active'));
+                }
+            });
+        }
+
+        function setupDropdown(dropdownId, hiddenInputId, callback) {
+            const dropdown = document.getElementById(dropdownId);
+            const header = dropdown.querySelector('.select-header');
+            const container = dropdown.querySelector('.select-options-container');
+            const searchInput = dropdown.querySelector('.search-input-dropdown');
+            const optionsList = dropdown.querySelector('.select-options');
+            const selectedText = dropdown.querySelector('.selected-text');
+            const hiddenInput = hiddenInputId ? document.getElementById(hiddenInputId) : null;
+
+            header.addEventListener('click', () => {
+                if (isSupervisorMode) return;
+
+                document.querySelectorAll('.select-options-container.active').forEach(c => {
+                    if (c !== container) {
+                        c.classList.remove('active');
+                        if(c.parentElement.querySelector('.select-header')) {
+                            c.parentElement.querySelector('.select-header').classList.remove('active');
+                        }
+                    }
+                });
+                
+                container.classList.toggle('active');
+                header.classList.toggle('active');
+                
+                if(container.classList.contains('active')) {
+                    searchInput.value = ''; 
+                    filterDropdownOptions('', optionsList);
+                    setTimeout(() => searchInput.focus(), 100);
+                }
+            });
+
+            searchInput.addEventListener('keyup', (e) => {
+                filterDropdownOptions(e.target.value, optionsList);
+            });
+
+            optionsList.addEventListener('click', (e) => {
+                const li = e.target.closest('li');
+                if(li) {
+                    if (isSupervisorMode) return;
+
+                    const value = li.getAttribute('data-value');
+                    const text = li.innerText;
+                    
+                    selectedText.innerText = text;
+                    selectedText.style.color = (value === "" || value === null) ? "var(--text-main)" : "var(--theme-color)";
+                    if(text.includes("Office")) selectedText.style.color = "#ffc107";
+                    selectedText.style.fontWeight = "700";
+                    
+                    if(hiddenInput) hiddenInput.value = value;
+                    
+                    container.classList.remove('active');
+                    header.classList.remove('active');
+                    
+                    if(callback) callback();
+                }
+            });
+        }
+
+        function filterDropdownOptions(term, list) {
+            const searchTerm = term.toLowerCase();
+            const items = list.querySelectorAll('li');
+            items.forEach(item => {
+                const text = item.innerText.toLowerCase();
+                item.style.display = text.includes(searchTerm) ? 'block' : 'none';
+            });
+        }
+
+        function populateReportSiteFilter() {
+            const list = document.getElementById('reportSiteList');
+            list.innerHTML = `<li data-value="">🌍 All Sites</li>`;
+
+            sites.forEach(s => {
+                let html = `<li data-value="${s}" ${s.includes('Office') ? 'class="option-office"' : ''}>${s}</li>`;
+                list.innerHTML += html;
+            });
+        }
+
+        function getFilteredReportItems() {
+            const query = document.getElementById('reportSearchInput').value.toLowerCase();
+            const selectedSite = (isSupervisorMode && assignedSite)
+                ? assignedSite.toLowerCase()
+                : document.getElementById('selectedReportSiteFilter').value.toLowerCase();
+
+            let reportMap = {};
+
+            stockEntries.forEach(s => {
+                let key = s.site.toLowerCase() + "___" + s.itemName.toLowerCase();
+                if (!reportMap[key]) {
+                    reportMap[key] = { site: s.site, itemName: s.itemName, unit: s.unit, totalAdded: 0, totalDamaged: 0 };
+                }
+                reportMap[key].totalAdded += Number(s.qty) || 0;
+            });
+
+            damageEntries.forEach(d => {
+                let key = d.site.toLowerCase() + "___" + d.itemName.toLowerCase();
+                if (!reportMap[key]) {
+                    reportMap[key] = { site: d.site, itemName: d.itemName, unit: d.unit, totalAdded: 0, totalDamaged: 0 };
+                }
+                reportMap[key].totalDamaged += Number(d.qty) || 0;
+            });
+
+            return Object.values(reportMap).filter(item => {
+                let matchesSearch = item.itemName.toLowerCase().includes(query) || item.site.toLowerCase().includes(query);
+                let matchesSite = !selectedSite || item.site.toLowerCase() === selectedSite;
+                return matchesSearch && matchesSite;
+            });
+        }
+
+        function renderStockReportTable() {
+            const tbody = document.getElementById('reportTableBody');
+            tbody.innerHTML = '';
+
+            const filtered = getFilteredReportItems();
+
+            let sumAdded = 0;
+            let sumDamaged = 0;
+            let sumAvailable = 0;
+
+            filtered.forEach(item => {
+                let netStock = item.totalAdded - item.totalDamaged;
+                sumAdded += item.totalAdded;
+                sumDamaged += item.totalDamaged;
+                sumAvailable += netStock;
+            });
+
+            document.getElementById('totalAddedSum').innerText = sumAdded.toLocaleString('en-IN');
+            document.getElementById('totalDamagedSum').innerText = sumDamaged.toLocaleString('en-IN');
+            document.getElementById('totalAvailableSum').innerText = sumAvailable.toLocaleString('en-IN');
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="empty-row">No stock records found for this view.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(item => {
+                let netStock = item.totalAdded - item.totalDamaged;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="color: ${item.site.includes('Office') ? '#ffc107' : 'var(--text-main)'}; font-weight: 600;">${item.site}</td>
+                    <td style="color:var(--text-main); font-weight:bold;">${item.itemName}</td>
+                    <td>${item.unit}</td>
+                    <td style="color:#28a745; font-weight:bold; font-size:14px;">${item.totalAdded}</td>
+                    <td style="color:#dc3545; font-weight:bold; font-size:14px;">${item.totalDamaged}</td>
+                    <td style="color:var(--theme-color); font-weight:bold; font-size:14px;">${netStock}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function exportStockReportToExcel() {
+            const filtered = getFilteredReportItems();
+
+            if (filtered.length === 0) {
+                alert("No data available to export!");
+                return;
+            }
+
+            const ws_data = [["Location / Site", "Item Name", "Unit", "Total Added (Stock)", "Total Damaged", "Net Available Stock"]];
+            filtered.forEach(item => {
+                let netStock = item.totalAdded - item.totalDamaged;
+                ws_data.push([
+                    item.site,
+                    item.itemName,
+                    item.unit,
+                    item.totalAdded.toString(),
+                    item.totalDamaged.toString(),
+                    netStock.toString()
+                ]);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(ws_data);
+            for (let cell in ws) {
+                if (cell[0] === '!') continue; 
+                ws[cell].t = 's'; ws[cell].z = '@'; 
+            }
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Stock_Report");
+            XLSX.writeFile(wb, "ATR_SiteWise_Stock_Report.xlsx");
+        }
+    </script>
+</body>
+</html>

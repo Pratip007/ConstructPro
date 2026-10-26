@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Monthly Attendance</title>
+    
+    <!-- Sync theme with Master Dashboard -->
+    <script>
+        const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        window.addEventListener('storage', function(e) {
+            if(e.key === 'atr_theme') { document.documentElement.setAttribute('data-theme', e.newValue); }
+        });
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap');
+
+        :root {
+            --bg-body: transparent; 
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.1);
+            
+            /* Dynamic Glass & Input Variables */
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(0, 0, 0, 0.2);
+            --input-focus-bg: rgba(0, 0, 0, 0.4);
+            
+            --shadow: 0 4px 15px rgba(0,0,0,0.3);
+            
+            /* Theme Color (Green Accent for Employee Section) */
+            --theme-color: #28a745;
+            --theme-glow: rgba(40, 167, 69, 0.4);
+            --theme-transition: all 0.4s ease;
+        }
+
+        [data-theme="light"] {
+            --bg-body: transparent;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #555555;
+            --border-color: rgba(0, 0, 0, 0.1);
+            
+            --glass-bg: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --input-bg: rgba(255, 255, 255, 0.5);
+            --input-focus-bg: #ffffff;
+            
+            --shadow: 0 8px 25px rgba(0,0,0,0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Montserrat', sans-serif;
+            scroll-behavior: smooth;
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(136, 136, 136, 0.3); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(136, 136, 136, 0.6); }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            display: flex;
+            min-height: 100vh;
+            transition: var(--theme-transition);
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+            transition: var(--theme-transition);
+        }
+
+        .header h1 { font-size: 24px; color: var(--text-main); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+        .sup-site-badge {
+            display: none;
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .btn-back {
+            background-color: var(--glass-bg);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            text-decoration: none;
+            padding: 9px 16px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 13px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .btn-back:hover { 
+            background-color: var(--theme-color); 
+            color: #fff; 
+            border-color: var(--theme-color); 
+            transform: translateY(-2px); 
+            box-shadow: 0 4px 10px var(--theme-glow); 
+        }
+
+        .btn-top-action {
+            background-color: #ffc107;
+            color: #121212;
+            padding: 10px 20px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 13px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+
+        .btn-top-action:hover { background-color: #e0a800; transform: translateY(-2px); }
+        .btn-view-list { background-color: #17a2b8; color: white; }
+        .btn-view-list:hover { background-color: #117a8b; }
+
+        .section-box {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-top: 4px solid var(--theme-color);
+            border-radius: 12px;
+            padding: 35px;
+            box-shadow: var(--shadow);
+            margin: 0 auto 25px auto;
+            transition: var(--theme-transition);
+        }
+
+        .section-box h2 {
+            font-size: 20px;
+            margin-bottom: 25px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--theme-color);
+        }
+
+        /* Bulk Upload Banner */
+        .bulk-upload-banner {
+            background: var(--input-bg);
+            border: 1px dashed #17a2b8;
+            padding: 20px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            transition: var(--theme-transition);
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .bulk-upload-info h3 { color: #17a2b8; font-size: 15px; margin-bottom: 5px; }
+        .bulk-upload-info p { color: var(--text-muted); font-size: 12px; }
+        .bulk-actions button {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-left: 10px;
+            transition: all 0.2s;
+        }
+        .bulk-actions button:hover { transform: translateY(-1px); }
+        .btn-template { background-color: #007bff; color: white; }
+        .btn-bulk-upload { background-color: var(--theme-color); color: white; }
+
+        /* --- Table Styling --- */
+        #listView { max-width: 100%; }
+        
+        .list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .list-header h2 { margin-bottom: 0; }
+
+        .search-box-container input {
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            padding: 10px 15px;
+            border-radius: 6px;
+            color: var(--text-main);
+            font-size: 14px;
+            width: 300px;
+            outline: none;
+            transition: all 0.3s ease;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .search-box-container input:focus { 
+            border-color: var(--theme-color); 
+            background-color: var(--input-focus-bg); 
+            box-shadow: 0 0 10px var(--theme-glow), inset 0 2px 4px rgba(0,0,0,0.05); 
+        }
+
+        .table-responsive { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 14px; border-bottom: 1px solid var(--border-color); font-size: 13px; color: var(--text-main); transition: var(--theme-transition); vertical-align: middle; }
+        th { color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 11px; background: var(--input-bg); }
+        .empty-msg { text-align: center; padding: 30px; color: var(--text-muted); font-size: 14px; }
+
+        .pending-status-pill {
+            display: inline-block;
+            background: rgba(255, 193, 7, 0.16);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.45);
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            margin-top: 4px;
+            text-transform: uppercase;
+        }
+
+        .action-btns { display: inline-flex; gap: 6px; flex-wrap: nowrap; align-items: center; }
+        .btn-sm { padding: 6px 10px; border: none; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; color: white; transition: all 0.2s; }
+        .btn-sm:hover { transform: translateY(-1px); }
+        .btn-edit { background-color: #007bff; }
+        .btn-delete { background-color: #dc3545; }
+
+        /* --- Form Styling --- */
+        #formView { max-width: 800px; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 25px; }
+        .form-group { display: flex; flex-direction: column; gap: 8px; position: relative; }
+        label { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; transition: color 0.3s; }
+        .required-star { color: #ff4d4d; margin-left: 3px; }
+
+        input[type="month"], input[type="number"], input[type="text"], input[type="hidden"], textarea, select {
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            padding: 12px 15px;
+            border-radius: 6px;
+            color: var(--text-main);
+            font-size: 14px;
+            transition: all 0.3s ease;
+            width: 100%;
+            outline: none;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+        input:focus, textarea:focus, select:focus { 
+            border-color: var(--theme-color); 
+            background-color: var(--input-focus-bg); 
+            box-shadow: 0 0 10px var(--theme-glow), inset 0 2px 4px rgba(0,0,0,0.05); 
+        }
+        .form-group:focus-within label { color: var(--theme-color); }
+        
+        select option { background: var(--bg-card); color: var(--text-main); }
+
+        /* Custom Dropdown Styling */
+        .custom-dropdown { position: relative; width: 100%; }
+        .dropdown-btn {
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            padding: 12px 15px;
+            border-radius: 6px;
+            color: var(--text-main);
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+            user-select: none;
+        }
+        .dropdown-btn:hover { border-color: var(--theme-color); }
+        .dropdown-btn::after { content: '▼'; font-size: 10px; color: var(--text-muted); }
+        
+        /* Locked / Disabled Dropdown State for Supervisor */
+        .dropdown-btn.disabled-dropdown {
+            opacity: 0.75;
+            cursor: not-allowed;
+            background-color: rgba(255, 193, 7, 0.08);
+            border-color: rgba(255, 193, 7, 0.4);
+            color: #ffc107 !important;
+            font-weight: 700;
+            pointer-events: none;
+        }
+        .dropdown-btn.disabled-dropdown::after { content: '🔒'; font-size: 12px; }
+
+        .dropdown-content {
+            display: none; position: absolute; top: 100%; left: 0; width: 100%;
+            background-color: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: 6px; box-shadow: var(--shadow); z-index: 100;
+            margin-top: 5px; overflow: hidden; transition: var(--theme-transition);
+        }
+        .dropdown-content.show { display: block; }
+        .dropdown-search { padding: 10px; border-bottom: 1px solid var(--border-color); background: var(--input-bg); }
+        .dropdown-search input { padding: 10px; font-size: 13px; }
+        .dropdown-list { max-height: 250px; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 5px; }
+        
+        .list-item {
+            display: flex; align-items: center; gap: 12px; padding: 10px;
+            background: var(--glass-bg); border-radius: 6px; cursor: pointer; transition: background 0.2s;
+        }
+        .list-item:hover { background: var(--theme-glow); color: var(--theme-color); }
+
+        .btn-submit-form {
+            background-color: var(--theme-color); color: #ffffff; border: 1px solid rgba(255,255,255,0.1); padding: 14px 30px;
+            border-radius: 6px; font-weight: 700; font-size: 14px; cursor: pointer;
+            text-transform: uppercase; width: 100%; margin-top: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+        }
+        .btn-submit-form:hover { transform: translateY(-2px); box-shadow: 0 8px 20px var(--theme-glow); }
+
+        /* Inline Success Message */
+        .inline-success {
+            display: none;
+            background-color: rgba(40, 167, 69, 0.1);
+            color: var(--theme-color);
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: 600;
+            margin-top: 15px;
+            border: 1px solid rgba(40, 167, 69, 0.4);
+            animation: fadeIn 0.3s;
+        }
+
+        /* ================= OFFICE APPROVAL REQUEST MODAL ================= */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(5px);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-top: 4px solid #ffc107;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 480px;
+            padding: 28px;
+            box-shadow: var(--shadow);
+            animation: fadeIn 0.25s ease;
+        }
+        .modal-card h3 { font-size: 18px; color: #ffc107; margin-bottom: 10px; }
+        .modal-card p { font-size: 12.5px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5; }
+        .modal-btn-row { display: flex; gap: 10px; margin-top: 18px; }
+        .btn-modal { flex: 1; padding: 11px 16px; border-radius: 6px; font-weight: 700; font-size: 12.5px; border: none; cursor: pointer; text-transform: uppercase; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        #hiddenCsvInput { display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="main-content">
+        <div class="header">
+            <h1>
+                Monthly Attendance
+                <span id="supSiteBadge" class="sup-site-badge">🔒 Site Locked</span>
+            </h1>
+            <div class="header-actions">
+                <button id="btnShowForm" class="btn-top-action" onclick="showForm()">➕ Single Entry</button>
+                <button id="btnShowList" class="btn-top-action btn-view-list" style="display:none;" onclick="showList()">📋 View List</button>
+                <a href="dashboard_home.html" id="btnBackDashboard" class="btn-back" onclick="handleBackToDashboard(event)">← Back to Dashboard</a>
+            </div>
+        </div>
+
+        <!-- ================= VIEW LIST SECTION ================= -->
+        <div id="listView" class="section-box">
+            
+            <div class="bulk-upload-banner">
+                <div class="bulk-upload-info">
+                    <h3>📊 Excel / CSV Bulk Attendance Upload</h3>
+                    <p id="bulkBannerDesc">Upload month-ending attendance for multiple employees at once.</p>
+                </div>
+                <div class="bulk-actions">
+                    <button class="btn-template" onclick="downloadCsvTemplate()">📥 Download Template</button>
+                    <button class="btn-bulk-upload" onclick="triggerCsvUpload()">📁 Upload Data</button>
+                    <input type="file" id="hiddenCsvInput" accept=".csv" onchange="handleBulkUpload(event)">
+                </div>
+            </div>
+
+            <div class="list-header">
+                <h2>📋 Attendance Records</h2>
+                <div class="search-box-container">
+                    <input type="text" id="tableSearchBox" placeholder="🔍 Search by Month, Name or Site..." onkeyup="filterTable()">
+                </div>
+            </div>
+            
+            <div class="table-responsive">
+                <table id="attendanceTable">
+                    <thead>
+                        <tr>
+                            <th>Month</th>
+                            <th>Employee Details</th>
+                            <th>Work Site</th>
+                            <th>Present Days</th>
+                            <th>Overtime (Hrs)</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="attendanceTableBody">
+                        <!-- Data populated via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ================= ENTRY FORM SECTION ================= -->
+        <div id="formView" class="section-box" style="display:none;">
+            <h2 id="formTitle">📝 Add Monthly Attendance</h2>
+            
+            <!-- data-office-hooked="true" prevents duplicate parent interception so this file handles Office Approval cleanly -->
+            <form id="attendanceForm" data-office-hooked="true" onsubmit="handleFormSubmit(event)">
+                <input type="hidden" id="edit_record_id">
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Select Month & Year <span class="required-star">*</span></label>
+                        <input type="month" id="attend_month" required onchange="updateAvailableEmployees()">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Work Site <span class="required-star">*</span></label>
+                        <input type="hidden" id="selected_site" required>
+                        <div class="custom-dropdown">
+                            <div class="dropdown-btn" onclick="toggleDropdown('siteDropdown')" id="siteDropdownBtnText">-- Select a Site --</div>
+                            <div class="dropdown-content" id="siteDropdown">
+                                <div class="dropdown-search">
+                                    <input type="text" placeholder="🔍 Search Site..." onkeyup="filterDropdown(this, 'site-item')">
+                                </div>
+                                <div class="dropdown-list" id="siteDropdownList">
+                                    <div class="list-item site-item" onclick="selectSite('Kolkata Metro Project - Line 6')">Kolkata Metro Project - Line 6</div>
+                                    <div class="list-item site-item" onclick="selectSite('Dum Dum Warehouse')">Dum Dum Warehouse</div>
+                                    <div class="list-item site-item" onclick="selectSite('Howrah Bridge Renovation')">Howrah Bridge Renovation</div>
+                                    <div class="list-item site-item" onclick="selectSite('Salt Lake IT Park')">Salt Lake IT Park</div>
+                                    <div class="list-item site-item" onclick="selectSite('Salt Lake Sector V')">Salt Lake Sector V</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label>Select Employee <span class="required-star">*</span></label>
+                        <input type="hidden" id="selected_employee" required>
+                        <div class="custom-dropdown">
+                            <div class="dropdown-btn" onclick="toggleDropdown('empDropdown')" id="empDropdownBtnText">-- Search & Select Employee --</div>
+                            <div class="dropdown-content" id="empDropdown">
+                                <div class="dropdown-search">
+                                    <input type="text" placeholder="🔍 Search Employee..." onkeyup="filterDropdown(this, 'emp-item')">
+                                </div>
+                                <div class="dropdown-list" id="employeeListArea">
+                                    <!-- Populated via JS -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Total Present Days <span class="required-star">*</span></label>
+                        <input type="number" id="present_days" placeholder="e.g. 26" step="0.5" min="0" max="31" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Total Overtime (Hrs)</label>
+                        <input type="number" id="overtime_hrs" placeholder="e.g. 15" min="0" value="0">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-submit-form" id="btnSubmit">Save Attendance</button>
+                <div id="inlineSuccessMsg" class="inline-success">✅ Attendance Saved Successfully!</div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= OFFICE APPROVAL MODAL (ROUTES TO ApproveOffice.html) ================= -->
+    <div class="modal-overlay" id="officeApprovalModal">
+        <div class="modal-card">
+            <h3>🏢 Send Request to ApproveOffice.html</h3>
+            <p>
+                অফিস পোর্টাল থেকে অ্যাটেন্ডেন্স এন্ট্রি, এডিট, বাল্ক আপলোড বা ডিলিট করলে তা অ্যাডমিনের <strong>ApproveOffice.html</strong>-এ পাঠানো হবে। অ্যাডমিন অ্যাপ্রুভ করলেই এটি চূড়ান্ত হবে।
+            </p>
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label>Action & Attendance Details</label>
+                <input type="text" id="officeApprovalSummary" readonly style="color: #ffc107; font-weight: 700;">
+            </div>
+            <div class="form-group">
+                <label>Reason / Remarks for Admin Approval <span class="required-star">*</span></label>
+                <textarea id="officeApprovalReason" rows="3" placeholder="Write a short note or reason for this attendance action..." style="resize: none;"></textarea>
+            </div>
+            <div class="modal-btn-row">
+                <button type="button" class="btn-modal" style="background: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color);" onclick="closeOfficeApprovalModal()">Cancel</button>
+                <button type="button" class="btn-modal" style="background: #ffc107; color: #121212;" onclick="confirmOfficeApprovalRequest()">📤 Send for Approval</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ================= ROLE & SITE LOCKING VARIABLES =================
+        let isSupervisorMode = false;
+        let isOfficeMode = false;
+        let assignedSite = "";
+        let loggedUserId = "ADMIN";
+        let loggedUserName = "Super Admin";
+        let pendingOfficePayload = null;
+
+        const allEmployees = JSON.parse(localStorage.getItem('atr_employees')) || [
+            { id: "EMP-001", name: "Rahul Sk", designation: "Site Engineer" },
+            { id: "EMP-002", name: "Amitabha Roy", designation: "Supervisor" },
+            { id: "EMP-003", name: "Sayan Karmakar", designation: "Labor" },
+            { id: "EMP-004", name: "Bikash Das", designation: "Mason" },
+            { id: "EMP-005", name: "Sumi", designation: "HR Manager" }
+        ];
+
+        window.onload = function() {
+            checkUrlPermissions();
+
+            const d = new Date();
+            const monthStr = d.toISOString().substring(0, 7);
+            document.getElementById('attend_month').value = monthStr;
+            
+            applySupervisorSiteLock();
+            updateAvailableEmployees(); 
+            loadTableData();
+        };
+
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'atr_attendance') {
+                updateAvailableEmployees();
+                loadTableData();
+            }
+        });
+
+        // --- Check Admin vs Supervisor vs Office Staff Mode ---
+        function checkUrlPermissions() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewParam = (urlParams.get('view') || '').toLowerCase();
+            const siteParam = urlParams.get('site');
+
+            let parentPath = "";
+            try {
+                if (window.parent && window.parent !== window) {
+                    parentPath = (window.parent.location.pathname || '').toLowerCase();
+                }
+            } catch (e) {}
+
+            if (viewParam === 'supervisor' && siteParam) {
+                isSupervisorMode = true;
+                isOfficeMode = false;
+                assignedSite = siteParam.trim();
+
+                // Show locked site badge in header
+                const badge = document.getElementById('supSiteBadge');
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🔒 Site Locked: ${assignedSite}`;
+                }
+
+                // Update Bulk Upload description for Supervisor
+                const bulkDesc = document.getElementById('bulkBannerDesc');
+                if (bulkDesc) {
+                    bulkDesc.innerText = `Upload month-ending attendance exclusively for ${assignedSite}.`;
+                }
+
+                // Update Back Button href to Supervisor Child Dashboard
+                const backBtn = document.getElementById('btnBackDashboard');
+                if (backBtn) {
+                    backBtn.href = "supervisor/supervisor_dashboard_home.html";
+                }
+            } else if (viewParam === 'office' || parentPath.includes('officedashboard')) {
+                isOfficeMode = true;
+                isSupervisorMode = false;
+                assignedSite = "";
+                loggedUserId = urlParams.get('userId') || sessionStorage.getItem('atr_logged_office_id') || localStorage.getItem('atr_logged_office_id') || "OFF-101";
+                loggedUserName = urlParams.get('userName') || "Office Staff";
+
+                const badge = document.getElementById('supSiteBadge');
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🏢 Office Mode (${loggedUserName}) — Synced with ApproveOffice.html`;
+                }
+
+                const submitBtn = document.getElementById('btnSubmit');
+                if (submitBtn) {
+                    submitBtn.innerText = "📤 Submit Attendance for Approval";
+                }
+
+                const backBtn = document.getElementById('btnBackDashboard');
+                if (backBtn) {
+                    backBtn.href = "office/office_dashboard_home.html";
+                }
+            } else {
+                isSupervisorMode = false;
+                isOfficeMode = false;
+                assignedSite = "";
+                const backBtn = document.getElementById('btnBackDashboard');
+                if (backBtn) {
+                    backBtn.href = "dashboard_home.html";
+                }
+            }
+        }
+
+        // --- Enforce Site Selection & Lock in Form ---
+        function applySupervisorSiteLock() {
+            const siteInput = document.getElementById('selected_site');
+            const siteBtn = document.getElementById('siteDropdownBtnText');
+
+            if (isSupervisorMode && assignedSite) {
+                siteInput.value = assignedSite;
+                siteBtn.innerText = assignedSite;
+                siteBtn.classList.add('disabled-dropdown');
+            } else {
+                siteBtn.classList.remove('disabled-dropdown');
+            }
+        }
+
+        // --- Smart Back to Dashboard Navigation (Admin vs Supervisor vs Office) ---
+        function handleBackToDashboard(event) {
+            if (isSupervisorMode) {
+                event.preventDefault();
+                
+                try {
+                    if (window.parent && window.parent !== window) {
+                        const parentHomeLink = window.parent.document.querySelector('.dashboard-home-link');
+                        if (parentHomeLink) {
+                            if (typeof window.parent.clearTreeActiveLinks === 'function') {
+                                window.parent.clearTreeActiveLinks();
+                            }
+                            window.location.href = parentHomeLink.href;
+                            return;
+                        }
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "supervisor_dashboard_home.html";
+                    return;
+                }
+
+                window.location.href = "supervisor/supervisor_dashboard_home.html";
+            } else if (isOfficeMode) {
+                event.preventDefault();
+
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.loadOfficeWorkspaceHome === 'function') {
+                        window.parent.loadOfficeWorkspaceHome();
+                        return;
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "office_dashboard_home.html";
+                    return;
+                }
+
+                window.location.href = "office/office_dashboard_home.html";
+            }
+        }
+
+        // --- Core Logic: Hide employees who already have attendance ---
+        function updateAvailableEmployees() {
+            const month = document.getElementById('attend_month').value;
+            const site = isSupervisorMode ? assignedSite : document.getElementById('selected_site').value;
+            const editId = document.getElementById('edit_record_id').value;
+            const data = JSON.parse(localStorage.getItem('atr_attendance')) || [];
+
+            const availableEmployees = allEmployees.filter(emp => {
+                const empStr = `${emp.name} (${emp.id})`;
+                const isAlreadyMarked = data.some(d => 
+                    d.month === month && 
+                    d.site === site && 
+                    d.employee === empStr &&
+                    d.id !== editId 
+                );
+                return !isAlreadyMarked;
+            });
+
+            renderEmployeeList(availableEmployees);
+
+            const currentSelected = document.getElementById('selected_employee').value;
+            if(currentSelected && !editId) {
+                const isValid = availableEmployees.some(emp => `${emp.name} (${emp.id})` === currentSelected);
+                if(!isValid) {
+                    document.getElementById('selected_employee').value = "";
+                    document.getElementById('empDropdownBtnText').innerText = "-- Search & Select Employee --";
+                    document.getElementById('empDropdownBtnText').style.color = "var(--text-main)";
+                }
+            }
+        }
+
+        // --- View Toggles ---
+        function showForm() {
+            document.getElementById('listView').style.display = 'none';
+            document.getElementById('btnShowForm').style.display = 'none';
+            document.getElementById('formView').style.display = 'block';
+            document.getElementById('btnShowList').style.display = 'block';
+            resetForm();
+        }
+
+        function showList() {
+            document.getElementById('formView').style.display = 'none';
+            document.getElementById('btnShowList').style.display = 'none';
+            document.getElementById('listView').style.display = 'block';
+            document.getElementById('btnShowForm').style.display = 'block';
+            loadTableData();
+        }
+
+        function resetForm() {
+            document.getElementById('attendanceForm').reset();
+            document.getElementById('edit_record_id').value = "";
+            document.getElementById('formTitle').innerText = "📝 Add Monthly Attendance";
+            document.getElementById('btnSubmit').innerText = isOfficeMode ? "📤 Submit Attendance for Approval" : "Save Attendance";
+            document.getElementById('inlineSuccessMsg').style.display = 'none';
+            
+            const monthStr = new Date().toISOString().substring(0, 7);
+            document.getElementById('attend_month').value = monthStr;
+
+            // Keep site locked if Supervisor, otherwise reset for Admin / Office
+            if (isSupervisorMode && assignedSite) {
+                applySupervisorSiteLock();
+            } else {
+                document.getElementById('selected_site').value = "";
+                document.getElementById('siteDropdownBtnText').innerText = "-- Select a Site --";
+                document.getElementById('siteDropdownBtnText').style.color = "var(--text-main)";
+            }
+
+            document.getElementById('selected_employee').value = "";
+            document.getElementById('empDropdownBtnText').innerText = "-- Search & Select Employee --";
+            document.getElementById('empDropdownBtnText').style.color = "var(--text-main)";
+
+            updateAvailableEmployees(); 
+        }
+
+        // --- Dropdown Logic ---
+        function toggleDropdown(id) {
+            // Prevent Supervisor from opening the Site dropdown
+            if (id === 'siteDropdown' && isSupervisorMode) {
+                return;
+            }
+            document.querySelectorAll('.dropdown-content').forEach(el => {
+                if(el.id !== id) el.classList.remove('show');
+            });
+            document.getElementById(id).classList.toggle('show');
+        }
+
+        window.onclick = function(event) {
+            if (!event.target.closest('.custom-dropdown')) {
+                document.querySelectorAll('.dropdown-content').forEach(el => el.classList.remove('show'));
+            }
+        }
+
+        function filterDropdown(input, itemClass) {
+            const filter = input.value.toLowerCase();
+            const items = document.querySelectorAll('.' + itemClass);
+            items.forEach(item => {
+                item.style.display = item.innerText.toLowerCase().includes(filter) ? 'flex' : 'none';
+            });
+        }
+
+        function selectSite(siteName) {
+            if (isSupervisorMode) return; // Strict protection
+            document.getElementById('selected_site').value = siteName;
+            let btn = document.getElementById('siteDropdownBtnText');
+            btn.innerText = siteName;
+            btn.style.color = 'var(--theme-color)';
+            document.getElementById('siteDropdown').classList.remove('show');
+            updateAvailableEmployees();
+        }
+
+        function renderEmployeeList(employees) {
+            const listArea = document.getElementById('employeeListArea');
+            listArea.innerHTML = '';
+            
+            if(employees.length === 0) {
+                listArea.innerHTML = `<div style="padding:10px; text-align:center; color:var(--text-muted); font-size:13px;">All employees are already marked for this site & month.</div>`;
+                return;
+            }
+
+            employees.forEach(emp => {
+                const div = document.createElement('div');
+                div.className = 'list-item emp-item';
+                div.innerHTML = `<span><span style="color:var(--theme-color); font-size:12px;">[${emp.id}]</span> ${emp.name}</span>`;
+                div.onclick = () => selectEmployee(emp.name, emp.id);
+                listArea.appendChild(div);
+            });
+        }
+
+        function selectEmployee(name, id) {
+            const combinedValue = `${name} (${id})`;
+            document.getElementById('selected_employee').value = combinedValue;
+            let btn = document.getElementById('empDropdownBtnText');
+            btn.innerText = combinedValue;
+            btn.style.color = 'var(--theme-color)';
+            document.getElementById('empDropdown').classList.remove('show');
+        }
+
+        // --- Form Submission Logic (Continuous Entry for Admin/Supervisor, Approval for Office) ---
+        function handleFormSubmit(event) {
+            event.preventDefault();
+
+            const month = document.getElementById('attend_month').value;
+            const site = isSupervisorMode ? assignedSite : document.getElementById('selected_site').value;
+            const employee = document.getElementById('selected_employee').value;
+            const presentDays = document.getElementById('present_days').value;
+            const overtime = document.getElementById('overtime_hrs').value || "0";
+            const editId = document.getElementById('edit_record_id').value;
+
+            if(!site || !employee) return alert("⚠️ Please select both Work Site and Employee.");
+
+            let data = JSON.parse(localStorage.getItem('atr_attendance')) || [];
+
+            // IF OFFICE STAFF MODE: Route to ApproveOffice.html
+            if (isOfficeMode) {
+                if (editId) {
+                    const existingRec = data.find(d => d.id === editId);
+                    openOfficeApprovalModal({
+                        type: 'EDIT',
+                        targetId: editId,
+                        actionLabel: "EDIT ATTENDANCE",
+                        summary: `${employee} (${month} | ${site}) — Days: ${existingRec ? existingRec.presentDays : ''} → ${presentDays}, OT: ${overtime} Hrs`,
+                        oldData: existingRec ? { ...existingRec } : null,
+                        newData: { id: editId, month, site, employee, presentDays, overtime }
+                    });
+                } else {
+                    const newId = "ATT-" + Date.now();
+                    openOfficeApprovalModal({
+                        type: 'CREATE',
+                        targetId: newId,
+                        actionLabel: "NEW ATTENDANCE ENTRY",
+                        summary: `${employee} (${month} | ${site}) — Present: ${presentDays} Days, OT: ${overtime} Hrs`,
+                        oldData: null,
+                        newData: { id: newId, month, site, employee, presentDays, overtime }
+                    });
+                }
+                return;
+            }
+
+            // ADMIN & SUPERVISOR EXISTING LOGIC (UNTOUCHED)
+            if(editId) {
+                let index = data.findIndex(d => d.id === editId);
+                if(index > -1) {
+                    data[index] = { id: editId, month, site, employee, presentDays, overtime };
+                }
+            } else {
+                let newId = "ATT-" + Date.now();
+                data.push({ id: newId, month, site, employee, presentDays, overtime });
+            }
+
+            localStorage.setItem('atr_attendance', JSON.stringify(data));
+            
+            let msgBox = document.getElementById('inlineSuccessMsg');
+            msgBox.innerText = "✅ Attendance Saved Successfully!";
+            msgBox.style.display = 'block';
+            setTimeout(() => { msgBox.style.display = 'none'; }, 3000);
+
+            document.getElementById('selected_employee').value = "";
+            document.getElementById('empDropdownBtnText').innerText = "-- Search & Select Employee --";
+            document.getElementById('empDropdownBtnText').style.color = "var(--text-main)";
+            document.getElementById('present_days').value = "";
+            document.getElementById('overtime_hrs').value = "0";
+
+            if(editId) {
+                document.getElementById('formTitle').innerText = "📝 Add Monthly Attendance";
+                document.getElementById('btnSubmit').innerText = "Save Attendance";
+                document.getElementById('edit_record_id').value = "";
+            }
+            
+            applySupervisorSiteLock();
+            updateAvailableEmployees(); 
+        }
+
+        // --- Table Display ---
+        function loadTableData() {
+            const tbody = document.getElementById('attendanceTableBody');
+            let data = JSON.parse(localStorage.getItem('atr_attendance')) || [];
+            tbody.innerHTML = "";
+
+            // Filter records strictly for Supervisor's assigned site
+            if (isSupervisorMode && assignedSite) {
+                data = data.filter(row => row.site === assignedSite);
+            }
+
+            if(data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="empty-msg">No Attendance Records Found${isSupervisorMode ? ' for ' + assignedSite : ''}.</td></tr>`;
+                return;
+            }
+
+            data.slice().reverse().forEach(row => {
+                let tr = document.createElement('tr');
+                let dateObj = new Date(row.month + "-01");
+                let readableMonth = dateObj.toLocaleString('default', { month: 'short', year: 'numeric' });
+                const pendingBadge = row.pendingStatus
+                    ? `<br><span class="pending-status-pill">⏳ ${row.pendingStatus}</span>`
+                    : '';
+
+                tr.innerHTML = `
+                    <td style="color:#ffc107; font-weight:bold;">
+                        ${readableMonth}
+                        ${pendingBadge}
+                    </td>
+                    <td>${row.employee}</td>
+                    <td>${row.site}</td>
+                    <td style="font-weight:bold; color:var(--theme-color);">${row.presentDays} Days</td>
+                    <td>${row.overtime} Hrs</td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="btn-sm btn-edit" title="Edit Record" onclick="editRecord('${row.id}')">✏️</button>
+                            <button class="btn-sm btn-delete" title="Delete Record" onclick="deleteRecord('${row.id}')">🗑️</button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filterTable() {
+            let filter = document.getElementById("tableSearchBox").value.toLowerCase();
+            let trs = document.getElementById("attendanceTableBody").getElementsByTagName("tr");
+            
+            for (let i = 0; i < trs.length; i++) {
+                if(trs[i].getElementsByTagName("td").length > 1) {
+                    let textContext = trs[i].innerText.toLowerCase();
+                    trs[i].style.display = textContext.includes(filter) ? "" : "none";
+                }
+            }
+        }
+
+        function editRecord(id) {
+            let data = JSON.parse(localStorage.getItem('atr_attendance')) || [];
+            let record = data.find(d => d.id === id);
+            
+            if(record) {
+                // Prevent Supervisor from editing another site's record
+                if (isSupervisorMode && record.site !== assignedSite) {
+                    alert("❌ Unauthorized: You can only edit attendance for your assigned site.");
+                    return;
+                }
+
+                showForm();
+                document.getElementById('formTitle').innerText = isOfficeMode ? "✏️ Edit Attendance (Requires Approval)" : "✏️ Edit Attendance";
+                document.getElementById('btnSubmit').innerText = isOfficeMode ? "📤 Send Update for Approval" : "Update Attendance";
+                document.getElementById('edit_record_id').value = record.id;
+                
+                document.getElementById('attend_month').value = record.month;
+                document.getElementById('present_days').value = record.presentDays;
+                document.getElementById('overtime_hrs').value = record.overtime;
+                
+                const activeSite = isSupervisorMode ? assignedSite : record.site;
+                document.getElementById('selected_site').value = activeSite;
+                document.getElementById('siteDropdownBtnText').innerText = activeSite;
+                document.getElementById('siteDropdownBtnText').style.color = 'var(--theme-color)';
+                applySupervisorSiteLock();
+                
+                document.getElementById('selected_employee').value = record.employee;
+                document.getElementById('empDropdownBtnText').innerText = record.employee;
+                document.getElementById('empDropdownBtnText').style.color = 'var(--theme-color)';
+
+                updateAvailableEmployees(); 
+            }
+        }
+
+        function deleteRecord(id) {
+            let data = JSON.parse(localStorage.getItem('atr_attendance')) || [];
+            let record = data.find(d => d.id === id);
+            if (!record) return;
+
+            // IF OFFICE STAFF MODE: Route Deletion to ApproveOffice.html
+            if (isOfficeMode) {
+                openOfficeApprovalModal({
+                    type: 'DELETE',
+                    targetId: id,
+                    actionLabel: "DELETE ATTENDANCE RECORD",
+                    summary: `Delete Attendance: ${record.employee} (${record.month} | ${record.site} | ${record.presentDays} Days)`,
+                    oldData: { ...record },
+                    newData: null
+                });
+                return;
+            }
+
+            // ADMIN & SUPERVISOR EXISTING LOGIC (UNTOUCHED)
+            let pwd = prompt("Authorization Required: Please enter the administrator password to confirm the deletion.");
+            if(pwd === "admin123") {
+                data = data.filter(d => d.id !== id);
+                localStorage.setItem('atr_attendance', JSON.stringify(data));
+                loadTableData();
+                updateAvailableEmployees();
+                alert("✅ The record has been successfully deleted.");
+            } else if(pwd !== null) {
+                alert("❌ Authentication failed. Access denied.");
+            }
+        }
+
+        // --- Bulk Upload Logic (DYNAMIC AUTO-FILL CSV) ---
+        function downloadCsvTemplate() {
+            // 1. Get Target Month
+            const currentMonth = document.getElementById('attend_month').value;
+            
+            // 2. Fetch Active Tagged Employees from DB (atr_site_tagging)
+            const siteTaggingDb = JSON.parse(localStorage.getItem('atr_site_tagging')) || [];
+            
+            let activeTags = [];
+            if (isSupervisorMode && assignedSite) {
+                // If Supervisor, ONLY fetch tags for their specific site
+                activeTags = siteTaggingDb.filter(t => t.site === assignedSite && t.status === "Active");
+            } else {
+                // If Admin/Office, fetch all active tags across all sites
+                activeTags = siteTaggingDb.filter(t => t.status === "Active");
+            }
+
+            // 3. Fallback dummy data if DB is completely empty for testing
+            if (activeTags.length === 0) {
+                const sampleSite = (isSupervisorMode && assignedSite) ? assignedSite : "Dum Dum Project";
+                activeTags = [
+                    { employeeName: "Rahul Sk", employeeId: "EMP-001", site: sampleSite },
+                    { employeeName: "Amitabha Roy", employeeId: "EMP-002", site: sampleSite }
+                ];
+            }
+
+            // 4. Generate the CSV File dynamically
+            let csvContent = "data:text/csv;charset=utf-8,";
+            // Header Row
+            csvContent += "Month (YYYY-MM),Work Site,Employee Details (Name & ID),Present Days,Overtime Hrs\n";
+            
+            // Data Rows (Auto-filled with Month, Site, and Name)
+            activeTags.forEach(tag => {
+                const empDetails = `${tag.employeeName} (${tag.employeeId})`;
+                // Leaving Present Days and Overtime blank for the user to fill
+                csvContent += `${currentMonth},${tag.site},${empDetails},,\n`;
+            });
+            
+            // 5. Download the File
+            var encodedUri = encodeURI(csvContent);
+            var link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `ATR_Attendance_Template_${currentMonth}.csv`);
+            document.body.appendChild(link); 
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function triggerCsvUpload() { document.getElementById('hiddenCsvInput').click(); }
+
+        function handleBulkUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                processCSV(e.target.result);
+                event.target.value = "";
+            };
+            reader.readAsText(file);
+        }
+
+        function processCSV(csvText) {
+            const rows = csvText.split("\n");
+            let data = JSON.parse(localStorage.getItem('atr_attendance')) || [];
+            let parsedBatch = [];
+            let skipCount = 0;
+
+            for(let i = 1; i < rows.length; i++) {
+                let row = rows[i].trim();
+                if(!row) continue;
+                
+                let cols = row.split(",");
+                if(cols.length >= 4) {
+                    let month = cols[0].trim();
+                    let site = (isSupervisorMode && assignedSite) ? assignedSite : cols[1].trim();
+                    let employee = cols[2].trim();
+                    
+                    // Skip if present days is empty or invalid
+                    if(!cols[3] || cols[3].trim() === "") { skipCount++; continue; }
+                    let presentDays = parseFloat(cols[3].trim());
+                    
+                    let overtime = (cols[4] && cols[4].trim() !== "") ? parseFloat(cols[4].trim()) : 0;
+
+                    if(!month || !site || !employee || isNaN(presentDays)) { skipCount++; continue; }
+
+                    let isDuplicate = data.some(d => d.month === month && d.site === site && d.employee === employee) ||
+                                      parsedBatch.some(d => d.month === month && d.site === site && d.employee === employee);
+                    if(isDuplicate) {
+                        skipCount++;
+                    } else {
+                        parsedBatch.push({ id: "ATT-" + Date.now() + "-" + i, month, site, employee, presentDays, overtime });
+                    }
+                }
+            }
+
+            if (parsedBatch.length === 0) {
+                alert(`⚠️ No new valid attendance records found in CSV. (Skipped: ${skipCount})\nMake sure you filled in the 'Present Days' column.`);
+                return;
+            }
+
+            // IF OFFICE STAFF MODE: Route Bulk Upload to ApproveOffice.html
+            if (isOfficeMode) {
+                openOfficeApprovalModal({
+                    type: 'BULK_UPLOAD',
+                    batchRecords: parsedBatch,
+                    skipCount: skipCount,
+                    actionLabel: "BULK CSV ATTENDANCE UPLOAD",
+                    summary: `Bulk Upload ${parsedBatch.length} Attendance Record(s) (Skipped: ${skipCount})`,
+                    oldData: null,
+                    newData: parsedBatch
+                });
+                return;
+            }
+
+            // ADMIN & SUPERVISOR EXISTING LOGIC (UNTOUCHED)
+            data.push(...parsedBatch);
+            localStorage.setItem('atr_attendance', JSON.stringify(data));
+            loadTableData();
+            updateAvailableEmployees();
+            alert(`✅ Bulk Upload Complete!\n\nSuccessfully Added: ${parsedBatch.length} records.\nSkipped (Empty/Duplicates): ${skipCount} records.`);
+        }
+
+        // ================= OFFICE APPROVAL MODAL ENGINE =================
+        function openOfficeApprovalModal(payload) {
+            pendingOfficePayload = payload;
+            document.getElementById('officeApprovalSummary').value = `${payload.actionLabel}: ${payload.summary}`;
+            document.getElementById('officeApprovalReason').value = '';
+            document.getElementById('officeApprovalModal').classList.add('active');
+            setTimeout(() => document.getElementById('officeApprovalReason').focus(), 50);
+        }
+
+        function closeOfficeApprovalModal() {
+            document.getElementById('officeApprovalModal').classList.remove('active');
+            pendingOfficePayload = null;
+        }
+
+        function confirmOfficeApprovalRequest() {
+            const reason = document.getElementById('officeApprovalReason').value.trim();
+            if (!reason) {
+                alert("⚠️ Please enter a reason/remark for Admin Approval.");
+                return;
+            }
+            if (!pendingOfficePayload) return;
+
+            let data = JSON.parse(localStorage.getItem('atr_attendance')) || [];
+
+            if (pendingOfficePayload.type === 'CREATE') {
+                data.push({
+                    ...pendingOfficePayload.newData,
+                    pendingStatus: "Pending in ApproveOffice"
+                });
+                localStorage.setItem('atr_attendance', JSON.stringify(data));
+            } else if (pendingOfficePayload.type === 'EDIT') {
+                const idx = data.findIndex(d => d.id === pendingOfficePayload.targetId);
+                if (idx > -1) {
+                    data[idx].pendingStatus = "Edit Pending";
+                    localStorage.setItem('atr_attendance', JSON.stringify(data));
+                }
+            } else if (pendingOfficePayload.type === 'DELETE') {
+                const idx = data.findIndex(d => d.id === pendingOfficePayload.targetId);
+                if (idx > -1) {
+                    data[idx].pendingStatus = "Delete Pending";
+                    localStorage.setItem('atr_attendance', JSON.stringify(data));
+                }
+            } else if (pendingOfficePayload.type === 'BULK_UPLOAD') {
+                const pendingBatch = (pendingOfficePayload.batchRecords || []).map(r => ({
+                    ...r,
+                    pendingStatus: "Pending in ApproveOffice"
+                }));
+                data.push(...pendingBatch);
+                localStorage.setItem('atr_attendance', JSON.stringify(data));
+            }
+
+            // 1. Push Request to ApproveOffice.html queue
+            const newReq = {
+                reqId: "OFF-ATT-" + Date.now().toString().slice(-5),
+                userId: loggedUserId,
+                userName: loggedUserName,
+                designation: "Office Staff",
+                module: "EmployeeAttendance.html",
+                action: pendingOfficePayload.actionLabel,
+                summary: pendingOfficePayload.summary,
+                oldData: pendingOfficePayload.oldData,
+                newData: pendingOfficePayload.newData,
+                reason: reason,
+                timestamp: new Date().toLocaleString('en-IN'),
+                status: "Pending"
+            };
+
+            const officeQueue = JSON.parse(localStorage.getItem('atr_office_approvals')) || [];
+            officeQueue.unshift(newReq);
+            localStorage.setItem('atr_office_approvals', JSON.stringify(officeQueue));
+            localStorage.setItem('approve_office_requests', JSON.stringify(officeQueue));
+            localStorage.setItem('ApproveOffice_requests', JSON.stringify(officeQueue));
+
+            // 2. Log in Office Daily Work Report (office_dashboard_home.html)
+            const workLogs = JSON.parse(localStorage.getItem('atr_office_daily_work')) || [];
+            const todayStr = new Date().toISOString().split('T')[0];
+            const nowTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+            workLogs.unshift({
+                id: "WRK-" + Date.now().toString().slice(-5),
+                userId: loggedUserId,
+                userName: loggedUserName,
+                date: todayStr,
+                time: nowTime,
+                module: "Attendence (EmployeeAttendance.html)",
+                refNo: newReq.reqId,
+                desc: `${pendingOfficePayload.actionLabel}: ${pendingOfficePayload.summary}`,
+                status: "Sent for Approval"
+            });
+            localStorage.setItem('atr_office_daily_work', JSON.stringify(workLogs));
+
+            // 3. Refresh Parent OfficeDashboard.html Notification Bell if inside iframe
+            try {
+                if (window.parent && window.parent !== window && typeof window.parent.refreshNotificationsUI === 'function') {
+                    window.parent.refreshNotificationsUI();
+                }
+            } catch (e) {}
+
+            const actionType = pendingOfficePayload.type;
+            closeOfficeApprovalModal();
+
+            if (actionType === 'CREATE' || actionType === 'EDIT') {
+                let msgBox = document.getElementById('inlineSuccessMsg');
+                msgBox.innerText = "📤 Request Sent to ApproveOffice.html for Admin Approval!";
+                msgBox.style.display = 'block';
+                setTimeout(() => { msgBox.style.display = 'none'; }, 3500);
+
+                document.getElementById('selected_employee').value = "";
+                document.getElementById('empDropdownBtnText').innerText = "-- Search & Select Employee --";
+                document.getElementById('empDropdownBtnText').style.color = "var(--text-main)";
+                document.getElementById('present_days').value = "";
+                document.getElementById('overtime_hrs').value = "0";
+
+                if (actionType === 'EDIT') {
+                    document.getElementById('formTitle').innerText = "📝 Add Monthly Attendance";
+                    document.getElementById('btnSubmit').innerText = "📤 Submit Attendance for Approval";
+                    document.getElementById('edit_record_id').value = "";
+                }
+            } else {
+                alert("📤 Request sent to ApproveOffice.html for Admin Approval!");
+            }
+
+            loadTableData();
+            updateAvailableEmployees();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Product Management System</title>
+    
+    <!-- Sync theme with Master Dashboard -->
+    <script>
+        const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        window.addEventListener('storage', function(e) {
+            if(e.key === 'atr_theme') { document.documentElement.setAttribute('data-theme', e.newValue); }
+        });
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap');
+
+        :root {
+            --bg-body: transparent; 
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.1);
+            
+            /* Dynamic Glass & Input Variables */
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(0, 0, 0, 0.2);
+            --input-focus-bg: rgba(0, 0, 0, 0.4);
+            
+            --shadow: 0 4px 15px rgba(0,0,0,0.3);
+            
+            /* Theme Color (Orange for Contractor Section) */
+            --theme-color: #fd7e14;
+            --theme-glow: rgba(253, 126, 20, 0.4);
+            --theme-transition: all 0.4s ease;
+        }
+
+        [data-theme="light"] {
+            --bg-body: transparent;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #555555;
+            --border-color: rgba(0, 0, 0, 0.1);
+            
+            --glass-bg: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --input-bg: rgba(255, 255, 255, 0.5);
+            --input-focus-bg: #ffffff;
+            
+            --shadow: 0 8px 25px rgba(0,0,0,0.05);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; scroll-behavior: smooth; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(136, 136, 136, 0.3); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(136, 136, 136, 0.6); }
+
+        body { background-color: var(--bg-body); color: var(--text-main); display: flex; min-height: 100vh; transition: var(--theme-transition); }
+
+        .main-content { flex: 1; padding: 40px; max-width: 1300px; margin: 0 auto; overflow-y: auto; width: 100%; }
+
+        .header-section {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 30px; border-bottom: 1px solid var(--border-color); padding-bottom: 20px;
+            transition: var(--theme-transition); flex-wrap: wrap; gap: 15px;
+        }
+
+        .header-section h1 { font-size: 24px; color: var(--text-main); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+        .role-mode-badge {
+            display: none;
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 700;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-back {
+            background-color: var(--glass-bg); color: var(--text-main);
+            border: 1px solid var(--border-color); text-decoration: none;
+            padding: 9px 16px; border-radius: 6px; font-weight: bold; font-size: 13px;
+            transition: all 0.3s; cursor: pointer;
+        }
+        .btn-back:hover { 
+            background-color: var(--theme-color); color: #fff; border-color: var(--theme-color); 
+            transform: translateY(-2px); box-shadow: 0 4px 10px var(--theme-glow); 
+        }
+
+        .btn-new-entry {
+            background-color: var(--theme-color); color: #121212; border: none; padding: 10px 20px;
+            border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; transition: all 0.3s;
+            display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+        .btn-new-entry:hover { transform: translateY(-2px); box-shadow: 0 6px 15px var(--theme-glow); }
+
+        /* Container Styles */
+        .box-container {
+            background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border); border-top: 4px solid var(--theme-color);
+            border-radius: 12px; padding: 30px; box-shadow: var(--shadow); margin-bottom: 30px;
+            transition: var(--theme-transition);
+        }
+
+        .list-header {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;
+            border-bottom: 1px dashed var(--border-color); padding-bottom: 15px; flex-wrap: wrap; gap: 15px;
+        }
+
+        .list-header h2 { font-size: 18px; color: var(--theme-color); text-transform: uppercase; letter-spacing: 0.5px; margin: 0; }
+
+        /* Search Bar Styles */
+        .search-bar {
+            padding: 10px 15px; border-radius: 20px; border: 1px solid var(--border-color);
+            background-color: var(--input-bg); color: var(--text-main); font-size: 13px; width: 300px;
+            transition: all 0.3s; outline: none; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .search-bar:focus { border-color: var(--theme-color); box-shadow: 0 0 10px var(--theme-glow); width: 350px; }
+
+        /* Form Grids & Inputs */
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .form-group { display: flex; flex-direction: column; gap: 8px; position: relative; }
+        .form-group.full-width { grid-column: span 2; }
+        .form-group label { font-size: 12px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
+        
+        .form-group input, .form-group select, .form-group textarea {
+            background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main);
+            padding: 12px 15px; border-radius: 6px; font-size: 14px; transition: all 0.3s; width: 100%; outline: none;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            border-color: var(--theme-color); background-color: var(--input-focus-bg);
+            box-shadow: 0 0 10px var(--theme-glow), inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+        select option { background: var(--bg-card); color: var(--text-main); }
+        
+        /* Buttons */
+        .btn-submit-order {
+            background-color: #28a745; color: white; border: none; padding: 12px 25px;
+            border-radius: 6px; font-weight: 700; font-size: 14px; cursor: pointer;
+            text-transform: uppercase; transition: all 0.3s; width: 100%; letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .btn-submit-order:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(40,167,69,0.3); }
+
+        .btn-cancel {
+            background-color: #6c757d; color: white; border: none; padding: 12px 25px;
+            border-radius: 6px; font-weight: 700; font-size: 14px; cursor: pointer;
+            text-transform: uppercase; transition: all 0.3s; width: 100%; letter-spacing: 1px;
+        }
+        .btn-cancel:hover { opacity: 0.9; transform: translateY(-2px); }
+
+        .button-group { display: flex; gap: 15px; margin-top: 25px; }
+
+        /* Table Styles */
+        .table-responsive { overflow-x: auto; width: 100%; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); margin-top: 10px; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 12px 15px; border-bottom: 1px solid var(--border-color); font-size: 13px; color: var(--text-main); transition: var(--theme-transition); vertical-align: middle; }
+        th { color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 11px; background: var(--input-bg); }
+        tr:hover { background: var(--glass-bg); }
+
+        .pending-status-pill {
+            display: inline-block;
+            background: rgba(255, 193, 7, 0.16);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.45);
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            margin-left: 8px;
+            text-transform: uppercase;
+        }
+
+        /* Action Buttons for List */
+        .action-btns { display: inline-flex; gap: 6px; align-items: center; flex-wrap: nowrap; white-space: nowrap; }
+        .btn-edit { background: var(--glass-bg); color: var(--theme-color); border: 1px solid var(--theme-color); padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; transition: 0.2s; }
+        .btn-delete { background: rgba(220, 53, 69, 0.1); color: #dc3545; border: 1px solid #dc3545; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; transition: 0.2s; }
+        .btn-edit:hover { background: var(--theme-color); color: #121212; }
+        .btn-delete:hover { background: #dc3545; color: white; }
+
+        /* MODAL (OVERLAY) STYLES */
+        #entryModal { 
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); z-index: 1000; 
+            justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s ease; padding: 20px;
+        }
+        #entryModal.show { display: flex; opacity: 1; }
+        #entryModal .box-container {
+            width: 100%; max-width: 550px; margin: 0; position: relative;
+            transform: translateY(-30px); transition: transform 0.3s ease; box-shadow: var(--shadow);
+        }
+        #entryModal.show .box-container { transform: translateY(0); }
+
+        .close-btn {
+            position: absolute; top: 25px; right: 25px; background: none; border: none;
+            color: var(--text-muted); font-size: 24px; cursor: pointer; transition: color 0.2s;
+        }
+        .close-btn:hover { color: #dc3545; }
+
+        /* OFFICE APPROVAL MODAL */
+        #officeApprovalModal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.72); backdrop-filter: blur(5px); z-index: 2000;
+            justify-content: center; align-items: center; padding: 20px;
+        }
+        #officeApprovalModal.show { display: flex; }
+        #officeApprovalModal .box-container {
+            width: 100%; max-width: 480px; border-top-color: #ffc107; margin: 0; position: relative;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-content">
+        <div class="header-section">
+            <h1>
+                📦 Product Management Master
+                <span id="roleModeBadge" class="role-mode-badge">🏢 Office Mode</span>
+            </h1>
+            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                <button class="btn-new-entry" onclick="openNewProductModal()">➕ Add New Product</button>
+                <a href="dashboard_home.html" id="btnBackDashboard" class="btn-back" onclick="handleBackToDashboard(event)">← Back to Dashboard</a>
+            </div>
+        </div>
+
+        <!-- LIST VIEW -->
+        <div id="listView" class="box-container">
+            <div class="list-header">
+                <h2>📋 Product List</h2>
+                <input type="text" id="searchInput" class="search-bar" placeholder="🔍 Search by Name, HSN or Unit..." onkeyup="searchProducts()">
+            </div>
+            
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Product Name</th>
+                            <th>HSN Code</th>
+                            <th>Unit</th>
+                            <th>Price (₹)</th>
+                            <th>GST (%)</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ENTRY FORM (MODAL OVERLAY) -->
+    <div id="entryModal">
+        <div class="box-container">
+            <button class="close-btn" onclick="closeModal()">&times;</button>
+            <h2 id="formTitle">📝 Add New Product</h2>
+            
+            <!-- data-office-hooked="true" prevents duplicate parent interception so this page handles Office Approval cleanly -->
+            <form id="productForm" data-office-hooked="true">
+                <input type="hidden" id="productId">
+                
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label>Product Name</label>
+                        <input type="text" id="pName" placeholder="Enter Product Name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>HSN Code</label>
+                        <input type="text" id="pHsn" placeholder="e.g. 2523" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Unit</label>
+                        <input type="text" id="pUnit" placeholder="e.g. Kg, Pcs, Bag, %" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Base Price (₹)</label>
+                        <input type="number" id="pPrice" step="0.01" min="0" placeholder="0.00" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>GST %</label>
+                        <select id="pGst" required>
+                            <option value="0">0%</option>
+                            <option value="5">5%</option>
+                            <option value="12">12%</option>
+                            <option value="18" selected>18%</option>
+                            <option value="28">28%</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button type="button" class="btn-cancel" onclick="closeModal()">❌ Close</button>
+                    <button type="submit" class="btn-submit-order" id="btnSave">✅ Save Product</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- OFFICE PORTAL APPROVAL MODAL (ROUTES TO ApproveOffice.html) -->
+    <div id="officeApprovalModal">
+        <div class="box-container">
+            <button class="close-btn" onclick="closeOfficeApprovalModal()">&times;</button>
+            <h2 id="officeApprovalTitle" style="font-size: 18px; color: #ffc107; margin-bottom: 10px;">🏢 Send Request to ApproveOffice.html</h2>
+            <p id="officeApprovalDesc" style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">
+                অফিস পোর্টাল থেকে নতুন প্রোডাক্ট অ্যাড, দাম বা তথ্য এডিট কিংবা প্রোডাক্ট ডিলিট করলে তা অ্যাডমিনের <strong>ApproveOffice.html</strong>-এ পাঠানো হবে। অ্যাডমিন অ্যাপ্রুভ করলেই এটি চূড়ান্ত হবে।
+            </p>
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label>Action & Product Details</label>
+                <input type="text" id="officeApprovalSummary" readonly style="color: #ffc107; font-weight: 700;">
+            </div>
+            <div class="form-group" style="margin-bottom: 18px;">
+                <label>Reason / Remarks for Admin Approval <span style="color: #ff4d4d;">*</span></label>
+                <textarea id="officeApprovalReason" rows="3" placeholder="Write a short note or reason for this product entry, update, or deletion..." style="resize: none;"></textarea>
+            </div>
+            <div class="button-group" style="margin-top: 10px;">
+                <button type="button" class="btn-cancel" onclick="closeOfficeApprovalModal()">Cancel</button>
+                <button type="button" class="btn-submit-order" style="background-color: #ffc107; color: #121212;" onclick="confirmOfficeApprovalRequest()">📤 Send for Approval</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================================================
+        // 1. PORTAL ROLE DETECTION & LOCALSTORAGE PERSISTENCE ENGINE
+        // =========================================================================================
+        let currentPortalMode = "admin"; // 'admin', 'office', or 'supervisor'
+        let loggedUserId = "ADMIN";
+        let loggedUserName = "Super Admin";
+        let assignedSite = "";
+        let pendingOfficePayload = null;
+
+        const defaultProducts = [
+            { id: 101, name: 'Ambuja Cement', hsn: '2523', unit: 'Bag', price: 350.00, gst: '28', pendingStatus: null },
+            { id: 102, name: 'Tata Tiscon 8mm', hsn: '7214', unit: 'Kg', price: 72.50, gst: '18', pendingStatus: null },
+            { id: 103, name: 'Red Bricks', hsn: '6904', unit: 'Pcs', price: 12.00, gst: '5', pendingStatus: null }
+        ];
+
+        let products = [];
+        let editMode = false;
+
+        function loadProductsDatabase() {
+            const stored = JSON.parse(localStorage.getItem('atr_products'));
+            if (Array.isArray(stored) && stored.length > 0) {
+                products = stored.map(p => ({
+                    ...p,
+                    price: parseFloat(p.price) || 0
+                }));
+            } else {
+                products = [...defaultProducts];
+                localStorage.setItem('atr_products', JSON.stringify(products));
+            }
+        }
+
+        function saveProductsDatabase() {
+            localStorage.setItem('atr_products', JSON.stringify(products));
+        }
+
+        function checkPortalPermissions() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewParam = (urlParams.get('view') || '').toLowerCase();
+            const badge = document.getElementById('roleModeBadge');
+            const backBtn = document.getElementById('btnBackDashboard');
+            const saveBtn = document.getElementById('btnSave');
+
+            let parentPath = "";
+            try {
+                if (window.parent && window.parent !== window) {
+                    parentPath = (window.parent.location.pathname || '').toLowerCase();
+                }
+            } catch (e) {}
+
+            if (viewParam === 'office' || parentPath.includes('officedashboard')) {
+                currentPortalMode = 'office';
+                loggedUserId = urlParams.get('userId') || sessionStorage.getItem('atr_logged_office_id') || localStorage.getItem('atr_logged_office_id') || "OFF-101";
+                loggedUserName = urlParams.get('userName') || "Office Staff";
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🏢 Office Mode (${loggedUserName}) — Synced with ApproveOffice.html`;
+                }
+                if (backBtn) {
+                    backBtn.href = "office/office_dashboard_home.html";
+                }
+                if (saveBtn) {
+                    saveBtn.innerText = "📤 Submit Product for Approval";
+                }
+            } else if (viewParam === 'supervisor' || parentPath.includes('supervisordashboard')) {
+                currentPortalMode = 'supervisor';
+                assignedSite = (urlParams.get('site') || sessionStorage.getItem('atr_supervisor_site') || "Salt Lake Sector V").trim();
+                loggedUserId = urlParams.get('supId') || "SUP-003";
+                loggedUserName = urlParams.get('supName') || "Supervisor";
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🛡️ Supervisor Mode (🔒 Site: ${assignedSite})`;
+                }
+                if (backBtn) {
+                    backBtn.href = "supervisor/supervisor_dashboard_home.html";
+                }
+            } else {
+                currentPortalMode = 'admin';
+                if (backBtn) {
+                    backBtn.href = "dashboard_home.html";
+                }
+            }
+        }
+
+        function handleBackToDashboard(event) {
+            if (currentPortalMode === 'office') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.loadOfficeWorkspaceHome === 'function') {
+                        window.parent.loadOfficeWorkspaceHome();
+                        return;
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "office_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "office/office_dashboard_home.html";
+            } else if (currentPortalMode === 'supervisor') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window) {
+                        const parentHomeLink = window.parent.document.querySelector('.dashboard-home-link');
+                        if (parentHomeLink) {
+                            window.location.href = parentHomeLink.href;
+                            return;
+                        }
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "supervisor_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "supervisor/supervisor_dashboard_home.html";
+            }
+        }
+
+        window.onload = function() {
+            checkPortalPermissions();
+            loadProductsDatabase();
+            renderTable(products);
+        };
+
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'atr_products') {
+                loadProductsDatabase();
+                searchProducts();
+            }
+        });
+
+        // =========================================================================================
+        // 2. SEARCH, MODAL & FORM SUBMISSION ENGINE
+        // =========================================================================================
+        function searchProducts() {
+            let filterValue = document.getElementById("searchInput").value.toLowerCase();
+            let filteredProducts = products.filter(p => 
+                p.name.toLowerCase().includes(filterValue) || 
+                p.hsn.toLowerCase().includes(filterValue) ||
+                p.unit.toLowerCase().includes(filterValue)
+            );
+            renderTable(filteredProducts);
+        }
+
+        function openNewProductModal() {
+            editMode = false;
+            openModal();
+        }
+
+        function openModal() {
+            const modal = document.getElementById('entryModal');
+            modal.classList.add('show');
+            
+            if(!editMode) {
+                document.getElementById("formTitle").innerText = "📝 Add New Product";
+                document.getElementById("btnSave").innerText = currentPortalMode === 'admin'
+                    ? "✅ Save Product"
+                    : "📤 Submit Product for Approval";
+                document.getElementById("productForm").reset();
+                document.getElementById("productId").value = "";
+                setTimeout(() => { document.getElementById("pName").focus(); }, 100); 
+            }
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('entryModal');
+            modal.classList.remove('show');
+            editMode = false;
+        }
+
+        document.getElementById("productForm").addEventListener("submit", function(e) {
+            e.preventDefault();
+            
+            let id = document.getElementById("productId").value;
+            let name = document.getElementById("pName").value.trim();
+            let hsn = document.getElementById("pHsn").value.trim();
+            let unit = document.getElementById("pUnit").value.trim();
+            let price = parseFloat(document.getElementById("pPrice").value) || 0;
+            let gst = document.getElementById("pGst").value;
+
+            let isDuplicate = products.some(p => 
+                p.name.toLowerCase() === name.toLowerCase() && 
+                p.unit.toLowerCase() === unit.toLowerCase() &&
+                Number(p.price) === Number(price) && 
+                String(p.id) !== String(id) 
+            );
+
+            if (isDuplicate) {
+                alert(`⚠️ Duplicate Entry Detected!\n\nA product named "${name}" with the unit "${unit}" and price "₹${price.toFixed(2)}" already exists.`);
+                return; 
+            }
+
+            if (editMode) {
+                let index = products.findIndex(p => String(p.id) === String(id));
+                if (index === -1) return;
+
+                const oldRecord = { ...products[index] };
+                const updatedRecord = {
+                    id: products[index].id,
+                    name,
+                    hsn,
+                    unit,
+                    price,
+                    gst,
+                    pendingStatus: null
+                };
+
+                // OFFICE PORTAL: Route Edit to ApproveOffice.html
+                if (currentPortalMode !== 'admin') {
+                    openOfficeApprovalModal({
+                        type: 'EDIT',
+                        targetId: products[index].id,
+                        actionLabel: "EDIT PRODUCT MASTER",
+                        summary: `${name} (HSN: ${hsn} | Unit: ${unit}) — Price: ₹${Number(oldRecord.price).toFixed(2)} → ₹${price.toFixed(2)}, GST: ${gst}%`,
+                        oldData: oldRecord,
+                        newData: updatedRecord
+                    });
+                    return;
+                }
+
+                // ADMIN DIRECT UPDATE
+                products[index] = updatedRecord;
+                saveProductsDatabase();
+                closeModal(); 
+            } else {
+                let newId = Date.now();
+                const newRecord = {
+                    id: newId,
+                    name,
+                    hsn,
+                    unit,
+                    price,
+                    gst,
+                    pendingStatus: null
+                };
+
+                // OFFICE PORTAL: Route New Product to ApproveOffice.html
+                if (currentPortalMode !== 'admin') {
+                    openOfficeApprovalModal({
+                        type: 'CREATE',
+                        targetId: newId,
+                        actionLabel: "ADD NEW PRODUCT",
+                        summary: `New Product: ${name} (HSN: ${hsn} | Unit: ${unit} | Price: ₹${price.toFixed(2)} | GST: ${gst}%)`,
+                        oldData: null,
+                        newData: newRecord
+                    });
+                    return;
+                }
+
+                // ADMIN DIRECT SAVE
+                products.push(newRecord);
+                saveProductsDatabase();
+                
+                document.getElementById("productForm").reset();
+                document.getElementById("productId").value = "";
+                document.getElementById("pName").focus(); 
+                
+                let saveBtn = document.getElementById("btnSave");
+                let originalText = saveBtn.innerText;
+                saveBtn.innerText = "✅ Saved Successfully!";
+                saveBtn.style.backgroundColor = "#218838"; 
+                
+                setTimeout(() => {
+                    saveBtn.innerText = originalText;
+                    saveBtn.style.backgroundColor = "#28a745"; 
+                }, 1500);
+            }
+
+            document.getElementById("searchInput").value = "";
+            renderTable(products); 
+        });
+
+        // =========================================================================================
+        // 3. RENDER TABLE, EDIT & DELETE ACTIONS
+        // =========================================================================================
+        function renderTable(dataToRender) {
+            let tbody = document.getElementById("productTableBody");
+            tbody.innerHTML = ""; 
+            
+            dataToRender.forEach(p => {
+                let pendingBadge = p.pendingStatus
+                    ? `<span class="pending-status-pill">⏳ ${p.pendingStatus}</span>`
+                    : '';
+
+                let row = `<tr id="row_${p.id}">
+                    <td><strong>${p.name}</strong>${pendingBadge}</td>
+                    <td>${p.hsn}</td>
+                    <td>${p.unit}</td>
+                    <td style="color:#28a745; font-weight:bold;">₹${Number(p.price).toFixed(2)}</td>
+                    <td>${p.gst}%</td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="btn-edit" onclick="editProduct('${p.id}')">Edit</button>
+                            <button class="btn-delete" onclick="deleteProduct('${p.id}')">Delete</button>
+                        </div>
+                    </td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+
+            if(dataToRender.length === 0) {
+                let emptyMsg = products.length === 0 ? "No products available. Click 'Add New Product' to enter data." : "No matching products found.";
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding: 30px 0;">${emptyMsg}</td></tr>`;
+            }
+        }
+
+        function editProduct(id) {
+            let product = products.find(p => String(p.id) === String(id));
+            if(product) {
+                document.getElementById("productId").value = product.id;
+                document.getElementById("pName").value = product.name;
+                document.getElementById("pHsn").value = product.hsn;
+                document.getElementById("pUnit").value = product.unit;
+                document.getElementById("pPrice").value = product.price;
+                document.getElementById("pGst").value = product.gst;
+                
+                document.getElementById("formTitle").innerText = currentPortalMode === 'admin'
+                    ? "🔄 Edit Product"
+                    : "🔄 Edit Product (Requires Approval)";
+                document.getElementById("btnSave").innerText = currentPortalMode === 'admin'
+                    ? "🔄 Update Product"
+                    : "📤 Send Update for Approval";
+                editMode = true;
+                
+                openModal();
+            }
+        }
+
+        function deleteProduct(id) {
+            let product = products.find(p => String(p.id) === String(id));
+            if (!product) return;
+
+            // OFFICE PORTAL: Route Delete to ApproveOffice.html
+            if (currentPortalMode !== 'admin') {
+                openOfficeApprovalModal({
+                    type: 'DELETE',
+                    targetId: product.id,
+                    actionLabel: "DELETE PRODUCT",
+                    summary: `Delete Product: ${product.name} (HSN: ${product.hsn} | Unit: ${product.unit} | Price: ₹${Number(product.price).toFixed(2)})`,
+                    oldData: { ...product },
+                    newData: null
+                });
+                return;
+            }
+
+            // ADMIN DIRECT DELETE WITH PASSWORD
+            let password = prompt("Security Check: \nEnter Admin Password to delete this product:");
+            
+            if (password === "admin123") {
+                const row = document.getElementById("row_" + id);
+                if (row) {
+                    row.style.background = "rgba(220, 53, 69, 0.3)";
+                    row.style.transition = "all 0.4s";
+                }
+                
+                setTimeout(() => {
+                    products = products.filter(p => String(p.id) !== String(id));
+                    saveProductsDatabase();
+                    let filterValue = document.getElementById("searchInput").value.toLowerCase();
+                    if(filterValue) { searchProducts(); } else { renderTable(products); }
+                }, 300);
+            } else if (password !== null) {
+                alert("❌ Incorrect Password! Product deletion denied.");
+            }
+        }
+
+        // =========================================================================================
+        // 4. OFFICE PORTAL APPROVAL MODAL ENGINE (ROUTES TO ApproveOffice.html)
+        // =========================================================================================
+        function openOfficeApprovalModal(payload) {
+            pendingOfficePayload = payload;
+            document.getElementById('officeApprovalSummary').value = `${payload.actionLabel}: ${payload.summary}`;
+            document.getElementById('officeApprovalReason').value = '';
+            document.getElementById('officeApprovalModal').classList.add('show');
+            setTimeout(() => document.getElementById('officeApprovalReason').focus(), 50);
+        }
+
+        function closeOfficeApprovalModal() {
+            document.getElementById('officeApprovalModal').classList.remove('show');
+            pendingOfficePayload = null;
+        }
+
+        function confirmOfficeApprovalRequest() {
+            const reason = document.getElementById('officeApprovalReason').value.trim();
+            if (!reason) {
+                alert("⚠️️ Please enter a reason/remark for Admin Approval.");
+                return;
+            }
+            if (!pendingOfficePayload) return;
+
+            if (pendingOfficePayload.type === 'CREATE') {
+                products.push({
+                    ...pendingOfficePayload.newData,
+                    pendingStatus: "Pending in ApproveOffice"
+                });
+                saveProductsDatabase();
+                closeModal();
+            } else if (pendingOfficePayload.type === 'EDIT') {
+                const idx = products.findIndex(p => String(p.id) === String(pendingOfficePayload.targetId));
+                if (idx > -1) {
+                    products[idx].pendingStatus = "Edit Pending";
+                    saveProductsDatabase();
+                }
+                closeModal();
+            } else if (pendingOfficePayload.type === 'DELETE') {
+                const idx = products.findIndex(p => String(p.id) === String(pendingOfficePayload.targetId));
+                if (idx > -1) {
+                    products[idx].pendingStatus = "Delete Pending";
+                    saveProductsDatabase();
+                }
+            }
+
+            // 1. Push Request to ApproveOffice.html queue
+            const newReq = {
+                reqId: "OFF-PRD-" + Date.now().toString().slice(-5),
+                userId: loggedUserId,
+                userName: loggedUserName,
+                designation: "Office Staff",
+                module: "ProductEntry.html",
+                action: pendingOfficePayload.actionLabel,
+                summary: pendingOfficePayload.summary,
+                oldData: pendingOfficePayload.oldData,
+                newData: pendingOfficePayload.newData,
+                reason: reason,
+                timestamp: new Date().toLocaleString('en-IN'),
+                status: "Pending"
+            };
+
+            const officeQueue = JSON.parse(localStorage.getItem('atr_office_approvals')) || [];
+            officeQueue.unshift(newReq);
+            localStorage.setItem('atr_office_approvals', JSON.stringify(officeQueue));
+            localStorage.setItem('approve_office_requests', JSON.stringify(officeQueue));
+            localStorage.setItem('ApproveOffice_requests', JSON.stringify(officeQueue));
+
+            // 2. Log in Office Daily Work Report (office_dashboard_home.html)
+            const workLogs = JSON.parse(localStorage.getItem('atr_office_daily_work')) || [];
+            const todayStr = new Date().toISOString().split('T')[0];
+            const nowTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+            workLogs.unshift({
+                id: "WRK-" + Date.now().toString().slice(-5),
+                userId: loggedUserId,
+                userName: loggedUserName,
+                date: todayStr,
+                time: nowTime,
+                module: "Product Master (ProductEntry.html)",
+                refNo: newReq.reqId,
+                desc: `${pendingOfficePayload.actionLabel}: ${pendingOfficePayload.summary}`,
+                status: "Sent for Approval"
+            });
+            localStorage.setItem('atr_office_daily_work', JSON.stringify(workLogs));
+
+            // 3. Refresh Parent OfficeDashboard.html Notification Bell if inside iframe
+            try {
+                if (window.parent && window.parent !== window && typeof window.parent.refreshNotificationsUI === 'function') {
+                    window.parent.refreshNotificationsUI();
+                }
+            } catch (e) {}
+
+            closeOfficeApprovalModal();
+            document.getElementById("searchInput").value = "";
+            renderTable(products);
+            alert("📤 Request sent to ApproveOffice.html for Admin Approval!");
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Sales Report & Project Ledger</title>
+    
+    <!-- Theme Settings synced with Dashboard -->
+    <script>
+        const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        window.addEventListener('storage', function(e) {
+            if(e.key === 'atr_theme') { document.documentElement.setAttribute('data-theme', e.newValue); }
+        });
+    </script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Excel & PDF Export Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-body: transparent; 
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.1);
+            
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(0, 0, 0, 0.25);
+            --input-focus-bg: rgba(0, 0, 0, 0.45);
+            
+            --shadow: 0 4px 15px rgba(0,0,0,0.3);
+            
+            --theme-color: #E30B5C;
+            --theme-glow: rgba(227, 11, 92, 0.4);
+            --theme-transition: all 0.4s ease;
+        }
+
+        [data-theme="light"] {
+            --bg-body: #f4f6f9;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #555555;
+            --border-color: rgba(0, 0, 0, 0.12);
+            --glass-bg: rgba(255, 255, 255, 0.88);
+            --glass-border: rgba(0, 0, 0, 0.1);
+            --input-bg: rgba(240, 242, 245, 0.9);
+            --input-focus-bg: #ffffff;
+            --shadow: 0 8px 25px rgba(0,0,0,0.05);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(227, 11, 92, 0.35); border-radius: 6px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--theme-color); }
+
+        body { background-color: var(--bg-body); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; transition: var(--theme-transition); }
+
+        /* Dropdown Dark/Light Mode Readability Fix */
+        select,
+        select.form-control {
+            background-color: var(--bg-card) !important;
+            color: var(--text-main) !important;
+            color-scheme: dark;
+            cursor: pointer;
+        }
+        [data-theme="light"] select,
+        [data-theme="light"] select.form-control {
+            background-color: var(--bg-card) !important;
+            color: var(--text-main) !important;
+            color-scheme: light;
+        }
+        select option {
+            background-color: var(--bg-card) !important;
+            color: var(--text-main) !important;
+            padding: 10px;
+        }
+
+        .main-content { flex: 1; display: flex; flex-direction: column; padding: 22px 28px; height: 100vh; overflow: hidden; width: 100%; max-width: 1600px; margin: 0 auto; gap: 14px; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; flex-wrap: wrap; gap: 15px; flex-shrink: 0; }
+        .header h1 { font-size: 24px; color: var(--text-main); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+        .role-mode-badge {
+            display: none;
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 700;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .btn-back-dash { 
+            background-color: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color); 
+            text-decoration: none; padding: 8px 15px; border-radius: 6px; font-weight: bold; font-size: 12.5px; 
+            transition: all 0.3s; display: inline-block; margin-bottom: 6px; cursor: pointer;
+        }
+        .btn-back-dash:hover { background-color: var(--theme-color); color: #fff; border-color: var(--theme-color); transform: translateY(-2px); box-shadow: 0 4px 10px var(--theme-glow); }
+
+        /* Action Buttons in Header */
+        .header-btn-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .btn-tally-pdf { background: var(--theme-color); color: #ffffff; border: none; padding: 10px 16px; border-radius: 6px; font-size: 12.5px; font-weight: 700; cursor: pointer; text-transform: uppercase; transition: all 0.3s; box-shadow: 0 4px 12px var(--theme-glow); display: inline-flex; align-items: center; gap: 6px; }
+        .btn-tally-pdf:hover { filter: brightness(1.1); transform: translateY(-2px); }
+
+        .btn-tally-view { background: rgba(0, 123, 255, 0.15); color: #3898ff; border: 1px solid rgba(0, 123, 255, 0.4); padding: 10px 15px; border-radius: 6px; font-size: 12.5px; font-weight: 700; cursor: pointer; text-transform: uppercase; transition: all 0.3s; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-tally-view:hover { background: #007bff; color: #fff; transform: translateY(-2px); }
+
+        .btn-export { background: rgba(40, 167, 69, 0.15); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.4); padding: 10px 15px; border-radius: 6px; font-size: 12.5px; font-weight: 700; cursor: pointer; text-transform: uppercase; transition: all 0.3s; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-export:hover { background-color: #28a745; color: white; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(40,167,69,0.3); }
+
+        /* Top Filter & Search Bar */
+        .controls-bar { 
+            display: grid; grid-template-columns: 1.1fr 1.1fr 1.1fr 0.9fr 1.5fr; gap: 12px; align-items: end;
+            background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            padding: 14px 16px; border-radius: 12px; border: 1px solid var(--glass-border); flex-shrink: 0;
+        }
+        @media (max-width: 1200px) {
+            .controls-bar { grid-template-columns: repeat(2, 1fr); }
+        }
+        .form-group { display: flex; flex-direction: column; gap: 5px; }
+        .form-group label { font-size: 10.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-control { background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 9px 12px; border-radius: 6px; font-size: 12.5px; outline: none; transition: 0.3s; width: 100%; height: 38px; }
+        .form-control:focus { border-color: var(--theme-color); box-shadow: 0 0 5px var(--theme-glow); }
+
+        .top-search-wrap { display: flex; gap: 8px; align-items: center; }
+        .btn-top-search {
+            background: var(--theme-color); color: #fff; border: none; height: 38px; padding: 0 16px;
+            border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; text-transform: uppercase;
+            transition: 0.25s; white-space: nowrap; box-shadow: 0 4px 10px var(--theme-glow);
+        }
+        .btn-top-search:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+        /* Dashboard Stats Grid (4 KPI Cards) */
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; flex-shrink: 0; }
+        @media (max-width: 1100px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        .stat-card { 
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            padding: 16px 18px; border-radius: 10px; position: relative; overflow: hidden; box-shadow: var(--shadow);
+        }
+        .stat-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; }
+        .stat-card.blue::before { background: #007bff; }
+        .stat-card.purple::before { background: #6f42c1; }
+        .stat-card.green::before { background: #28a745; }
+        .stat-card.red::before { background: #dc3545; }
+        
+        .stat-card h4 { font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; font-weight: 700; letter-spacing: 0.4px; }
+        .stat-card h2 { font-size: 22px; font-weight: 800; color: var(--text-main); }
+        .stat-card .sub-text { font-size: 11px; margin-top: 5px; display: block; color: var(--text-muted); }
+
+        /* Single Full-Height Details Table Area */
+        .table-container-box { 
+            background: var(--bg-card); border-radius: 12px;
+            box-shadow: var(--shadow); flex: 1; min-height: 0; 
+            border: 1px solid var(--border-color); border-top: 4px solid var(--theme-color);
+            overflow-y: auto; overflow-x: hidden;
+        }
+        .table-container-box::-webkit-scrollbar { width: 6px; height: 6px; }
+        .table-container-box::-webkit-scrollbar-track { background: transparent; }
+        .table-container-box::-webkit-scrollbar-thumb { background: rgba(227, 11, 92, 0.3); border-radius: 4px; }
+        .table-container-box::-webkit-scrollbar-thumb:hover { background: var(--theme-color); }
+
+        table.ledger-table { width: 100%; border-collapse: collapse; text-align: left; table-layout: fixed; }
+        table.ledger-table thead { position: sticky; top: 0; background-color: var(--bg-card); z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.25); }
+        table.ledger-table th { padding: 13px 10px; color: var(--theme-color); font-weight: 700; text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.5px; border-bottom: 2px solid var(--theme-color); word-wrap: break-word; background: var(--input-bg); }
+        table.ledger-table td { padding: 11px 10px; border-bottom: 1px solid var(--border-color); font-size: 12.5px; color: var(--text-main); vertical-align: middle; word-wrap: break-word; }
+        table.ledger-table tbody tr:hover { background: var(--glass-bg); }
+        table.ledger-table tfoot td { position: sticky; bottom: 0; background: var(--bg-card); font-weight: 800; font-size: 12.5px; border-top: 2px solid var(--theme-color); padding: 12px 10px; z-index: 10; box-shadow: 0 -2px 8px rgba(0,0,0,0.25); }
+
+        .t-right { text-align: right !important; }
+        .t-center { text-align: center !important; }
+
+        /* ================= TALLY A4 REPORT PREVIEW MODAL ================= */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.72); backdrop-filter: blur(6px); display: none; justify-content: center; align-items: center; z-index: 3000; padding: 15px; }
+        .modal-overlay.active { display: flex; }
+        .modal-card { background: var(--bg-card); width: 100%; max-width: 960px; max-height: 95vh; border-radius: 12px; border: 1px solid var(--border-color); border-top: 4px solid var(--theme-color); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 15px 45px rgba(0,0,0,0.6); }
+        .modal-header { padding: 15px 22px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h2 { font-size: 17px; color: var(--theme-color); font-weight: 800; }
+        .close-btn { background: none; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; }
+        .close-btn:hover { color: #dc3545; }
+        .modal-body { padding: 18px; overflow-y: auto; background: #e2e8f0; flex: 1; }
+        .modal-footer { padding: 12px 22px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 10px; background: var(--input-bg); }
+
+        /* Authentic Tally Prime Ledger Account A4 Styling */
+        .tally-a4-page {
+            width: 210mm;
+            min-height: 297mm;
+            background: #ffffff;
+            color: #000000;
+            margin: 0 auto;
+            padding: 10mm 11mm;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            font-size: 10px;
+            line-height: 1.38;
+            border: 1.5px solid #000;
+        }
+        .tally-a4-page * {
+            color: #000000;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        .tally-header {
+            text-align: center;
+            border-bottom: 2px solid #000;
+            padding-bottom: 8px;
+            margin-bottom: 8px;
+        }
+        .tally-header h1 { font-size: 16.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 2px; }
+        .tally-header h2 { font-size: 13px; font-weight: 800; text-transform: uppercase; margin-bottom: 3px; }
+        .tally-header p { font-size: 9.5px; font-weight: 600; color: #111; }
+
+        .tally-kpi-bar {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            border: 1px solid #000;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+        }
+        .tally-kpi-cell {
+            padding: 6px 7px;
+            border-right: 1px solid #000;
+            text-align: right;
+        }
+        .tally-kpi-cell:last-child { border-right: none; }
+        .tally-kpi-cell span { display: block; font-size: 7.8px; font-weight: 700; text-transform: uppercase; color: #333; margin-bottom: 2px; }
+        .tally-kpi-cell strong { font-size: 10px; font-weight: 800; }
+
+        table.tally-ledger-tbl {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 12px;
+            table-layout: fixed;
+            border: 1.5px solid #000;
+        }
+        table.tally-ledger-tbl th {
+            border-top: 1.5px solid #000 !important;
+            border-bottom: 1.5px solid #000 !important;
+            border-left: 1px solid #000 !important;
+            border-right: 1px solid #000 !important;
+            padding: 6px 5px !important;
+            background: #f1f3f5 !important;
+            font-weight: 800;
+            text-transform: uppercase;
+            font-size: 8.5px;
+        }
+        table.tally-ledger-tbl td {
+            border-left: 1px solid #000 !important;
+            border-right: 1px solid #000 !important;
+            border-bottom: 1px dotted #888 !important;
+            padding: 5.5px 5px !important;
+            vertical-align: top;
+            word-wrap: break-word;
+            font-size: 9px;
+        }
+        table.tally-ledger-tbl tfoot td {
+            border-top: 1.5px solid #000 !important;
+            border-bottom: 1.5px solid #000 !important;
+            border-left: 1px solid #000 !important;
+            border-right: 1px solid #000 !important;
+            background: #f8f9fa !important;
+            font-weight: 800;
+            padding: 5.5px 5px !important;
+            font-size: 9.2px;
+        }
+
+        .tally-footer-sign {
+            margin-top: auto;
+            padding-top: 14px;
+            border-top: 1.5px solid #000;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            font-size: 9.5px;
+        }
+        .tally-sign-box {
+            text-align: center;
+            width: 185px;
+        }
+        .tally-sign-line {
+            border-top: 1px dashed #000;
+            margin-top: 34px;
+            padding-top: 4px;
+            font-weight: 700;
+        }
+
+        @page { size: A4 portrait; margin: 8mm; }
+        @media print {
+            html, body { height: auto !important; overflow: visible !important; background: #fff !important; color: #000 !important; display: block !important; }
+            .main-content, .no-print, .modal-header, .modal-footer { display: none !important; }
+            #tallyModal { position: static !important; display: block !important; background: transparent !important; padding: 0 !important; }
+            #tallyModal .modal-card { max-width: none !important; width: 100% !important; max-height: none !important; border: none !important; box-shadow: none !important; background: transparent !important; }
+            #tallyModal .modal-body { padding: 0 !important; background: #fff !important; overflow: visible !important; }
+            .tally-a4-page { width: 100% !important; min-height: 278mm !important; box-shadow: none !important; margin: 0 !important; padding: 5mm !important; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-content">
+        <div class="header">
+            <div>
+                <a href="dashboard_home.html" id="btnBackDashboard" class="btn-back-dash" onclick="handleBackToDashboard(event)">← Back to Dashboard</a>
+                <h1>
+                    📊 Sales Report &amp; Project Ledger (View Only)
+                    <span id="roleModeBadge" class="role-mode-badge">🏢 Office Mode</span>
+                </h1>
+            </div>
+            
+            <div class="header-btn-group">
+                <button type="button" class="btn-tally-view" onclick="openTallyPreviewModal()">👁️ Tally Ledger View / Print</button>
+                <button type="button" class="btn-tally-pdf" onclick="downloadTallyA4PDF()">📥 Download Tally PDF (A4)</button>
+                <button type="button" class="btn-export" onclick="exportToExcel()">📊 Export Excel</button>
+            </div>
+        </div>
+
+        <!-- Top Filter Dropdowns & Search Option -->
+        <div class="controls-bar">
+            <div class="form-group">
+                <label>🏢 Select Company</label>
+                <select class="form-control" id="selectCompany" onchange="onCompanyFilterChange()">
+                    <option value="ALL">🌍 All Companies</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>🏗️ Select Project / Site</label>
+                <select class="form-control" id="selectProject" onchange="onProjectFilterChange()">
+                    <option value="ALL">🏗️ All Projects / Sites</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>🔗 Select PO Reference</label>
+                <select class="form-control" id="selectPO" onchange="renderFullSalesReport()">
+                    <option value="ALL">📄 All PO References</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>📅 Financial Year</label>
+                <select class="form-control" id="selectFY" onchange="renderFullSalesReport()">
+                    <option value="ALL">All Financial Years</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>🔍 Search Invoice / PO / Site</label>
+                <div class="top-search-wrap">
+                    <input type="text" class="form-control" id="searchInput" placeholder="Type Inv No, PO, Site..." oninput="renderFullSalesReport()" onkeydown="if(event.key==='Enter') renderFullSalesReport()">
+                    <button type="button" class="btn-top-search" onclick="renderFullSalesReport()">🔍 Search</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4 Executive KPI Cards -->
+        <div class="stats-grid" id="statsGrid">
+            <!-- Box 1: Project / PO Value -->
+            <div class="stat-card blue">
+                <h4>Total Project / PO Value (Work Taken)</h4>
+                <h2 id="stPoValue">₹0.00</h2>
+                <span class="sub-text">Billed Base Work: <strong id="stBilledBase" style="color:#007bff;">₹0.00</strong></span>
+                <span class="sub-text">Unbilled Remaining Work: <strong id="stRemainingPo" style="color:#ffc107;">₹0.00</strong></span>
+            </div>
+            <!-- Box 2: Total Sales Billed (Gross) -->
+            <div class="stat-card purple">
+                <h4>Total Sales Billed (Gross with GST)</h4>
+                <h2 id="stBilledGross">₹0.00</h2>
+                <span class="sub-text">Total GST Billed: <strong id="stTotalGst" style="color:#b18cfd;">₹0.00</strong></span>
+                <span class="sub-text">Total Bills Generated: <strong id="stBillCount" style="color:var(--text-main);">0</strong></span>
+            </div>
+            <!-- Box 3: Total Payment Received -->
+            <div class="stat-card green">
+                <h4>Total Bill Paid / Received</h4>
+                <h2 id="stReceived">₹0.00</h2>
+                <span class="sub-text">TDS Deducted (Hold): <strong id="stTds" style="color:#fd7e14;">₹0.00</strong></span>
+                <span class="sub-text">Total Settled (Paid + TDS): <strong id="stTotalSettled" style="color:#28a745;">₹0.00</strong></span>
+            </div>
+            <!-- Box 4: Net Receivable (Paona) -->
+            <div class="stat-card red">
+                <h4>Net Receivable / Paona (Due)</h4>
+                <h2 id="stDue">₹0.00</h2>
+                <span class="sub-text" style="color:#ff6b6b; font-weight:600;">Calculation: Gross Billed − (Paid + TDS)</span>
+            </div>
+        </div>
+
+        <!-- SINGLE CLEAN DETAILS TABLE -->
+        <div class="table-container-box">
+            <table class="ledger-table" id="detailsTable">
+                <colgroup>
+                    <col style="width: 9%;">
+                    <col style="width: 13%;">
+                    <col style="width: 13%;">
+                    <col style="width: 10%;">
+                    <col style="width: 13%;">
+                    <col style="width: 8.5%;">
+                    <col style="width: 7.5%;">
+                    <col style="width: 9%;">
+                    <col style="width: 8.5%;">
+                    <col style="width: 8.5%;">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Company</th>
+                        <th>Project / Site</th>
+                        <th>Voucher Type</th>
+                        <th>Ref (Inv / PO / Txn)</th>
+                        <th class="t-right">Base Value (₹)</th>
+                        <th class="t-right">GST (₹)</th>
+                        <th class="t-right">Gross Bill (Dr ₹)</th>
+                        <th class="t-right">Paid + TDS (Cr ₹)</th>
+                        <th class="t-right">Running Due (₹)</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+                <tfoot id="tableFoot"></tfoot>
+            </table>
+        </div>
+    </div>
+
+    <!-- ================= TALLY PRIME LEDGER A4 PRINT & DOWNLOAD PREVIEW MODAL ================= -->
+    <div class="modal-overlay" id="tallyModal">
+        <div class="modal-card">
+            <div class="modal-header no-print">
+                <h2>📄 Tally Ledger Statement (A4 Format)</h2>
+                <button class="close-btn" onclick="closeTallyPreviewModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="tally-a4-page" id="tallyA4Sheet">
+                    <!-- Dynamically populated in Authentic Tally Ledger Format -->
+                </div>
+            </div>
+            <div class="modal-footer no-print">
+                <button type="button" class="btn-tally-pdf" onclick="downloadTallyA4PDF()">📥 Download Tally PDF (A4)</button>
+                <button type="button" class="btn-tally-view" style="background:#ffc107; color:#000; border:none;" onclick="window.print()">🖨️ Print A4 Ledger</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================================================
+        // 1. PORTAL ROLE DETECTION (ADMIN vs OFFICE STAFF vs SUPERVISOR)
+        // =========================================================================================
+        let currentPortalMode = "admin";
+        let loggedUserName = "Super Admin";
+
+        function checkPortalPermissions() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewParam = (urlParams.get('view') || '').toLowerCase();
+            const badge = document.getElementById('roleModeBadge');
+            const backBtn = document.getElementById('btnBackDashboard');
+
+            let parentPath = "";
+            try {
+                if (window.parent && window.parent !== window) {
+                    parentPath = (window.parent.location.pathname || '').toLowerCase();
+                }
+            } catch (e) {}
+
+            if (viewParam === 'office' || parentPath.includes('officedashboard')) {
+                currentPortalMode = 'office';
+                loggedUserName = urlParams.get('userName') || "Office Staff";
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🏢 Office Mode (${loggedUserName}) — View Only`;
+                }
+                if (backBtn) {
+                    backBtn.href = "office/office_dashboard_home.html";
+                }
+            } else if (viewParam === 'supervisor' || parentPath.includes('supervisordashboard')) {
+                currentPortalMode = 'supervisor';
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🛡️ Supervisor Mode — View Only`;
+                }
+                if (backBtn) {
+                    backBtn.href = "supervisor/supervisor_dashboard_home.html";
+                }
+            } else {
+                currentPortalMode = 'admin';
+                if (backBtn) {
+                    backBtn.href = "dashboard_home.html";
+                }
+            }
+        }
+
+        function handleBackToDashboard(event) {
+            if (currentPortalMode === 'office') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.loadOfficeWorkspaceHome === 'function') {
+                        window.parent.loadOfficeWorkspaceHome();
+                        return;
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "office_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "office/office_dashboard_home.html";
+            } else if (currentPortalMode === 'supervisor') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window) {
+                        const parentHomeLink = window.parent.document.querySelector('.dashboard-home-link');
+                        if (parentHomeLink) {
+                            window.location.href = parentHomeLink.href;
+                            return;
+                        }
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "supervisor_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "supervisor/supervisor_dashboard_home.html";
+            }
+        }
+
+        // =========================================================================================
+        // 2. HELPERS (FINANCIAL YEAR & AMOUNT IN WORDS)
+        // =========================================================================================
+        const fmtINR = v => Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        function getFinancialYear(dateStr) {
+            if (!dateStr) return "FY 2026-27";
+            const parts = String(dateStr).split('-');
+            if (parts.length >= 2) {
+                const y = parseInt(parts[0], 10);
+                const m = parseInt(parts[1], 10);
+                if (!isNaN(y) && !isNaN(m)) {
+                    return m >= 4 ? `FY ${y}-${String(y + 1).slice(-2)}` : `FY ${y - 1}-${String(y).slice(-2)}`;
+                }
+            }
+            return "FY 2026-27";
+        }
+
+        const ONES = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+        const TENS = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+        const twoW = k => k < 20 ? ONES[k] : TENS[Math.floor(k/10)] + (k%10 ? ' ' + ONES[k%10] : '');
+        const threeW = k => { const h = Math.floor(k/100), r = k%100; return (h ? ONES[h] + ' Hundred' + (r ? ' ' : '') : '') + (r ? twoW(r) : ''); };
+        function numToWordsInt(num) {
+            if (num === 0) return 'Zero';
+            let out = '';
+            const cr = Math.floor(num/10000000); num %= 10000000;
+            const la = Math.floor(num/100000);   num %= 100000;
+            const th = Math.floor(num/1000);     num %= 1000;
+            if (cr) out += numToWordsInt(cr) + ' Crore ';
+            if (la) out += twoW(la) + ' Lakh ';
+            if (th) out += twoW(th) + ' Thousand ';
+            if (num) out += threeW(num);
+            return out.trim();
+        }
+        function amountInWordsINR(amount) {
+            let rupees = Math.floor(Math.abs(amount));
+            let paise  = Math.round((Math.abs(amount) - rupees) * 100);
+            if (paise === 100) { rupees += 1; paise = 0; }
+            let s = 'INR ' + numToWordsInt(rupees) + ' Rupees';
+            if (paise) s += ' and ' + twoW(paise) + ' Paise';
+            return s + ' Only';
+        }
+
+        // =========================================================================================
+        // 3. DATABASE INITIALIZATION & LIVE SYNC WITH PO, INVOICE & BALANCE RECEIVED MODULES
+        // =========================================================================================
+        const companies = [
+            { id: 1, name: "ATR Construction Main" },
+            { id: 2, name: "ATR Infra Sub" }
+        ];
+
+        const defaultProjects = [
+            { id: 101, compId: 1, name: "Dum Dum Complex" },
+            { id: 102, compId: 1, name: "Salt Lake Sector V" },
+            { id: 103, compId: 2, name: "Barasat Highway" }
+        ];
+
+        const defaultPoDB = [
+            { id: "PO-2026-001", numericPoId: 101, compId: 1, projId: 101, siteName: "Dum Dum Complex", totalBaseValue: 500000, date: "2026-04-10" },
+            { id: "PO-2026-002", numericPoId: 102, compId: 1, projId: 102, siteName: "Salt Lake Sector V", totalBaseValue: 1200000, date: "2026-05-15" },
+            { id: "PO-2026-003", numericPoId: 103, compId: 2, projId: 103, siteName: "Barasat Highway", totalBaseValue: 850000, date: "2026-06-20" }
+        ];
+
+        const defaultInvoices = [
+            { id: "INV-2026-001", poId: "PO-2026-001", compId: 1, siteName: "Dum Dum Complex", date: "2026-08-12", base: 100000, gst: 18000, gross: 118000, status: "Paid" },
+            { id: "INV-2026-002", poId: "PO-2026-001", compId: 1, siteName: "Dum Dum Complex", date: "2026-08-20", base: 50000, gst: 9000, gross: 59000, status: "Unpaid" },
+            { id: "INV-2026-003", poId: "PO-2026-002", compId: 1, siteName: "Salt Lake Sector V", date: "2026-08-15", base: 300000, gst: 54000, gross: 354000, status: "Partial" },
+            { id: "INV-2026-004", poId: "PO-2026-003", compId: 2, siteName: "Barasat Highway", date: "2026-08-22", base: 200000, gst: 36000, gross: 236000, status: "Unpaid" }
+        ];
+
+        const defaultPayments = [
+            { id: "PAY-001", poId: "PO-2026-001", invNo: "INV-2026-001", compId: 1, siteName: "Dum Dum Complex", date: "2026-08-25", ref: "NEFT-HDFC123 (Against INV-2026-001)", tdsDeducted: 2000, amountReceived: 116000 },
+            { id: "PAY-002", poId: "PO-2026-002", invNo: "INV-2026-003", compId: 1, siteName: "Salt Lake Sector V", date: "2026-08-28", ref: "RTGS-SBI998 (Part Payment INV-2026-003)", tdsDeducted: 6000, amountReceived: 150000 }
+        ];
+
+        let projects = [];
+        let poDB = [];
+        let invoices = [];
+        let payments = [];
+
+        // Store latest computed report snapshot for Tally A4 PDF & Excel Export
+        let activeReportSnapshot = {
+            ledgerEntries: [],
+            totals: { poBase: 0, billedBase: 0, unbilledBase: 0, gst: 0, gross: 0, paid: 0, tds: 0, netDue: 0, billCount: 0 }
+        };
+
+        function syncTrackingDatabases() {
+            projects = JSON.parse(JSON.stringify(defaultProjects));
+            poDB = JSON.parse(JSON.stringify(defaultPoDB));
+            invoices = JSON.parse(JSON.stringify(defaultInvoices));
+            payments = JSON.parse(JSON.stringify(defaultPayments));
+
+            // 1. Sync Purchase Orders from PurchaseOrderEntry.html (atr_purchase_orders_db)
+            const storedPos = JSON.parse(localStorage.getItem('atr_purchase_orders_db')) || [];
+            storedPos.forEach(sp => {
+                if (!sp.poNo || !sp.siteName) return;
+                const cId = Number(sp.compId) || 1;
+
+                let projObj = projects.find(p => p.compId == cId && p.name.toLowerCase() === sp.siteName.toLowerCase());
+                if (!projObj) {
+                    projObj = {
+                        id: Date.now() + Math.floor(Math.random() * 10000),
+                        compId: cId,
+                        name: sp.siteName
+                    };
+                    projects.push(projObj);
+                }
+
+                let baseSum = 0;
+                if (Array.isArray(sp.cart) && sp.cart.length > 0) {
+                    sp.cart.forEach(item => {
+                        const u = String(item.unit || '').trim().toLowerCase();
+                        const isPct = u === '%' || u.includes('%') || u === 'percent';
+                        const lineBase = isPct ? ((Number(item.price || 0) * Number(item.qty || 0)) / 100) : (Number(item.qty || 0) * Number(item.price || 0));
+                        baseSum += Number(item.baseVal) || lineBase;
+                    });
+                } else {
+                    baseSum = Number(sp.total) || 0;
+                }
+
+                const existingPoIdx = poDB.findIndex(existingPo => existingPo.id === sp.poNo || existingPo.numericPoId == sp.id);
+                if (existingPoIdx === -1) {
+                    poDB.push({
+                        id: sp.poNo,
+                        numericPoId: sp.id,
+                        compId: cId,
+                        projId: projObj.id,
+                        siteName: projObj.name,
+                        totalBaseValue: baseSum || Number(sp.total) || 0,
+                        date: sp.date || new Date().toISOString().split('T')[0]
+                    });
+                }
+            });
+
+            // 2. Sync Invoices from InvoiceEntry.html (atr_invoices_db)
+            const storedInvs = JSON.parse(localStorage.getItem('atr_invoices_db')) || [];
+            storedInvs.forEach(sinv => {
+                const matchedPo = poDB.find(p => p.numericPoId == sinv.poId || p.id === sinv.poId);
+                const cId = Number(sinv.compId) || (matchedPo ? matchedPo.compId : 1);
+                const sName = sinv.siteName || (matchedPo ? matchedPo.siteName : "General Site");
+
+                let projObj = projects.find(p => p.compId == cId && p.name.toLowerCase() === sName.toLowerCase());
+                if (!projObj) {
+                    projObj = { id: Date.now() + Math.floor(Math.random() * 10000), compId: cId, name: sName };
+                    projects.push(projObj);
+                }
+
+                const poRefStr = matchedPo ? matchedPo.id : `PO-${sinv.poId || 'DIRECT'}`;
+                const baseVal = Number(sinv.base) || 0;
+                const grossVal = Number(sinv.gross) || 0;
+                const gstVal = Math.max(0, grossVal - baseVal);
+
+                const existingIdx = invoices.findIndex(i => i.id === sinv.invNo);
+                const invObj = {
+                    id: sinv.invNo,
+                    poId: poRefStr,
+                    compId: cId,
+                    siteName: projObj.name,
+                    date: sinv.date || new Date().toISOString().split('T')[0],
+                    base: baseVal,
+                    gst: gstVal,
+                    gross: grossVal,
+                    status: sinv.status || "Unpaid",
+                    receivedAmount: Number(sinv.receivedAmount) || 0
+                };
+
+                if (existingIdx > -1) {
+                    invoices[existingIdx] = invObj;
+                } else {
+                    invoices.push(invObj);
+                }
+
+                // If an invoice from InvoiceEntry.html is marked Paid or has receivedAmount, ensure a corresponding payment record exists
+                const hasPaymentEntry = payments.some(p => p.invNo === sinv.invNo);
+                if (!hasPaymentEntry && (sinv.status === "Paid" || Number(sinv.receivedAmount) > 0)) {
+                    const settledAmt = sinv.status === "Paid" ? grossVal : Number(sinv.receivedAmount);
+                    payments.push({
+                        id: "PAY-" + sinv.invNo,
+                        poId: poRefStr,
+                        invNo: sinv.invNo,
+                        compId: cId,
+                        siteName: projObj.name,
+                        date: sinv.date || new Date().toISOString().split('T')[0],
+                        ref: `Payment Cleared (${sinv.invNo})`,
+                        tdsDeducted: 0,
+                        amountReceived: settledAmt
+                    });
+                }
+            });
+
+            // 3. Sync Receipts from BalanceReceived.html (if stored in localStorage)
+            const possiblePaymentKeys = ['atr_balance_received_db', 'atr_balance_received', 'balance_received_db', 'atr_company_receipts'];
+            possiblePaymentKeys.forEach(k => {
+                try {
+                    const parsed = JSON.parse(localStorage.getItem(k));
+                    if (Array.isArray(parsed)) {
+                        parsed.forEach((rec, idx) => {
+                            const recId = rec.id || rec.txnId || `REC-${idx + 1}`;
+                            if (!payments.some(p => p.id === recId)) {
+                                const invMatch = invoices.find(i => i.id === (rec.invNo || rec.invoiceNo));
+                                payments.push({
+                                    id: recId,
+                                    poId: rec.poId || (invMatch ? invMatch.poId : "PO-2026-001"),
+                                    invNo: rec.invNo || rec.invoiceNo || "",
+                                    compId: Number(rec.compId) || (invMatch ? invMatch.compId : 1),
+                                    siteName: rec.siteName || (invMatch ? invMatch.siteName : "Dum Dum Complex"),
+                                    date: rec.date || new Date().toISOString().split('T')[0],
+                                    ref: rec.ref || rec.utr || rec.invNo || "Bank Receipt",
+                                    tdsDeducted: Number(rec.tds || rec.tdsDeducted || 0),
+                                    amountReceived: Number(rec.amount || rec.receivedAmount || 0)
+                                });
+                            }
+                        });
+                    }
+                } catch (e) {}
+            });
+        }
+
+        // =========================================================================================
+        // 4. FILTER DROPDOWNS & CASCADING LOGIC
+        // =========================================================================================
+        function populateInitialFilters() {
+            const compSelect = document.getElementById('selectCompany');
+            const fySelect = document.getElementById('selectFY');
+
+            compSelect.innerHTML = `<option value="ALL">🌍 All Companies</option>`;
+            companies.forEach(c => {
+                compSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+            });
+
+            const fySet = new Set(["FY 2025-26", "FY 2026-27", "FY 2027-28"]);
+            invoices.forEach(i => fySet.add(getFinancialYear(i.date)));
+            poDB.forEach(p => fySet.add(getFinancialYear(p.date)));
+
+            fySelect.innerHTML = `<option value="ALL">All Financial Years</option>`;
+            Array.from(fySet).sort().reverse().forEach(fy => {
+                fySelect.innerHTML += `<option value="${fy}">${fy}</option>`;
+            });
+
+            populateProjectDropdown();
+            populatePODropdown();
+        }
+
+        function populateProjectDropdown() {
+            const compVal = document.getElementById('selectCompany').value;
+            const projSelect = document.getElementById('selectProject');
+            const prevProj = projSelect.value;
+
+            projSelect.innerHTML = `<option value="ALL">🏗️ All Projects / Sites</option>`;
+            const filteredProjs = compVal === "ALL" ? projects : projects.filter(p => String(p.compId) === String(compVal));
+
+            filteredProjs.forEach(proj => {
+                const compObj = companies.find(c => c.id == proj.compId);
+                const label = compVal === "ALL" && compObj ? `${proj.name} (${compObj.name})` : proj.name;
+                projSelect.innerHTML += `<option value="${proj.name}">${label}</option>`;
+            });
+
+            if (filteredProjs.some(p => p.name === prevProj)) {
+                projSelect.value = prevProj;
+            } else {
+                projSelect.value = "ALL";
+            }
+        }
+
+        function populatePODropdown() {
+            const compVal = document.getElementById('selectCompany').value;
+            const projVal = document.getElementById('selectProject').value;
+            const poSelect = document.getElementById('selectPO');
+            const prevPO = poSelect.value;
+
+            poSelect.innerHTML = `<option value="ALL">📄 All PO References</option>`;
+            const filteredPOs = poDB.filter(po => {
+                const matchComp = compVal === "ALL" || String(po.compId) === String(compVal);
+                const matchProj = projVal === "ALL" || po.siteName === projVal;
+                return matchComp && matchProj;
+            });
+
+            filteredPOs.forEach(po => {
+                poSelect.innerHTML += `<option value="${po.id}">${po.id} — ${po.siteName} (₹${Number(po.totalBaseValue).toLocaleString('en-IN')})</option>`;
+            });
+
+            if (filteredPOs.some(p => p.id === prevPO)) {
+                poSelect.value = prevPO;
+            } else {
+                poSelect.value = "ALL";
+            }
+        }
+
+        function onCompanyFilterChange() {
+            populateProjectDropdown();
+            populatePODropdown();
+            renderFullSalesReport();
+        }
+
+        function onProjectFilterChange() {
+            populatePODropdown();
+            renderFullSalesReport();
+        }
+
+        // =========================================================================================
+        // 5. CORE SALES REPORT & SINGLE CLEAN LEDGER TABLE ENGINE
+        // =========================================================================================
+        function renderFullSalesReport() {
+            const compVal = document.getElementById('selectCompany').value;
+            const projVal = document.getElementById('selectProject').value;
+            const poVal = document.getElementById('selectPO').value;
+            const fyVal = document.getElementById('selectFY').value;
+            const searchQ = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+
+            // 1. Filter POs for KPI Card 1 (Total Project / PO Value)
+            const filteredPOs = poDB.filter(po => {
+                if (compVal !== "ALL" && String(po.compId) !== String(compVal)) return false;
+                if (projVal !== "ALL" && po.siteName !== projVal) return false;
+                if (poVal !== "ALL" && po.id !== poVal) return false;
+                if (fyVal !== "ALL" && getFinancialYear(po.date) !== fyVal) return false;
+                if (searchQ) {
+                    const compName = (companies.find(c => c.id == po.compId)?.name || '').toLowerCase();
+                    const hay = `${po.id} ${po.siteName} ${compName}`.toLowerCase();
+                    // If searching for a specific invoice number, still keep the linked PO in KPI calculation
+                    const linkedInvMatch = invoices.some(inv => inv.poId === po.id && `${inv.id} ${inv.poId} ${inv.siteName}`.toLowerCase().includes(searchQ));
+                    if (!hay.includes(searchQ) && !linkedInvMatch) return false;
+                }
+                return true;
+            });
+
+            // 2. Filter Invoices
+            const filteredInvoices = invoices.filter(inv => {
+                if (compVal !== "ALL" && String(inv.compId) !== String(compVal)) return false;
+                if (projVal !== "ALL" && inv.siteName !== projVal) return false;
+                if (poVal !== "ALL" && inv.poId !== poVal) return false;
+                if (fyVal !== "ALL" && getFinancialYear(inv.date) !== fyVal) return false;
+                if (searchQ) {
+                    const compName = (companies.find(c => c.id == inv.compId)?.name || '').toLowerCase();
+                    const hay = `${inv.id} ${inv.poId} ${inv.siteName} ${compName}`.toLowerCase();
+                    if (!hay.includes(searchQ)) return false;
+                }
+                return true;
+            });
+
+            // 3. Filter Payments
+            const filteredPayments = payments.filter(pay => {
+                if (compVal !== "ALL" && String(pay.compId) !== String(compVal)) return false;
+                if (projVal !== "ALL" && pay.siteName !== projVal) return false;
+                if (poVal !== "ALL" && pay.poId !== poVal) return false;
+                if (fyVal !== "ALL" && getFinancialYear(pay.date) !== fyVal) return false;
+                if (searchQ) {
+                    const compName = (companies.find(c => c.id == pay.compId)?.name || '').toLowerCase();
+                    const hay = `${pay.id} ${pay.ref} ${pay.poId} ${pay.siteName} ${compName}`.toLowerCase();
+                    if (!hay.includes(searchQ)) return false;
+                }
+                return true;
+            });
+
+            // 4. Calculate Totals
+            let totPoVal = 0, totBilledBase = 0, totGst = 0, totGross = 0, totPaid = 0, totTds = 0;
+            filteredPOs.forEach(po => {
+                totPoVal += Number(po.totalBaseValue) || 0;
+            });
+
+            let timelineData = [];
+            filteredInvoices.forEach(inv => {
+                const compName = companies.find(c => c.id == inv.compId)?.name || "ATR Construction";
+                const bVal = Number(inv.base) || 0;
+                const gVal = Number(inv.gst) || 0;
+                const grVal = Number(inv.gross) || 0;
+                totBilledBase += bVal;
+                totGst += gVal;
+                totGross += grVal;
+
+                timelineData.push({
+                    date: inv.date,
+                    compName: compName,
+                    siteName: inv.siteName,
+                    poId: inv.poId,
+                    type: "Sales Invoice",
+                    vchNo: inv.id,
+                    ref: `${inv.id} (PO: ${inv.poId})`,
+                    base: bVal,
+                    gst: gVal,
+                    gross: grVal,
+                    tds: 0,
+                    received: 0
+                });
+            });
+
+            filteredPayments.forEach(pay => {
+                const compName = companies.find(c => c.id == pay.compId)?.name || "ATR Construction";
+                const rVal = Number(pay.amountReceived) || 0;
+                const tVal = Number(pay.tdsDeducted) || 0;
+                totPaid += rVal;
+                totTds += tVal;
+
+                timelineData.push({
+                    date: pay.date,
+                    compName: compName,
+                    siteName: pay.siteName,
+                    poId: pay.poId,
+                    type: "Receipt",
+                    vchNo: pay.id,
+                    ref: `${pay.ref} (PO: ${pay.poId})`,
+                    base: 0,
+                    gst: 0,
+                    gross: 0,
+                    tds: tVal,
+                    received: rVal
+                });
+            });
+
+            // Sort Chronologically by Date
+            timelineData.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            const totUnbilled = Math.max(0, totPoVal - totBilledBase);
+            const totNetDue = Math.max(0, totGross - (totPaid + totTds));
+            const totBills = filteredInvoices.length;
+
+            // 5. Render Single Main Ledger Table
+            const tbody = document.getElementById('tableBody');
+            const tfoot = document.getElementById('tableFoot');
+            tbody.innerHTML = '';
+
+            let runningDue = 0;
+            if (timelineData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="10" class="t-center" style="padding:35px; color:var(--text-muted);">No bills or payment transactions found for the selected filters.</td></tr>`;
+                tfoot.innerHTML = '';
+            } else {
+                timelineData.forEach(item => {
+                    const isInv = item.type === "Sales Invoice";
+                    if (isInv) {
+                        runningDue += item.gross;
+                    } else {
+                        runningDue -= (item.received + item.tds);
+                    }
+                    item.runningDue = Math.max(0, runningDue);
+
+                    const badgeHtml = isInv
+                        ? `<span style="background:rgba(0,123,255,0.18); color:#3898ff; padding:3px 8px; border-radius:4px; font-size:10.5px; font-weight:700;">🧾 Sales Bill</span>`
+                        : `<span style="background:rgba(40,167,69,0.18); color:#28a745; padding:3px 8px; border-radius:4px; font-size:10.5px; font-weight:700;">💰 Paid Receipt</span>`;
+
+                    const paidPlusTds = item.received + item.tds;
+                    const tr = document.createElement('tr');
+                    if (!isInv) tr.style.background = "rgba(40, 167, 69, 0.04)";
+                    tr.innerHTML = `
+                        <td><strong>${item.date}</strong></td>
+                        <td>${item.compName}</td>
+                        <td style="color:var(--theme-color); font-weight:700;">${item.siteName}</td>
+                        <td>${badgeHtml}</td>
+                        <td style="font-weight:700;">${item.ref}</td>
+                        <td class="t-right">${isInv ? '₹' + fmtINR(item.base) : '-'}</td>
+                        <td class="t-right">${isInv ? '₹' + fmtINR(item.gst) : '-'}</td>
+                        <td class="t-right" style="font-weight:700; color:#b18cfd;">${isInv ? '₹' + fmtINR(item.gross) : '-'}</td>
+                        <td class="t-right" style="font-weight:700; color:#28a745;">
+                            ${!isInv ? '₹' + fmtINR(paidPlusTds) : '-'}
+                            ${(!isInv && item.tds > 0) ? `<small style="display:block; font-size:9.5px; color:#fd7e14;">(Inc. TDS: ₹${fmtINR(item.tds)})</small>` : ''}
+                        </td>
+                        <td class="t-right" style="font-weight:800; color:${item.runningDue > 0 ? '#ff6b6b' : '#28a745'};">₹${fmtINR(item.runningDue)}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                tfoot.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="t-right">TOTAL LEDGER SUMMARY (${totBills} Bills):</td>
+                        <td class="t-right" style="color:#3898ff;">₹${fmtINR(totBilledBase)}</td>
+                        <td class="t-right" style="color:#ffc107;">₹${fmtINR(totGst)}</td>
+                        <td class="t-right" style="color:#b18cfd;">₹${fmtINR(totGross)}</td>
+                        <td class="t-right" style="color:#28a745;">₹${fmtINR(totPaid + totTds)}</td>
+                        <td class="t-right" style="color:#ff6b6b; font-size:13.5px;">₹${fmtINR(totNetDue)}</td>
+                    </tr>
+                `;
+            }
+
+            // 6. Update Top 4 KPI Cards
+            document.getElementById('stPoValue').innerText = `₹${fmtINR(totPoVal)}`;
+            document.getElementById('stBilledBase').innerText = `₹${fmtINR(totBilledBase)}`;
+            document.getElementById('stRemainingPo').innerText = `₹${fmtINR(totUnbilled)}`;
+
+            document.getElementById('stBilledGross').innerText = `₹${fmtINR(totGross)}`;
+            document.getElementById('stTotalGst').innerText = `₹${fmtINR(totGst)}`;
+            document.getElementById('stBillCount').innerText = `${totBills} Bill(s)`;
+
+            document.getElementById('stReceived').innerText = `₹${fmtINR(totPaid)}`;
+            document.getElementById('stTds').innerText = `₹${fmtINR(totTds)}`;
+            document.getElementById('stTotalSettled').innerText = `₹${fmtINR(totPaid + totTds)}`;
+
+            document.getElementById('stDue').innerText = `₹${fmtINR(totNetDue)}`;
+
+            // Save Snapshot for Tally A4 PDF & Excel Export
+            activeReportSnapshot = {
+                ledgerEntries: timelineData,
+                totals: {
+                    poBase: totPoVal,
+                    billedBase: totBilledBase,
+                    unbilledBase: totUnbilled,
+                    gst: totGst,
+                    gross: totGross,
+                    paid: totPaid,
+                    tds: totTds,
+                    netDue: totNetDue,
+                    billCount: totBills
+                }
+            };
+        }
+
+        // =========================================================================================
+        // 6. PROPER TALLY PRIME LEDGER STATEMENT BUILDER (Dr / Cr FORMAT ON A4 PAGE)
+        // =========================================================================================
+        function getSelectedFilterMeta() {
+            const compSel = document.getElementById('selectCompany');
+            const compText = compSel.value === "ALL" ? "ATR CONSTRUCTION (ALL COMPANIES)" : compSel.options[compSel.selectedIndex].text;
+            const projVal = document.getElementById('selectProject').value;
+            const poVal = document.getElementById('selectPO').value;
+            const fyVal = document.getElementById('selectFY').value;
+            return {
+                companyHeading: compText,
+                siteHeading: projVal === "ALL" ? "All Project Sites (Consolidated Ledger)" : `${projVal} — Project Ledger A/c`,
+                poHeading: poVal === "ALL" ? "All Purchase Orders" : poVal,
+                fyHeading: fyVal === "ALL" ? "All Financial Years" : fyVal,
+                reportDate: new Date().toLocaleDateString('en-IN')
+            };
+        }
+
+        function buildTallyA4SheetHTML() {
+            const meta = getSelectedFilterMeta();
+            const t = activeReportSnapshot.totals;
+            const totalSettledCr = t.paid + t.tds;
+            const balancedTotal = Math.max(t.gross, totalSettledCr + t.netDue);
+
+            let ledgerRowsHtml = '';
+            if (activeReportSnapshot.ledgerEntries.length === 0) {
+                ledgerRowsHtml = `<tr><td colspan="7" class="t-center" style="padding:18px;">No ledger voucher entries found for the selected criteria.</td></tr>`;
+            } else {
+                activeReportSnapshot.ledgerEntries.forEach(item => {
+                    const isInv = item.type === "Sales Invoice";
+                    const settled = item.received + item.tds;
+                    const particularsText = isInv
+                        ? `<b>To Sales A/c — ${item.siteName}</b><br><span style="font-size:8px; color:#333;">PO Ref: ${item.poId} | Base: ₹${fmtINR(item.base)} + GST: ₹${fmtINR(item.gst)}</span>`
+                        : `<b>By Bank / TDS A/c — ${item.siteName}</b><br><span style="font-size:8px; color:#333;">${item.ref}${item.tds > 0 ? ` (Rec: ₹${fmtINR(item.received)} + TDS: ₹${fmtINR(item.tds)})` : ''}</span>`;
+
+                    ledgerRowsHtml += `
+                        <tr>
+                            <td>${item.date}</td>
+                            <td>${particularsText}</td>
+                            <td class="t-center">${isInv ? 'Sales' : 'Receipt'}</td>
+                            <td class="t-center"><b>${item.vchNo}</b></td>
+                            <td class="t-right">${isInv ? fmtINR(item.gross) : ''}</td>
+                            <td class="t-right">${!isInv ? fmtINR(settled) : ''}</td>
+                            <td class="t-right"><b>${fmtINR(item.runningDue)} Dr</b></td>
+                        </tr>
+                    `;
+                });
+            }
+
+            const sheet = document.getElementById('tallyA4Sheet');
+            sheet.innerHTML = `
+                <div class="tally-header">
+                    <h1>${meta.companyHeading}</h1>
+                    <h2>${meta.siteHeading}</h2>
+                    <p>Ledger Account Statement &nbsp;|&nbsp; PO Ref: ${meta.poHeading} &nbsp;|&nbsp; Period: ${meta.fyHeading} &nbsp;|&nbsp; As on: ${meta.reportDate}</p>
+                </div>
+
+                <div class="tally-kpi-bar">
+                    <div class="tally-kpi-cell">
+                        <span>Total Project PO Work</span>
+                        <strong>₹${fmtINR(t.poBase)}</strong>
+                    </div>
+                    <div class="tally-kpi-cell">
+                        <span>Billed Base Work</span>
+                        <strong>₹${fmtINR(t.billedBase)}</strong>
+                    </div>
+                    <div class="tally-kpi-cell">
+                        <span>Unbilled PO Work</span>
+                        <strong>₹${fmtINR(t.unbilledBase)}</strong>
+                    </div>
+                    <div class="tally-kpi-cell">
+                        <span>Total Gross Billed (Dr)</span>
+                        <strong>₹${fmtINR(t.gross)}</strong>
+                    </div>
+                    <div class="tally-kpi-cell">
+                        <span>Paid + TDS (Cr)</span>
+                        <strong>₹${fmtINR(totalSettledCr)}</strong>
+                    </div>
+                </div>
+
+                <table class="tally-ledger-tbl">
+                    <colgroup>
+                        <col style="width:10%;">
+                        <col style="width:33%;">
+                        <col style="width:10%;">
+                        <col style="width:13%;">
+                        <col style="width:11%;">
+                        <col style="width:11%;">
+                        <col style="width:12%;">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Particulars (Tally Ledger Narration)</th>
+                            <th class="t-center">Vch Type</th>
+                            <th class="t-center">Vch No.</th>
+                            <th class="t-right">Debit / Billed (₹)</th>
+                            <th class="t-right">Credit / Paid (₹)</th>
+                            <th class="t-right">Balance (₹)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${ledgerRowsHtml}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="4" class="t-right">Current Total :</td>
+                            <td class="t-right">₹${fmtINR(t.gross)}</td>
+                            <td class="t-right">₹${fmtINR(totalSettledCr)}</td>
+                            <td class="t-right"></td>
+                        </tr>
+                        <tr>
+                            <td colspan="4" class="t-right" style="color:#000;">By Closing Balance (Net Receivable / Paona Due) :</td>
+                            <td class="t-right"></td>
+                            <td class="t-right">₹${fmtINR(t.netDue)}</td>
+                            <td class="t-right"><b>₹${fmtINR(t.netDue)} Dr</b></td>
+                        </tr>
+                        <tr>
+                            <td colspan="4" class="t-right">Grand Total (Balanced) :</td>
+                            <td class="t-right">₹${fmtINR(balancedTotal)}</td>
+                            <td class="t-right">₹${fmtINR(balancedTotal)}</td>
+                            <td class="t-right"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+
+                <div style="border:1px solid #000; padding:6px 8px; font-size:9px; background:#f8f9fa; margin-bottom:10px;">
+                    <b>Closing Receivable (Paona) in Words:</b> ${amountInWordsINR(t.netDue)}
+                </div>
+
+                <div class="tally-footer-sign">
+                    <div>
+                        <b>Note:</b> Authentic Tally Prime Format Sales &amp; Project Ledger Statement.<br>
+                        <small>Base Billed: ₹${fmtINR(t.billedBase)} | GST Billed: ₹${fmtINR(t.gst)} | TDS Deducted: ₹${fmtINR(t.tds)}</small>
+                    </div>
+                    <div class="tally-sign-box">
+                        <div class="tally-sign-line">Checked &amp; Verified By</div>
+                    </div>
+                    <div class="tally-sign-box">
+                        <div class="tally-sign-line">For ${meta.companyHeading}<br>(Authorised Signatory)</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function openTallyPreviewModal() {
+            buildTallyA4SheetHTML();
+            document.getElementById('tallyModal').classList.add('active');
+        }
+
+        function closeTallyPreviewModal() {
+            document.getElementById('tallyModal').classList.remove('active');
+        }
+
+        // Direct A4 Tally Ledger Format PDF Download using jsPDF + autoTable
+        function downloadTallyA4PDF() {
+            if (typeof window.jspdf === 'undefined') {
+                alert("PDF Library is loading, please try again.");
+                return;
+            }
+            const meta = getSelectedFilterMeta();
+            const t = activeReportSnapshot.totals;
+            const totalSettledCr = t.paid + t.tds;
+            const balancedTotal = Math.max(t.gross, totalSettledCr + t.netDue);
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+            // Outer A4 Tally Frame
+            doc.setDrawColor(0, 0, 0);
+            doc.setLineWidth(0.4);
+            doc.rect(10, 10, 190, 277);
+
+            // Tally Header
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(13.5);
+            doc.setTextColor(0, 0, 0);
+            doc.text(meta.companyHeading.toUpperCase(), 105, 17, { align: "center" });
+
+            doc.setFontSize(10.5);
+            doc.text(meta.siteHeading.toUpperCase(), 105, 22.5, { align: "center" });
+
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(8.5);
+            doc.text(`Ledger Statement   |   PO Ref: ${meta.poHeading}   |   Period: ${meta.fyHeading}   |   Date: ${meta.reportDate}`, 105, 27.5, { align: "center" });
+            doc.line(10, 30, 200, 30);
+
+            // Top Project Summary Strip
+            doc.autoTable({
+                startY: 33,
+                margin: { left: 13, right: 13 },
+                head: [['Project Work (PO)', 'Billed (Base)', 'Unbilled PO Work', 'Gross Billed (Dr)', 'Paid + TDS (Cr)', 'Closing Due (Dr)']],
+                body: [[
+                    `Rs. ${fmtINR(t.poBase)}`,
+                    `Rs. ${fmtINR(t.billedBase)}`,
+                    `Rs. ${fmtINR(t.unbilledBase)}`,
+                    `Rs. ${fmtINR(t.gross)}`,
+                    `Rs. ${fmtINR(totalSettledCr)}`,
+                    `Rs. ${fmtINR(t.netDue)}`
+                ]],
+                theme: 'grid',
+                styles: { fontSize: 7.8, textColor: [0, 0, 0], lineColor: [0, 0, 0], lineWidth: 0.2, halign: 'right', fontStyle: 'bold' },
+                headStyles: { fillColor: [238, 240, 244], textColor: [0, 0, 0], fontStyle: 'bold', halign: 'right' }
+            });
+
+            // Main Tally Ledger Table
+            const ledgerBody = activeReportSnapshot.ledgerEntries.map(item => {
+                const isInv = item.type === "Sales Invoice";
+                const settled = item.received + item.tds;
+                const narration = isInv
+                    ? `To Sales A/c - ${item.siteName}\n(PO: ${item.poId} | Base: ${fmtINR(item.base)} + GST: ${fmtINR(item.gst)})`
+                    : `By Bank/TDS A/c - ${item.siteName}\n(${item.ref}${item.tds > 0 ? ` | TDS: ${fmtINR(item.tds)}` : ''})`;
+
+                return [
+                    item.date,
+                    narration,
+                    isInv ? 'Sales' : 'Receipt',
+                    item.vchNo,
+                    isInv ? fmtINR(item.gross) : '',
+                    !isInv ? fmtINR(settled) : '',
+                    `${fmtINR(item.runningDue)} Dr`
+                ];
+            });
+
+            doc.autoTable({
+                startY: doc.lastAutoTable.finalY + 5,
+                margin: { left: 13, right: 13 },
+                head: [['Date', 'Particulars (Tally Narration)', 'Vch Type', 'Vch No.', 'Debit (Rs)', 'Credit (Rs)', 'Balance (Rs)']],
+                body: ledgerBody.length ? ledgerBody : [['-', 'No voucher entries found', '-', '-', '0.00', '0.00', '0.00 Dr']],
+                foot: [
+                    ['', 'Current Total :', '', '', fmtINR(t.gross), fmtINR(totalSettledCr), ''],
+                    ['', 'By Closing Balance (Net Receivable / Paona) :', '', '', '', fmtINR(t.netDue), `${fmtINR(t.netDue)} Dr`],
+                    ['', 'Grand Total :', '', '', fmtINR(balancedTotal), fmtINR(balancedTotal), '']
+                ],
+                theme: 'grid',
+                styles: { fontSize: 7.8, textColor: [0, 0, 0], lineColor: [0, 0, 0], lineWidth: 0.2, valign: 'middle' },
+                headStyles: { fillColor: [235, 238, 242], textColor: [0, 0, 0], fontStyle: 'bold' },
+                footStyles: { fillColor: [244, 246, 248], textColor: [0, 0, 0], fontStyle: 'bold', halign: 'right' },
+                columnStyles: {
+                    0: { cellWidth: 18 },
+                    1: { cellWidth: 64 },
+                    2: { cellWidth: 16, halign: 'center' },
+                    3: { cellWidth: 22, halign: 'center', fontStyle: 'bold' },
+                    4: { cellWidth: 21, halign: 'right', fontStyle: 'bold' },
+                    5: { cellWidth: 21, halign: 'right', fontStyle: 'bold' },
+                    6: { cellWidth: 22, halign: 'right', fontStyle: 'bold' }
+                }
+            });
+
+            let curY = doc.lastAutoTable.finalY + 7;
+            if (curY < 268) {
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(8.2);
+                doc.text(`Closing Receivable (in words): ${amountInWordsINR(t.netDue)}`, 13, curY);
+
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(8);
+                doc.text("Checked & Verified By", 15, 278);
+                doc.text(`For ${meta.companyHeading} (Authorised Signatory)`, 195, 278, { align: "right" });
+            }
+
+            const cleanSite = meta.siteHeading.replace(/[^a-zA-Z0-9]/g, '_');
+            doc.save(`Tally_Ledger_${cleanSite}.pdf`);
+        }
+
+        // =========================================================================================
+        // 7. EXCEL EXPORT (TALLY LEDGER FORMAT)
+        // =========================================================================================
+        function exportToExcel() {
+            const wb = XLSX.utils.book_new();
+            const t = activeReportSnapshot.totals;
+            const totalSettledCr = t.paid + t.tds;
+
+            const rows = [
+                ['ATR CONSTRUCTION - SALES & PROJECT LEDGER STATEMENT'],
+                ['Project PO Work Value', t.poBase, 'Billed Base Work', t.billedBase, 'Unbilled Remaining Work', t.unbilledBase],
+                ['Gross Billed (Debit)', t.gross, 'Total Paid + TDS (Credit)', totalSettledCr, 'Net Receivable Due', t.netDue],
+                [],
+                ['Date', 'Company', 'Project / Site', 'Voucher Type', 'Voucher / Ref No', 'Base Value (Rs)', 'GST (Rs)', 'Debit / Gross Bill (Rs)', 'Credit / Paid (Rs)', 'TDS Deducted (Rs)', 'Running Due Balance (Rs)']
+            ];
+
+            activeReportSnapshot.ledgerEntries.forEach(item => {
+                rows.push([
+                    item.date, item.compName, item.siteName, item.type, item.ref,
+                    item.base, item.gst, item.gross, item.received, item.tds, item.runningDue
+                ]);
+            });
+
+            rows.push([
+                'CLOSING SUMMARY', '', '', '', '',
+                t.billedBase, t.gst, t.gross, t.paid, t.tds, t.netDue
+            ]);
+
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            XLSX.utils.book_append_sheet(wb, ws, "Tally_Sales_Ledger");
+
+            const meta = getSelectedFilterMeta();
+            const cleanSite = meta.siteHeading.replace(/[^a-zA-Z0-9]/g, '_');
+            XLSX.writeFile(wb, `ATR_Sales_Ledger_${cleanSite}.xlsx`);
+        }
+
+        // =========================================================================================
+        // 8. INITIALIZE ON PAGE LOAD
+        // =========================================================================================
+        window.onload = () => {
+            checkPortalPermissions();
+            syncTrackingDatabases();
+            populateInitialFilters();
+            renderFullSalesReport();
+        };
+
+        window.addEventListener('storage', function(e) {
+            if (['atr_purchase_orders_db', 'atr_invoices_db', 'atr_balance_received_db', 'atr_balance_received'].includes(e.key)) {
+                syncTrackingDatabases();
+                populateInitialFilters();
+                renderFullSalesReport();
+            }
+        });
+    </script>
+</body>
+</html>

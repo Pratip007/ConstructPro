@@ -1,0 +1,1518 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Site Order Entry</title>
+    
+    <!-- Sync theme with Master Dashboard -->
+    <script>
+        const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        window.addEventListener('storage', function(e) {
+            if(e.key === 'atr_theme') { document.documentElement.setAttribute('data-theme', e.newValue); }
+        });
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap');
+
+        :root {
+            --bg-body: transparent; 
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.1);
+            
+            /* Dynamic Glass & Input Variables */
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(0, 0, 0, 0.2);
+            --input-focus-bg: rgba(0, 0, 0, 0.4);
+            
+            --shadow: 0 4px 15px rgba(0,0,0,0.3);
+            
+            /* Theme Color (Orange for Contractor Section) */
+            --theme-color: #fd7e14;
+            --theme-glow: rgba(253, 126, 20, 0.4);
+            --theme-transition: all 0.4s ease;
+        }
+
+        [data-theme="light"] {
+            --bg-body: transparent;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #555555;
+            --border-color: rgba(0, 0, 0, 0.1);
+            
+            --glass-bg: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --input-bg: rgba(255, 255, 255, 0.5);
+            --input-focus-bg: #ffffff;
+            
+            --shadow: 0 8px 25px rgba(0,0,0,0.05);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; scroll-behavior: smooth; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(136, 136, 136, 0.3); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(136, 136, 136, 0.6); }
+
+        body { background-color: var(--bg-body); color: var(--text-main); display: flex; min-height: 100vh; transition: var(--theme-transition); }
+
+        /* Expanded Width + Bottom Padding so Fixed Calculation Bar never covers table rows */
+        .main-content {
+            flex: 1; padding: 32px 36px 120px 36px; overflow-y: auto; max-width: 1560px; margin: 0 auto; width: 100%;
+        }
+
+        .header-section {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 25px; border-bottom: 1px solid var(--border-color); padding-bottom: 18px;
+            transition: var(--theme-transition); flex-wrap: wrap; gap: 15px;
+        }
+
+        .header-section h1 { font-size: 24px; color: var(--text-main); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+        .role-mode-badge {
+            display: none;
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 700;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-back {
+            background-color: var(--glass-bg); color: var(--text-main);
+            border: 1px solid var(--border-color); text-decoration: none;
+            padding: 9px 16px; border-radius: 6px; font-weight: bold; font-size: 13px;
+            transition: all 0.3s; cursor: pointer;
+        }
+        .btn-back:hover { 
+            background-color: var(--theme-color); color: #fff; border-color: var(--theme-color); 
+            transform: translateY(-2px); box-shadow: 0 4px 10px var(--theme-glow); 
+        }
+
+        .btn-new-entry {
+            background-color: var(--theme-color); color: #121212; border: none; padding: 10px 20px;
+            border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; transition: all 0.3s;
+            display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+        .btn-new-entry:hover { transform: translateY(-2px); box-shadow: 0 6px 15px var(--theme-glow); }
+
+        /* Container Styles */
+        .box-container {
+            background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border); border-top: 4px solid var(--theme-color);
+            border-radius: 12px; padding: 28px 30px; box-shadow: var(--shadow); margin-bottom: 30px;
+            transition: var(--theme-transition); width: 100%;
+        }
+
+        .box-container h2 {
+            font-size: 18px; margin-bottom: 25px; color: var(--theme-color);
+            text-transform: uppercase; letter-spacing: 0.5px;
+            border-bottom: 1px dashed var(--border-color); padding-bottom: 10px;
+        }
+
+        .list-header-bar {
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;
+            border-bottom: 1px dashed var(--border-color); padding-bottom: 12px; margin-bottom: 18px;
+        }
+        .list-header-bar h2 { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
+        .list-search-input {
+            background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main);
+            padding: 10px 15px; border-radius: 6px; font-size: 13px; width: 320px; outline: none;
+            transition: all 0.3s;
+        }
+        .list-search-input:focus { border-color: var(--theme-color); box-shadow: 0 0 8px var(--theme-glow); }
+
+        /* Form Grids & Inputs */
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+        .form-group { display: flex; flex-direction: column; gap: 8px; position: relative; }
+        .form-group label { font-size: 12px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
+        
+        .form-group input, .form-group select, .form-group textarea {
+            background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main);
+            padding: 12px 15px; border-radius: 6px; font-size: 14px; transition: all 0.3s; width: 100%; outline: none;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); color-scheme: dark;
+        }
+        [data-theme="light"] input[type="date"] { color-scheme: light; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            border-color: var(--theme-color); background-color: var(--input-focus-bg);
+            box-shadow: 0 0 10px var(--theme-glow), inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .form-group input[readonly] { background-color: rgba(0,0,0,0.15); color: #ffc107; font-weight: 700; cursor: not-allowed; border-color: var(--border-color); }
+        select option { background: var(--bg-card); color: var(--text-main); }
+        
+        /* TDS Badge */
+        .tds-badge {
+            background: rgba(253, 126, 20, 0.1); color: var(--theme-color); padding: 5px 10px;
+            font-size: 11px; font-weight: bold; border-radius: 4px; border: 1px solid var(--theme-color);
+            display: none; width: fit-content; margin-top: -3px;
+        }
+
+        /* GST Global Selection Box */
+        .gst-global-box {
+            background: var(--input-bg); border: 1px solid var(--border-color); padding: 12px 15px; border-radius: 6px;
+        }
+        .radio-group { display: flex; gap: 15px; align-items: center; margin-top: 5px; }
+        .radio-group label { font-size: 13px; color: var(--text-main); display: flex; align-items: center; gap: 5px; cursor: pointer; text-transform: none; }
+        .radio-group input[type="radio"] { accent-color: var(--theme-color); width: 16px; height: 16px; cursor: pointer; }
+
+        /* Custom Searchable Dropdown */
+        .search-dropdown { position: relative; width: 100%; }
+        .dropdown-list {
+            position: absolute; top: 100%; left: 0; right: 0;
+            background-color: var(--bg-card); border: 1px solid var(--theme-color); border-top: none;
+            border-radius: 0 0 6px 6px; max-height: 220px; overflow-y: auto;
+            z-index: 1000; display: none; box-shadow: var(--shadow); list-style: none;
+        }
+        .dropdown-list li { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid var(--border-color); font-size: 13px; color: var(--text-main); }
+        .dropdown-list li:hover { background-color: var(--theme-color); color: #121212; font-weight: bold; }
+        .search-dropdown.active .dropdown-list { display: block; }
+
+        /* Item Entry Section */
+        .item-entry-box {
+            background: var(--input-bg); padding: 25px; border-radius: 10px;
+            border: 1px solid var(--border-color); margin-top: 25px;
+        }
+        .item-grid { display: flex; flex-wrap: wrap; gap: 15px; align-items: end; }
+        .item-grid > .form-group { flex: 1; min-width: 100px; }
+        .item-grid > .form-group.large { flex: 2; min-width: 200px; }
+        
+        .btn-add-cart {
+            background-color: #28a745; color: white; border: none; padding: 12px 20px;
+            border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.3s; height: 43px;
+            display: flex; align-items: center; gap: 5px; font-size: 13px;
+        }
+        .btn-add-cart:hover { background-color: #218838; transform: translateY(-2px); }
+
+        /* ================= FULL-WIDTH NO-SCROLL TABLE STYLING ================= */
+        .table-responsive {
+            width: 100%;
+            overflow-x: visible;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-card);
+            margin-top: 15px;
+        }
+        @media (max-width: 980px) {
+            .table-responsive { overflow-x: auto; }
+        }
+
+        table { width: 100%; border-collapse: collapse; text-align: left; table-layout: auto; }
+        th, td {
+            padding: 13px 12px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 13px;
+            color: var(--text-main);
+            transition: var(--theme-transition);
+            vertical-align: middle;
+        }
+        th {
+            color: var(--text-muted);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 11px;
+            background: var(--input-bg);
+            letter-spacing: 0.4px;
+            white-space: nowrap;
+        }
+        tbody tr:hover { background: var(--glass-bg); }
+
+        /* Table Footer Row for Quick Column Totals */
+        tfoot tr {
+            background: rgba(253, 126, 20, 0.08);
+            border-top: 2px solid var(--theme-color);
+        }
+        tfoot td {
+            font-weight: 700;
+            font-size: 13.5px;
+            padding: 14px 12px;
+            border-bottom: none;
+        }
+
+        /* ================= FIXED BOTTOM LIVE CALCULATION SUMMARY BAR ================= */
+        .fixed-bottom-calc-wrapper {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 950;
+            background: var(--bg-card);
+            border-top: 3px solid var(--theme-color);
+            box-shadow: 0 -6px 25px rgba(0, 0, 0, 0.45);
+            padding: 12px 36px;
+            transition: var(--theme-transition);
+        }
+        .list-calculation-bar {
+            max-width: 1500px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 16px;
+            align-items: center;
+        }
+        @media (max-width: 900px) {
+            .fixed-bottom-calc-wrapper { padding: 10px 16px; }
+            .list-calculation-bar { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        }
+        .calc-metric-item {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            padding-right: 12px;
+            border-right: 1px dashed var(--border-color);
+        }
+        .calc-metric-item:last-child {
+            border-right: none;
+            padding-right: 0;
+        }
+        .calc-metric-label {
+            font-size: 10.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+        }
+        .calc-metric-value {
+            font-size: 16.5px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+        .calc-metric-sub {
+            font-size: 10.5px;
+            color: var(--text-muted);
+        }
+
+        .cart-remove-btn { color: #dc3545; background: none; border: none; cursor: pointer; font-weight: bold; font-size: 20px; }
+        .cart-remove-btn:hover { color: #ff6b6b; }
+
+        .pending-status-pill {
+            display: inline-block; background: rgba(255, 193, 7, 0.16); color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.45); padding: 2px 7px; border-radius: 4px;
+            font-size: 10px; font-weight: 700; margin-top: 4px; text-transform: uppercase;
+        }
+
+        /* Live Calculation Area (Entry View) */
+        .calc-area {
+            margin-top: 25px; padding-top: 20px; border-top: 1px solid var(--border-color);
+            display: flex; justify-content: flex-end; align-items: flex-start;
+        }
+        
+        .totals-box { background: var(--input-bg); padding: 25px; border-radius: 8px; min-width: 320px; border: 1px solid var(--border-color); box-shadow: var(--shadow); }
+        .total-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px; color: var(--text-main); }
+        .total-row.tds-row { color: #dc3545; border-bottom: 1px dashed var(--border-color); padding-bottom: 10px; }
+        .total-row.grand { font-size: 18px; font-weight: bold; color: #28a745; border-top: 1px dashed var(--border-color); padding-top: 15px; margin-top: 10px; }
+
+        .btn-submit-order {
+            background-color: var(--theme-color); color: #121212; border: none; padding: 15px 30px;
+            border-radius: 6px; font-weight: 700; font-size: 15px; cursor: pointer;
+            text-transform: uppercase; transition: all 0.3s; width: 100%; margin-top: 25px;
+            letter-spacing: 1px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .btn-submit-order:hover { transform: translateY(-2px); box-shadow: 0 8px 20px var(--theme-glow); }
+
+        /* Action Buttons for List */
+        .action-btns { display: inline-flex; gap: 6px; align-items: center; flex-wrap: nowrap; }
+        .btn-edit { background: var(--glass-bg); color: var(--theme-color); border: 1px solid var(--theme-color); padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; transition: 0.2s; }
+        .btn-delete { background: rgba(220, 53, 69, 0.1); color: #dc3545; border: 1px solid #dc3545; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; transition: 0.2s; }
+        .btn-edit:hover { background: var(--theme-color); color: #121212; }
+        .btn-delete:hover { background: #dc3545; color: white; }
+
+        #entryView { display: none; }
+        .gst-col { display: none; }
+        .gst-col.active { display: flex; }
+
+        /* ================= OFFICE / SUPERVISOR APPROVAL MODAL ================= */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(5px); z-index: 2000;
+            justify-content: center; align-items: center; padding: 20px;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-card {
+            background: var(--bg-card); border: 1px solid var(--border-color); border-top: 4px solid #ffc107;
+            border-radius: 12px; width: 100%; max-width: 480px; padding: 28px; box-shadow: var(--shadow);
+        }
+        .modal-card h3 { font-size: 18px; color: #ffc107; margin-bottom: 10px; }
+        .modal-card p { font-size: 12.5px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5; }
+        .modal-btn-row { display: flex; gap: 10px; margin-top: 18px; }
+        .btn-modal { flex: 1; padding: 11px 16px; border-radius: 6px; font-weight: 700; font-size: 12.5px; border: none; cursor: pointer; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+
+    <div class="main-content">
+        <div class="header-section">
+            <h1>
+                📦 Site Order Entry
+                <span id="roleModeBadge" class="role-mode-badge">🏢 Office Mode</span>
+            </h1>
+            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                <button class="btn-new-entry" id="btnToggleView" onclick="toggleView()">➕ New Order Entry</button>
+                <a href="dashboard_home.html" id="btnBackDashboard" class="btn-back" onclick="handleBackToDashboard(event)">← Back to Dashboard</a>
+            </div>
+        </div>
+
+        <!-- LIST VIEW (First Page) -->
+        <div id="listView" class="box-container">
+            <div class="list-header-bar">
+                <h2>📋 Recent Orders Master List</h2>
+                <input type="text" id="orderSearchInput" class="list-search-input" placeholder="🔍 Search Order ID, Site, Contractor, Date..." onkeyup="renderOrderListTable()">
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 11%;">Order ID</th>
+                            <th style="width: 10%;">Date</th>
+                            <th style="width: 21%;">Site / Project</th>
+                            <th style="width: 19%;">Contractor Name</th>
+                            <th style="width: 8%;">Items</th>
+                            <th style="width: 12%;">Net Amount (₹)</th>
+                            <th style="width: 9%;">TDS Deducted</th>
+                            <th style="width: 8%;">GST Applied</th>
+                            <th style="width: 12%; text-align: right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orderListBody">
+                        <!-- Dynamically populated from localStorage via JS -->
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="4" style="text-align: right; color: var(--text-muted); text-transform: uppercase; font-size: 12px;">
+                                Filtered List Total (<span id="tfootOrderCount">0</span> Orders):
+                            </td>
+                            <td id="tfootItemCount" style="color: var(--text-main);">0 Item(s)</td>
+                            <td id="tfootNetTotal" style="color: #28a745; font-size: 15px; font-weight: 800;">₹0.00</td>
+                            <td id="tfootTdsTotal" style="color: #dc3545; font-size: 12.5px;">- ₹0.00</td>
+                            <td id="tfootGstTotal" style="color: #28a745; font-size: 12.5px;">+ ₹0.00</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- ENTRY VIEW -->
+        <div id="entryView">
+            <div class="box-container">
+                <h2 id="entryFormHeading">📝 1. Contractor, Site & Order Details</h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Order ID (Auto)</label>
+                        <input type="text" id="orderId" readonly>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Order Date</label>
+                        <input type="date" id="orderDate">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Select Contractor *</label>
+                        <div class="search-dropdown" id="contractorDropdown">
+                            <input type="text" id="contractorInput" placeholder="Type & Search..." onkeyup="filterDropdown('contractorDropdown')" onclick="toggleDropdown('contractorDropdown')">
+                            <ul class="dropdown-list" id="contractorList"></ul>
+                        </div>
+                        <div id="tdsInfoBadge" class="tds-badge">TDS Applicable</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Select Site / Project *</label>
+                        <div class="search-dropdown" id="siteDropdown">
+                            <input type="text" id="siteInput" placeholder="Search Site..." onkeyup="filterDropdown('siteDropdown')" onclick="toggleDropdown('siteDropdown')">
+                            <ul class="dropdown-list" id="siteList">
+                                <li onclick="selectDropdownOption('siteDropdown', 'Commercial Complex B3')">Commercial Complex B3</li>
+                                <li onclick="selectDropdownOption('siteDropdown', 'Residential Villa')">Residential Villa</li>
+                                <li onclick="selectDropdownOption('siteDropdown', 'Apartment Phase 2')">Apartment Phase 2</li>
+                                <li onclick="selectDropdownOption('siteDropdown', 'Office Renovation')">Office Renovation</li>
+                                <li onclick="selectDropdownOption('siteDropdown', 'Salt Lake Sector V')">Salt Lake Sector V</li>
+                                <li onclick="selectDropdownOption('siteDropdown', 'Kolkata Metro Project - Line 6')">Kolkata Metro Project - Line 6</li>
+                                <li onclick="selectDropdownOption('siteDropdown', 'Dum Dum Warehouse Construction')">Dum Dum Warehouse Construction</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="form-group gst-global-box">
+                        <label>🧾 Will this order include GST?</label>
+                        <div class="radio-group">
+                            <label><input type="radio" name="globalGst" value="no" checked onchange="toggleItemGst()"> No GST</label>
+                            <label><input type="radio" name="globalGst" value="yes" onchange="toggleItemGst()"> Yes, Applicable</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add Items Section -->
+                <div class="item-entry-box">
+                    <h2 style="font-size:16px; margin-bottom: 20px; color:var(--text-main); border:none; padding:0;">➕ 2. Add Items & Live Preview</h2>
+                    
+                    <div class="item-grid">
+                        <div class="form-group large">
+                            <label>Search Product</label>
+                            <div class="search-dropdown" id="productDropdown">
+                                <input type="text" id="productInput" placeholder="Type Product Name..." onkeyup="filterDropdown('productDropdown')" onclick="toggleDropdown('productDropdown')">
+                                <ul class="dropdown-list">
+                                    <li onclick="selectProductOption('Ambuja Cement', '2523', 'Bag', 350)">Ambuja Cement (Bag)</li>
+                                    <li onclick="selectProductOption('Tata Tiscon 8mm', '7214', 'Kg', 72)">Tata Tiscon 8mm (Kg)</li>
+                                    <li onclick="selectProductOption('Red Bricks (1st Class)', '6904', 'Pcs', 12)">Red Bricks (1st Class)</li>
+                                    <li onclick="selectProductOption('River Sand', '2505', 'Cft', 65)">River Sand (Cft)</li>
+                                    <li onclick="selectProductOption('PVC Pipe 4 inch', '3917', 'Pcs', 450)">PVC Pipe 4 inch</li>
+                                    <li onclick="selectProductOption('Contractor Work Bill (% Basis)', '9954', '%', 100000)">Contractor Work Bill (% Basis)</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="form-group"><label>HSN</label><input type="text" id="itemHsn"></div>
+                        <div class="form-group" style="max-width: 95px;">
+                            <label>Unit</label>
+                            <input type="text" id="itemUnit" list="unitOptionsList" placeholder="Bag / %" oninput="liveCalculatePreview()" onkeyup="liveCalculatePreview()" onchange="liveCalculatePreview()">
+                            <datalist id="unitOptionsList">
+                                <option value="%">Percentage (%)</option>
+                                <option value="Percentage">Percentage</option>
+                                <option value="Bag">Bag</option>
+                                <option value="Kg">Kg</option>
+                                <option value="Pcs">Pcs</option>
+                                <option value="Cft">Cft</option>
+                                <option value="Sqft">Sqft</option>
+                                <option value="Ton">Ton</option>
+                                <option value="Nos">Nos</option>
+                            </datalist>
+                        </div>
+                        
+                        <div class="form-group"><label>Base Price(₹)</label><input type="number" id="itemPrice" step="any" oninput="liveCalculatePreview()" onkeyup="liveCalculatePreview()" onchange="liveCalculatePreview()"></div>
+                        <div class="form-group" style="max-width: 90px;"><label id="itemQtyLabel">Qty</label><input type="number" id="itemQty" step="any" oninput="liveCalculatePreview()" onkeyup="liveCalculatePreview()" onchange="liveCalculatePreview()"></div>
+                        
+                        <div class="form-group gst-col" id="itemGstCol">
+                            <label>GST %</label>
+                            <select id="itemGstPercent" onchange="liveCalculatePreview()">
+                                <option value="0">0%</option>
+                                <option value="5">5%</option>
+                                <option value="12">12%</option>
+                                <option value="18" selected>18%</option>
+                                <option value="28">28%</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group"><label>Net Total(₹)</label><input type="text" id="itemTotalPreview" readonly style="font-weight:bold; color:var(--theme-color);"></div>
+                        
+                        <button type="button" class="btn-add-cart" onclick="addToCart()">🛒 Add Item</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cart Details & Checkout -->
+            <div class="box-container">
+                <h2>🛒 3. Cart & Final Checkout</h2>
+                <div class="table-responsive">
+                    <table id="cartTable">
+                        <thead>
+                            <tr>
+                                <th>Product Name</th>
+                                <th>HSN</th>
+                                <th>Qty x Unit</th>
+                                <th>Base Total</th>
+                                <th class="cart-gst-header" style="display:none;">GST %</th>
+                                <th class="cart-gst-header" style="display:none;">GST Amt</th>
+                                <th>Net Total</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cartBody"></tbody>
+                    </table>
+                </div>
+
+                <div class="calc-area">
+                    <div class="totals-box">
+                        <div class="total-row"><span>Total Base Amount:</span> <span id="lblBaseTotal">₹0.00</span></div>
+                        <div class="total-row" id="gstSummaryRow" style="display:none;"><span>Total GST Amount:</span> <span id="lblGstTotal">₹0.00</span></div>
+                        
+                        <div class="total-row tds-row" id="tdsSummaryRow" style="display:none;">
+                            <span>TDS Deducted <span id="lblTdsPercentLabel"></span>:</span>
+                            <span id="lblTdsAmount">- ₹0.00</span>
+                        </div>
+
+                        <div class="total-row grand"><span>Net Payable:</span> <span id="lblGrandTotal">₹0.00</span></div>
+                    </div>
+                </div>
+
+                <button type="button" class="btn-submit-order" id="submitActionBtn" onclick="submitOrder()">✅ Place Order / Checkout</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ================= FIXED BOTTOM LIVE CALCULATION SUMMARY BAR (PINNED TO VIEWPORT BOTTOM) ================= -->
+    <div class="fixed-bottom-calc-wrapper" id="fixedBottomCalcBar">
+        <div class="list-calculation-bar" id="orderListSummaryBar">
+            <div class="calc-metric-item">
+                <span class="calc-metric-label">📦 Displayed Orders</span>
+                <span class="calc-metric-value" id="sumBarOrderCount" style="color: var(--theme-color);">0 Orders</span>
+                <span class="calc-metric-sub" id="sumBarItemsCount">Total 0 Line Items</span>
+            </div>
+            <div class="calc-metric-item">
+                <span class="calc-metric-label">💰 Total Base Amount</span>
+                <span class="calc-metric-value" id="sumBarBaseAmt">₹0.00</span>
+                <span class="calc-metric-sub">Before Tax & TDS</span>
+            </div>
+            <div class="calc-metric-item">
+                <span class="calc-metric-label">🧾 Total GST Added</span>
+                <span class="calc-metric-value" id="sumBarGstAmt" style="color: #28a745;">+ ₹0.00</span>
+                <span class="calc-metric-sub">Applicable GST Total</span>
+            </div>
+            <div class="calc-metric-item">
+                <span class="calc-metric-label">✂ Total TDS Deducted</span>
+                <span class="calc-metric-value" id="sumBarTdsAmt" style="color: #dc3545;">- ₹0.00</span>
+                <span class="calc-metric-sub">Contractor TDS Total</span>
+            </div>
+            <div class="calc-metric-item">
+                <span class="calc-metric-label">✅ Total Net Payable</span>
+                <span class="calc-metric-value" id="sumBarNetAmt" style="color: #28a745; font-size: 18.5px;">₹0.00</span>
+                <span class="calc-metric-sub">Base + GST - TDS</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= OFFICE / SUPERVISOR APPROVAL MODAL (ROUTES TO ApproveOffice.html) ================= -->
+    <div class="modal-overlay" id="roleApprovalModal">
+        <div class="modal-card">
+            <h3 id="roleApprovalTitle">🏢 Send Request to ApproveOffice.html</h3>
+            <p id="roleApprovalDesc">
+                অফিস পোর্টাল থেকে নতুন সাইট অর্ডার প্লেস, এডিট বা ডিলিট করলে তা অ্যাডমিনের <strong>ApproveOffice.html</strong>-এ পাঠানো হবে। অ্যাডমিন অ্যাপ্রুভ করলেই এটি চূড়ান্ত হবে।
+            </p>
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label>Order Action Summary</label>
+                <input type="text" id="roleApprovalSummary" readonly style="color: #ffc107; font-weight: 700;">
+            </div>
+            <div class="form-group">
+                <label>Reason / Remarks for Admin Approval <span style="color: #ff4d4d;">*</span></label>
+                <textarea id="roleApprovalReason" rows="3" placeholder="Write a short note or reason for this site order entry, update, or deletion..." style="resize: none;"></textarea>
+            </div>
+            <div class="modal-btn-row">
+                <button type="button" class="btn-modal" style="background: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color);" onclick="closeRoleApprovalModal()">Cancel</button>
+                <button type="button" class="btn-modal" style="background: #ffc107; color: #121212;" onclick="confirmRoleApprovalRequest()">📤 Send for Approval</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================================================
+        // 1. PORTAL ROLE DETECTION & CONTRACTORS / ORDERS DATABASE SYNC
+        // =========================================================================================
+        let currentPortalMode = "admin"; // 'admin', 'office', or 'supervisor'
+        let loggedUserId = "ADMIN";
+        let loggedUserName = "Super Admin";
+        let assignedSite = "";
+        let pendingRolePayload = null;
+
+        const defaultContractorsDB = [
+            { name: 'Amitabha Roy (Civil)', tdsApplicable: true, tdsPerc: 2 },
+            { name: 'Sayan Karmakar (Electrical)', tdsApplicable: true, tdsPerc: 1 },
+            { name: 'Rajat Dutta (Plumbing)', tdsApplicable: true, tdsPerc: 2 },
+            { name: 'Maa Tara Traders (Material)', tdsApplicable: false, tdsPerc: 0 }
+        ];
+
+        const defaultSiteOrders = [
+            {
+                orderId: "ORD-1001",
+                date: "2026-07-28",
+                site: "Commercial Complex B3",
+                contractor: "Amitabha Roy (Civil)",
+                baseAmount: 122500.00,
+                gstAmount: 22050.00,
+                tdsAmount: 2450.00,
+                netAmount: 142100.00,
+                tdsApplicable: true,
+                tdsPerc: 2,
+                tdsDisplay: "Yes (2%)",
+                gstApplied: true,
+                items: [
+                    { id: 1, name: "Ambuja Cement", hsn: "2523", unit: "Bag", price: 350, qty: 350, baseTotal: 122500, gstPercent: 18, gstAmount: 22050, netTotal: 144550 }
+                ],
+                pendingStatus: null
+            },
+            {
+                orderId: "ORD-1002",
+                date: "2026-07-30",
+                site: "Residential Villa",
+                contractor: "Maa Tara Traders (Material)",
+                baseAmount: 85500.00,
+                gstAmount: 0.00,
+                tdsAmount: 0.00,
+                netAmount: 85500.00,
+                tdsApplicable: false,
+                tdsPerc: 0,
+                tdsDisplay: "No",
+                gstApplied: false,
+                items: [
+                    { id: 2, name: "River Sand", hsn: "2505", unit: "Cft", price: 65, qty: 1315.38, baseTotal: 85500, gstPercent: 0, gstAmount: 0, netTotal: 85500 }
+                ],
+                pendingStatus: null
+            }
+        ];
+
+        let contractorsDB = [];
+        let siteOrdersDB = [];
+        let isEntryView = false;
+        let cart = [];
+        let isGstActive = false;
+        let activePartyTdsPerc = 0;
+        let currentEditOrderId = null;
+
+        // =========================================================================================
+        // SMART PERCENTAGE UNIT vs NORMAL QUANTITY CALCULATION ENGINE
+        // =========================================================================================
+        function isPercentageUnit(unitVal) {
+            if (!unitVal) return false;
+            const u = String(unitVal).trim().toLowerCase();
+            return u === '%' || u === 'percent' || u === 'percentage' || u === 'pct' || u.includes('%');
+        }
+
+        function calculateItemBaseTotal(price, qty, unit) {
+            const p = parseFloat(price) || 0;
+            const q = parseFloat(qty) || 0;
+            if (isPercentageUnit(unit)) {
+                return (p * q) / 100;
+            }
+            return p * q;
+        }
+
+        // Helper: Compute Base, GST, TDS, and Net breakdown for any order record accurately
+        function getOrderBreakdown(ord) {
+            let baseAmt = parseFloat(ord.baseAmount);
+            let gstAmt = parseFloat(ord.gstAmount);
+            let tdsAmt = parseFloat(ord.tdsAmount);
+            let netAmt = parseFloat(ord.netAmount) || 0;
+
+            if (isNaN(baseAmt) || isNaN(gstAmt) || isNaN(tdsAmt)) {
+                baseAmt = 0;
+                gstAmt = 0;
+                if (Array.isArray(ord.items) && ord.items.length > 0) {
+                    ord.items.forEach(it => {
+                        const b = calculateItemBaseTotal(it.price, it.qty, it.unit);
+                        const g = ord.gstApplied ? (b * (parseFloat(it.gstPercent) || 18)) / 100 : 0;
+                        baseAmt += b;
+                        gstAmt += g;
+                    });
+                } else {
+                    baseAmt = netAmt;
+                }
+                const tdsPerc = parseFloat(ord.tdsPerc) || 0;
+                tdsAmt = tdsPerc > 0 ? (baseAmt * tdsPerc) / 100 : 0;
+                if (!netAmt) netAmt = baseAmt + gstAmt - tdsAmt;
+            }
+
+            return {
+                baseAmt: baseAmt || 0,
+                gstAmt: gstAmt || 0,
+                tdsAmt: tdsAmt || 0,
+                netAmt: netAmt || 0
+            };
+        }
+
+        function syncContractorsAndOrders() {
+            contractorsDB = [...defaultContractorsDB];
+            const storedContractors = JSON.parse(localStorage.getItem('atr_contractors')) || [];
+            storedContractors.forEach(c => {
+                const formattedName = `${c.name} (${c.category.replace(' Work', '')})`;
+                const exists = contractorsDB.some(existing =>
+                    existing.name.toLowerCase() === formattedName.toLowerCase() ||
+                    existing.name.toLowerCase().startsWith(c.name.toLowerCase())
+                );
+                if (!exists) {
+                    contractorsDB.push({
+                        name: formattedName,
+                        tdsApplicable: Boolean(c.tdsApplicable),
+                        tdsPerc: parseFloat(c.tdsPercent) || 0
+                    });
+                }
+            });
+
+            const contractorHtml = contractorsDB.map(c =>
+                `<li onclick="selectDropdownOption('contractorDropdown', '${c.name.replace(/'/g, "\\'")}')">${c.name}</li>`
+            ).join('');
+            document.getElementById('contractorList').innerHTML = contractorHtml;
+
+            const storedOrders = JSON.parse(localStorage.getItem('atr_site_orders'));
+            if (Array.isArray(storedOrders) && storedOrders.length > 0) {
+                siteOrdersDB = storedOrders;
+            } else {
+                siteOrdersDB = [...defaultSiteOrders];
+                localStorage.setItem('atr_site_orders', JSON.stringify(siteOrdersDB));
+            }
+        }
+
+        function saveOrdersToStorage() {
+            localStorage.setItem('atr_site_orders', JSON.stringify(siteOrdersDB));
+        }
+
+        function checkPortalPermissions() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewParam = (urlParams.get('view') || '').toLowerCase();
+            const badge = document.getElementById('roleModeBadge');
+            const backBtn = document.getElementById('btnBackDashboard');
+            const modalTitle = document.getElementById('roleApprovalTitle');
+            const modalDesc = document.getElementById('roleApprovalDesc');
+
+            let parentPath = "";
+            try {
+                if (window.parent && window.parent !== window) {
+                    parentPath = (window.parent.location.pathname || '').toLowerCase();
+                }
+            } catch (e) {}
+
+            if (viewParam === 'office' || parentPath.includes('officedashboard')) {
+                currentPortalMode = 'office';
+                loggedUserId = urlParams.get('userId') || sessionStorage.getItem('atr_logged_office_id') || localStorage.getItem('atr_logged_office_id') || "OFF-101";
+                loggedUserName = urlParams.get('userName') || "Office Staff";
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🏢 Office Mode (${loggedUserName}) — Synced with ApproveOffice.html`;
+                }
+                if (backBtn) {
+                    backBtn.href = "office/office_dashboard_home.html";
+                }
+                if (modalTitle) modalTitle.innerText = "🏢 Send Request to ApproveOffice.html";
+                if (modalDesc) modalDesc.innerHTML = "অফিস পোর্টাল থেকে নতুন সাইট অর্ডার প্লেস, এডিট বা ডিলিট করলে তা অ্যাডমিনের <strong>ApproveOffice.html</strong>-এ পাঠানো হবে। অ্যাডমিন অ্যাপ্রুভ করলেই এটি চূড়ান্ত হবে।";
+
+            } else if (viewParam === 'supervisor' || parentPath.includes('supervisordashboard')) {
+                currentPortalMode = 'supervisor';
+                assignedSite = (urlParams.get('site') || sessionStorage.getItem('atr_supervisor_site') || "Salt Lake Sector V").trim();
+                loggedUserId = urlParams.get('supId') || "SUP-003";
+                loggedUserName = urlParams.get('supName') || "Supervisor";
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🛡️ Supervisor Mode (🔒 Site: ${assignedSite})`;
+                }
+                if (backBtn) {
+                    backBtn.href = "supervisor/supervisor_dashboard_home.html";
+                }
+                if (modalTitle) modalTitle.innerText = "🛡 Send Request to ApproveSupervisor.html";
+                if (modalDesc) modalDesc.innerHTML = `সুপারভাইজার পোর্টাল (<strong>${assignedSite}</strong>) থেকে সাইট অর্ডার এন্ট্রি বা পরিবর্তন করলে তা অ্যাডমিনের <strong>ApproveSupervisor.html</strong>-এ পাঠানো হবে।`;
+
+            } else {
+                currentPortalMode = 'admin';
+                if (backBtn) {
+                    backBtn.href = "dashboard_home.html";
+                }
+            }
+        }
+
+        function handleBackToDashboard(event) {
+            if (currentPortalMode === 'office') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.loadOfficeWorkspaceHome === 'function') {
+                        window.parent.loadOfficeWorkspaceHome();
+                        return;
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "office_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "office/office_dashboard_home.html";
+            } else if (currentPortalMode === 'supervisor') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window) {
+                        const parentHomeLink = window.parent.document.querySelector('.dashboard-home-link');
+                        if (parentHomeLink) {
+                            window.location.href = parentHomeLink.href;
+                            return;
+                        }
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "supervisor_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "supervisor/supervisor_dashboard_home.html";
+            }
+        }
+
+        window.onload = () => {
+            checkPortalPermissions();
+            syncContractorsAndOrders();
+            renderOrderListTable();
+        };
+
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'atr_site_orders' || e.key === 'atr_contractors') {
+                syncContractorsAndOrders();
+                renderOrderListTable();
+            }
+        });
+
+        // =========================================================================================
+        // 2. VIEW TOGGLE & SEQUENTIAL ORDER ID GENERATOR
+        // =========================================================================================
+        function getNextOrderId() {
+            let maxSeq = 1000;
+            siteOrdersDB.forEach(ord => {
+                const match = String(ord.orderId || '').match(/(\d+)$/);
+                if (match) {
+                    const num = parseInt(match[1], 10);
+                    if (num > maxSeq) maxSeq = num;
+                }
+            });
+            return "ORD-" + (maxSeq + 1);
+        }
+
+        function toggleView() {
+            const listView = document.getElementById('listView');
+            const entryView = document.getElementById('entryView');
+            const fixedBar = document.getElementById('fixedBottomCalcBar');
+            const btn = document.getElementById('btnToggleView');
+
+            if(isEntryView) {
+                listView.style.display = 'block';
+                entryView.style.display = 'none';
+                if (fixedBar) fixedBar.style.display = 'block';
+                btn.innerHTML = '➕ New Order Entry';
+                resetForm();
+                renderOrderListTable();
+            } else {
+                listView.style.display = 'none';
+                entryView.style.display = 'block';
+                if (fixedBar) fixedBar.style.display = 'none';
+                btn.innerHTML = '⬅️ Back to List';
+                if(!currentEditOrderId) { autoAssignData(); }
+                toggleItemGst();
+            }
+            isEntryView = !isEntryView;
+        }
+
+        function autoAssignData() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('orderDate').value = today;
+            document.getElementById('orderId').value = getNextOrderId();
+            document.getElementById('entryFormHeading').innerText = "📝 1. Contractor, Site & Order Details";
+
+            if (currentPortalMode === 'supervisor' && assignedSite) {
+                const siteInp = document.getElementById('siteInput');
+                siteInp.value = assignedSite;
+                siteInp.readOnly = true;
+            }
+            
+            const submitBtn = document.getElementById('submitActionBtn');
+            submitBtn.innerHTML = currentPortalMode === 'admin'
+                ? "✅ Place Order / Checkout"
+                : "📤 Submit Order for Admin Approval";
+            submitBtn.setAttribute("onclick", "submitOrder()");
+            currentEditOrderId = null;
+        }
+
+        function resetForm() {
+            cart = [];
+            activePartyTdsPerc = 0;
+            document.getElementById('tdsInfoBadge').style.display = 'none';
+            document.getElementById('contractorInput').value = '';
+            if (currentPortalMode === 'supervisor' && assignedSite) {
+                document.getElementById('siteInput').value = assignedSite;
+            } else {
+                document.getElementById('siteInput').value = '';
+            }
+            document.querySelector('input[name="globalGst"][value="no"]').checked = true;
+            clearItemInputs();
+            renderCart();
+            currentEditOrderId = null;
+        }
+
+        // =========================================================================================
+        // 3. RENDER MASTER ORDER LIST TABLE + FIXED BOTTOM CALCULATION BAR
+        // =========================================================================================
+        function renderOrderListTable() {
+            const tbody = document.getElementById('orderListBody');
+            const query = (document.getElementById('orderSearchInput').value || '').toLowerCase();
+            tbody.innerHTML = '';
+
+            let displayOrders = (currentPortalMode === 'supervisor' && assignedSite)
+                ? siteOrdersDB.filter(o => o.site === assignedSite)
+                : siteOrdersDB;
+
+            if (query) {
+                displayOrders = displayOrders.filter(o =>
+                    (o.orderId || '').toLowerCase().includes(query) ||
+                    (o.date || '').toLowerCase().includes(query) ||
+                    (o.site || '').toLowerCase().includes(query) ||
+                    (o.contractor || '').toLowerCase().includes(query)
+                );
+            }
+
+            // Dynamic Summary Accumulators for Filtered Orders
+            let sumOrdersCount = displayOrders.length;
+            let sumItemsCount = 0;
+            let sumBaseAmt = 0;
+            let sumGstAmt = 0;
+            let sumTdsAmt = 0;
+            let sumNetAmt = 0;
+
+            if (displayOrders.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 25px; color: var(--text-muted);">No site orders found matching your filter.</td></tr>`;
+            } else {
+                displayOrders.slice().reverse().forEach(ord => {
+                    const breakdown = getOrderBreakdown(ord);
+                    const itemCount = Array.isArray(ord.items) ? ord.items.length : 0;
+
+                    sumItemsCount += itemCount;
+                    sumBaseAmt += breakdown.baseAmt;
+                    sumGstAmt += breakdown.gstAmt;
+                    sumTdsAmt += breakdown.tdsAmt;
+                    sumNetAmt += breakdown.netAmt;
+
+                    const tdsHtml = ord.tdsPerc > 0
+                        ? `<span style="color:#dc3545; font-weight:600;">Yes (${ord.tdsPerc}%)</span><br><small style="color:var(--text-muted);">-₹${breakdown.tdsAmt.toFixed(2)}</small>`
+                        : `<span style="color:var(--text-muted);">No</span>`;
+
+                    const gstHtml = ord.gstApplied
+                        ? `<span style="color:#28a745; font-weight:bold;">Yes</span><br><small style="color:var(--text-muted);">+₹${breakdown.gstAmt.toFixed(2)}</small>`
+                        : `<span style="color:#dc3545; font-weight:bold;">No</span>`;
+
+                    const pendingBadge = ord.pendingStatus
+                        ? `<br><span class="pending-status-pill">⏳ ${ord.pendingStatus}</span>`
+                        : '';
+
+                    const tr = document.createElement('tr');
+                    tr.id = "row_" + ord.orderId;
+                    tr.innerHTML = `
+                        <td style="white-space: nowrap;">
+                            <strong>${ord.orderId}</strong>
+                            ${pendingBadge}
+                        </td>
+                        <td style="white-space: nowrap;">${ord.date}</td>
+                        <td style="font-weight: 600;">${ord.site}</td>
+                        <td>${ord.contractor}</td>
+                        <td style="white-space: nowrap;"><span style="color:var(--text-muted); font-size:12px;">${itemCount} Item(s)</span></td>
+                        <td class="amt-col" style="font-weight:700; color:#28a745; white-space: nowrap;">₹${breakdown.netAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td style="white-space: nowrap;">${tdsHtml}</td>
+                        <td style="white-space: nowrap;">${gstHtml}</td>
+                        <td style="text-align: right; white-space: nowrap;">
+                            <div class="action-btns">
+                                <button class="btn-edit" onclick="editOrder('${ord.orderId}')">Edit</button>
+                                <button class="btn-delete" onclick="deleteOrder('${ord.orderId}')">Delete</button>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            // Update Table Footer Totals
+            document.getElementById('tfootOrderCount').innerText = sumOrdersCount;
+            document.getElementById('tfootItemCount').innerText = `${sumItemsCount} Item(s)`;
+            document.getElementById('tfootNetTotal').innerText = `₹${sumNetAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('tfootTdsTotal').innerText = `- ₹${sumTdsAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('tfootGstTotal').innerText = `+ ₹${sumGstAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            // Update Fixed Bottom Live Calculation Summary Bar
+            document.getElementById('sumBarOrderCount').innerText = `${sumOrdersCount} Order(s)`;
+            document.getElementById('sumBarItemsCount').innerText = `Total ${sumItemsCount} Line Item(s)`;
+            document.getElementById('sumBarBaseAmt').innerText = `₹${sumBaseAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('sumBarGstAmt').innerText = `+ ₹${sumGstAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('sumBarTdsAmt').innerText = `- ₹${sumTdsAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('sumBarNetAmt').innerText = `₹${sumNetAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+
+        // =========================================================================================
+        // 4. EDIT ORDER (RESTORES SAVED CART ITEMS PROPERLY)
+        // =========================================================================================
+        function editOrder(orderId) {
+            const ord = siteOrdersDB.find(o => o.orderId === orderId);
+            if(!ord) return;
+
+            currentEditOrderId = orderId;
+
+            if(!isEntryView) { toggleView(); }
+
+            document.getElementById('entryFormHeading').innerText = currentPortalMode === 'admin'
+                ? `✏️ Edit Site Order: ${ord.orderId}`
+                : `✏ Edit Site Order (Requires Approval): ${ord.orderId}`;
+
+            document.getElementById('orderId').value = ord.orderId;
+            document.getElementById('orderDate').value = ord.date;
+            document.getElementById('siteInput').value = ord.site;
+            selectDropdownOption('contractorDropdown', ord.contractor);
+
+            if(ord.gstApplied) {
+                document.querySelector('input[name="globalGst"][value="yes"]').checked = true;
+            } else {
+                document.querySelector('input[name="globalGst"][value="no"]').checked = true;
+            }
+
+            cart = Array.isArray(ord.items) ? ord.items.map(item => ({ ...item })) : [];
+            toggleItemGst();
+
+            const submitBtn = document.getElementById('submitActionBtn');
+            submitBtn.innerHTML = currentPortalMode === 'admin'
+                ? "🔄 Update Final Order"
+                : "📤 Send Order Update for Approval";
+            submitBtn.setAttribute("onclick", `updateOrder('${orderId}')`);
+
+            window.scrollTo(0, 0); 
+        }
+
+        // =========================================================================================
+        // 5. DROPDOWNS & LIVE CART CALCULATION ENGINE (WITH PERCENTAGE UNIT LOGIC)
+        // =========================================================================================
+        function toggleDropdown(id) {
+            if (id === 'siteDropdown' && currentPortalMode === 'supervisor') return;
+            document.getElementById(id).classList.toggle('active');
+        }
+
+        function filterDropdown(id) {
+            const input = document.querySelector(`#${id} input`);
+            const filter = input.value.toUpperCase();
+            const li = document.querySelectorAll(`#${id} .dropdown-list li`);
+            document.getElementById(id).classList.add('active');
+            for (let i = 0; i < li.length; i++) {
+                let txtValue = li[i].textContent || li[i].innerText;
+                if (txtValue.toUpperCase().indexOf(filter) > -1) { li[i].style.display = ""; } 
+                else { li[i].style.display = "none"; }
+            }
+        }
+
+        function selectDropdownOption(id, value) {
+            document.querySelector(`#${id} input`).value = value;
+            document.getElementById(id).classList.remove('active');
+
+            if(id === 'contractorDropdown') {
+                const contractor = contractorsDB.find(c => c.name === value);
+                const badge = document.getElementById('tdsInfoBadge');
+                
+                if(contractor) {
+                    activePartyTdsPerc = contractor.tdsPerc;
+                    badge.innerText = contractor.tdsApplicable ? `TDS Applicable: ${contractor.tdsPerc}%` : "TDS Exempted";
+                    badge.style.display = 'inline-block';
+                    badge.style.color = contractor.tdsApplicable ? '#dc3545' : '#28a745';
+                    badge.style.borderColor = contractor.tdsApplicable ? '#dc3545' : '#28a745';
+                    badge.style.background = contractor.tdsApplicable ? 'rgba(220,53,69,0.1)' : 'rgba(40,167,69,0.1)';
+                } else {
+                    activePartyTdsPerc = 0;
+                    badge.style.display = 'none';
+                }
+                renderCart(); 
+            }
+        }
+
+        function selectProductOption(name, hsn, unit, price) {
+            document.getElementById('productInput').value = name;
+            document.getElementById('itemHsn').value = hsn;
+            document.getElementById('itemUnit').value = unit;
+            document.getElementById('itemPrice').value = price;
+            document.getElementById('itemQty').value = isPercentageUnit(unit) ? 10 : 1; 
+            document.getElementById('productDropdown').classList.remove('active');
+            liveCalculatePreview();
+        }
+
+        window.onclick = function(event) {
+            if (!event.target.matches('.search-dropdown input')) {
+                let dropdowns = document.getElementsByClassName("search-dropdown");
+                for (let i = 0; i < dropdowns.length; i++) { dropdowns[i].classList.remove('active'); }
+            }
+        };
+
+        function toggleItemGst() {
+            const val = document.querySelector('input[name="globalGst"]:checked').value;
+            isGstActive = (val === 'yes');
+            
+            const gstCol = document.getElementById('itemGstCol');
+            if(isGstActive) { gstCol.classList.add('active'); } 
+            else { gstCol.classList.remove('active'); }
+
+            const cartGstHeaders = document.querySelectorAll('.cart-gst-header');
+            cartGstHeaders.forEach(th => { th.style.display = isGstActive ? 'table-cell' : 'none'; });
+
+            document.getElementById('gstSummaryRow').style.display = isGstActive ? 'flex' : 'none';
+
+            liveCalculatePreview();
+            renderCart();
+        }
+
+        function liveCalculatePreview() {
+            const unit = document.getElementById('itemUnit').value;
+            const price = parseFloat(document.getElementById('itemPrice').value) || 0;
+            const qty = parseFloat(document.getElementById('itemQty').value) || 0;
+
+            // Update Qty label dynamically to indicate Percentage vs Normal Qty
+            const qtyLbl = document.getElementById('itemQtyLabel');
+            if (qtyLbl) {
+                qtyLbl.innerText = isPercentageUnit(unit) ? "Qty (%)" : "Qty";
+            }
+
+            let baseTotal = calculateItemBaseTotal(price, qty, unit);
+            let netTotal = baseTotal;
+
+            if(isGstActive) {
+                const gstPercent = parseFloat(document.getElementById('itemGstPercent').value) || 0;
+                const gstAmount = (baseTotal * gstPercent) / 100;
+                netTotal = baseTotal + gstAmount;
+            }
+            document.getElementById('itemTotalPreview').value = netTotal.toFixed(2);
+        }
+
+        function addToCart() {
+            const name = document.getElementById('productInput').value.trim();
+            const hsn = document.getElementById('itemHsn').value.trim() || "-";
+            const unit = document.getElementById('itemUnit').value.trim() || "Unit";
+            const price = parseFloat(document.getElementById('itemPrice').value) || 0;
+            const qty = parseFloat(document.getElementById('itemQty').value) || 0;
+            
+            if(!name || qty <= 0 || price <= 0) { alert("Please select a product and enter valid price/qty."); return; }
+
+            let baseTotal = calculateItemBaseTotal(price, qty, unit);
+            let gstPercent = parseFloat(document.getElementById('itemGstPercent').value) || 18;
+            let gstAmount = isGstActive ? (baseTotal * gstPercent) / 100 : 0;
+            let netTotal = baseTotal + gstAmount;
+
+            const item = { id: Date.now(), name, hsn, unit, price, qty, baseTotal, gstPercent, gstAmount, netTotal };
+            cart.push(item);
+            
+            renderCart();
+            clearItemInputs();
+        }
+
+        function clearItemInputs() {
+            document.getElementById('productInput').value = '';
+            document.getElementById('itemHsn').value = '';
+            document.getElementById('itemUnit').value = '';
+            document.getElementById('itemPrice').value = '';
+            document.getElementById('itemQty').value = '';
+            document.getElementById('itemTotalPreview').value = '';
+            const qtyLbl = document.getElementById('itemQtyLabel');
+            if (qtyLbl) qtyLbl.innerText = "Qty";
+        }
+
+        function renderCart() {
+            const tbody = document.getElementById('cartBody');
+            tbody.innerHTML = '';
+            let totalBaseAmount = 0, totalGstAmount = 0, grossTotal = 0;
+
+            if (cart.length === 0) {
+                const colSpan = isGstActive ? 8 : 6;
+                tbody.innerHTML = `<tr><td colspan="${colSpan}" style="text-align:center; padding:20px; color:var(--text-muted);">Cart is empty. Add items above.</td></tr>`;
+            }
+
+            cart.forEach((item, index) => {
+                // Uses Percentage formula (price * qty / 100) if Unit is %, otherwise normal (price * qty)
+                item.baseTotal = calculateItemBaseTotal(item.price, item.qty, item.unit);
+                const effectiveGstPerc = isGstActive ? (parseFloat(item.gstPercent) || 18) : 0;
+                const currentItemGstAmt = isGstActive ? (item.baseTotal * effectiveGstPerc) / 100 : 0;
+                const currentItemGross = item.baseTotal + currentItemGstAmt;
+
+                item.gstAmount = currentItemGstAmt;
+                item.netTotal = currentItemGross;
+
+                totalBaseAmount += item.baseTotal;
+                totalGstAmount += currentItemGstAmt;
+                grossTotal += currentItemGross;
+
+                const isPct = isPercentageUnit(item.unit);
+                const qtyUnitDisplay = isPct
+                    ? `${item.qty}% <small style="color:var(--text-muted);">(of ₹${Number(item.price).toFixed(2)})</small>`
+                    : `${item.qty} ${item.unit} <small style="color:var(--text-muted);">(@ ₹${Number(item.price).toFixed(2)})</small>`;
+
+                const tr = document.createElement('tr');
+                let rowHtml = `
+                    <td><strong>${item.name}</strong></td>
+                    <td>${item.hsn}</td>
+                    <td>${qtyUnitDisplay}</td>
+                    <td>₹${item.baseTotal.toFixed(2)}</td>
+                `;
+
+                if(isGstActive) {
+                    rowHtml += `
+                        <td>${effectiveGstPerc}%</td>
+                        <td style="color:#28a745;">₹${currentItemGstAmt.toFixed(2)}</td>
+                    `;
+                }
+
+                rowHtml += `
+                    <td><strong style="color:var(--theme-color);">₹${currentItemGross.toFixed(2)}</strong></td>
+                    <td><button type="button" class="cart-remove-btn" title="Remove" onclick="removeFromCart(${index})">×</button></td>
+                `;
+                
+                tr.innerHTML = rowHtml;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('lblBaseTotal').innerText = "₹" + totalBaseAmount.toFixed(2);
+            if(isGstActive) { document.getElementById('lblGstTotal').innerText = "₹" + totalGstAmount.toFixed(2); }
+            
+            let tdsAmount = 0;
+            let tdsRow = document.getElementById('tdsSummaryRow');
+            
+            if(activePartyTdsPerc > 0 && totalBaseAmount > 0) {
+                tdsAmount = (totalBaseAmount * activePartyTdsPerc) / 100;
+                tdsRow.style.display = 'flex';
+                document.getElementById('lblTdsPercentLabel').innerText = `(@ ${activePartyTdsPerc}%)`;
+                document.getElementById('lblTdsAmount').innerText = "- ₹" + tdsAmount.toFixed(2);
+            } else {
+                tdsRow.style.display = 'none';
+            }
+
+            let finalNetPayable = grossTotal - tdsAmount;
+            document.getElementById('lblGrandTotal').innerText = "₹" + finalNetPayable.toFixed(2);
+        }
+
+        function removeFromCart(index) {
+            cart.splice(index, 1);
+            renderCart();
+        }
+
+        // =========================================================================================
+        // 6. SUBMIT, UPDATE & DELETE ORDERS (ADMIN DIRECT vs OFFICE/SUPERVISOR APPROVAL)
+        // =========================================================================================
+        function buildOrderObjectFromForm(orderIdToUse) {
+            let baseAmount = 0;
+            let gstAmount = 0;
+
+            cart.forEach(item => {
+                const b = calculateItemBaseTotal(item.price, item.qty, item.unit);
+                const g = isGstActive ? (b * (parseFloat(item.gstPercent) || 18)) / 100 : 0;
+                baseAmount += b;
+                gstAmount += g;
+            });
+
+            const tdsAmount = activePartyTdsPerc > 0 ? (baseAmount * activePartyTdsPerc) / 100 : 0;
+            const netAmount = baseAmount + gstAmount - tdsAmount;
+
+            return {
+                orderId: orderIdToUse,
+                date: document.getElementById('orderDate').value,
+                site: document.getElementById('siteInput').value.trim(),
+                contractor: document.getElementById('contractorInput').value.trim(),
+                baseAmount: baseAmount,
+                gstAmount: gstAmount,
+                tdsAmount: tdsAmount,
+                netAmount: netAmount,
+                tdsApplicable: activePartyTdsPerc > 0,
+                tdsPerc: activePartyTdsPerc,
+                tdsDisplay: activePartyTdsPerc > 0 ? `Yes (${activePartyTdsPerc}%)` : "No",
+                gstApplied: isGstActive,
+                items: cart.map(item => ({ ...item })),
+                pendingStatus: null
+            };
+        }
+
+        function submitOrder() {
+            if(cart.length === 0) { alert("Cart is empty! Please add items before checking out."); return; }
+            if(!document.getElementById('contractorInput').value.trim()) { alert("Please select a contractor."); return; }
+            if(!document.getElementById('siteInput').value.trim()) { alert("Please select a site/project."); return; }
+
+            const orderId = document.getElementById('orderId').value;
+            const newOrderObj = buildOrderObjectFromForm(orderId);
+
+            // IF OFFICE OR SUPERVISOR MODE: Route to Approval Modal
+            if (currentPortalMode !== 'admin') {
+                openRoleApprovalModal({
+                    type: 'CREATE',
+                    targetOrderId: orderId,
+                    actionLabel: "NEW SITE ORDER ENTRY",
+                    summary: `${orderId} | Site: ${newOrderObj.site} | Contractor: ${newOrderObj.contractor} | Net: ₹${newOrderObj.netAmount.toFixed(2)}`,
+                    oldData: null,
+                    newData: newOrderObj
+                });
+                return;
+            }
+
+            // ADMIN DIRECT SAVE
+            siteOrdersDB.push(newOrderObj);
+            saveOrdersToStorage();
+            alert(`✅ Order Successfully Placed for ${newOrderObj.site}!\n(Order ID: ${newOrderObj.orderId})\nNet Payable: ₹${newOrderObj.netAmount.toFixed(2)}`);
+            toggleView(); 
+        }
+
+        function updateOrder(orderId) {
+            if(cart.length === 0) { alert("Cart is empty! Please add items before updating."); return; }
+            if(!document.getElementById('contractorInput').value.trim()) { alert("Please select a contractor."); return; }
+            if(!document.getElementById('siteInput').value.trim()) { alert("Please select a site/project."); return; }
+
+            const idx = siteOrdersDB.findIndex(o => o.orderId === orderId);
+            if (idx === -1) return;
+
+            const oldOrderObj = { ...siteOrdersDB[idx] };
+            const updatedOrderObj = buildOrderObjectFromForm(orderId);
+
+            // IF OFFICE OR SUPERVISOR MODE: Route Edit to Approval Modal
+            if (currentPortalMode !== 'admin') {
+                openRoleApprovalModal({
+                    type: 'EDIT',
+                    targetOrderId: orderId,
+                    actionLabel: "EDIT SITE ORDER",
+                    summary: `${orderId} (${updatedOrderObj.site}) — Net: ₹${Number(oldOrderObj.netAmount).toFixed(2)} → ₹${updatedOrderObj.netAmount.toFixed(2)}`,
+                    oldData: oldOrderObj,
+                    newData: updatedOrderObj
+                });
+                return;
+            }
+
+            // ADMIN DIRECT UPDATE
+            siteOrdersDB[idx] = updatedOrderObj;
+            saveOrdersToStorage();
+            alert(`✅ Order ${orderId} Successfully Updated!`);
+            toggleView();
+        }
+
+        function deleteOrder(orderId) {
+            const ord = siteOrdersDB.find(o => o.orderId === orderId);
+            if (!ord) return;
+
+            // IF OFFICE OR SUPERVISOR MODE: Route Delete to Approval Modal
+            if (currentPortalMode !== 'admin') {
+                openRoleApprovalModal({
+                    type: 'DELETE',
+                    targetOrderId: orderId,
+                    actionLabel: "DELETE SITE ORDER",
+                    summary: `Delete Order ${ord.orderId} (${ord.site} | ${ord.contractor} | ₹${Number(ord.netAmount).toFixed(2)})`,
+                    oldData: { ...ord },
+                    newData: null
+                });
+                return;
+            }
+
+            // ADMIN DIRECT DELETE WITH PASSWORD
+            const pwd = prompt("Security Check: Enter Admin Password to delete this order:");
+            if(pwd === "admin123") {
+                siteOrdersDB = siteOrdersDB.filter(o => o.orderId !== orderId);
+                saveOrdersToStorage();
+                renderOrderListTable();
+                alert("✅ Order record deleted successfully.");
+            } else if (pwd !== null) {
+                alert("❌ Incorrect Password! Access Denied.");
+            }
+        }
+
+        // =========================================================================================
+        // 7. OFFICE & SUPERVISOR APPROVAL MODAL ENGINE (ROUTES TO ApproveOffice.html)
+        // =========================================================================================
+        function openRoleApprovalModal(payload) {
+            pendingRolePayload = payload;
+            document.getElementById('roleApprovalSummary').value = `${payload.actionLabel}: ${payload.summary}`;
+            document.getElementById('roleApprovalReason').value = '';
+            document.getElementById('roleApprovalModal').classList.add('active');
+            setTimeout(() => document.getElementById('roleApprovalReason').focus(), 50);
+        }
+
+        function closeRoleApprovalModal() {
+            document.getElementById('roleApprovalModal').classList.remove('active');
+            pendingRolePayload = null;
+        }
+
+        function confirmRoleApprovalRequest() {
+            const reason = document.getElementById('roleApprovalReason').value.trim();
+            if (!reason) {
+                alert("⚠️ Please enter a reason/remark for Admin Approval.");
+                return;
+            }
+            if (!pendingRolePayload) return;
+
+            const targetApprovalPage = currentPortalMode === 'supervisor' ? 'ApproveSupervisor.html' : 'ApproveOffice.html';
+
+            if (pendingRolePayload.type === 'CREATE') {
+                siteOrdersDB.push({
+                    ...pendingRolePayload.newData,
+                    pendingStatus: `Pending in ${targetApprovalPage}`
+                });
+                saveOrdersToStorage();
+            } else if (pendingRolePayload.type === 'EDIT') {
+                const idx = siteOrdersDB.findIndex(o => o.orderId === pendingRolePayload.targetOrderId);
+                if (idx > -1) {
+                    siteOrdersDB[idx].pendingStatus = "Edit Pending";
+                    saveOrdersToStorage();
+                }
+            } else if (pendingRolePayload.type === 'DELETE') {
+                const idx = siteOrdersDB.findIndex(o => o.orderId === pendingRolePayload.targetOrderId);
+                if (idx > -1) {
+                    siteOrdersDB[idx].pendingStatus = "Delete Pending";
+                    saveOrdersToStorage();
+                }
+            }
+
+            if (currentPortalMode === 'supervisor') {
+                const supQueue = JSON.parse(localStorage.getItem('atr_supervisor_approvals')) || [];
+                supQueue.unshift({
+                    id: "SUP-ORD-" + Date.now().toString().slice(-5),
+                    module: "SiteOrderEntry.html",
+                    action: pendingRolePayload.actionLabel,
+                    site: assignedSite,
+                    requestedBy: loggedUserName,
+                    reason: reason,
+                    summary: pendingRolePayload.summary,
+                    requestedAt: new Date().toISOString(),
+                    status: "Pending",
+                    oldData: pendingRolePayload.oldData,
+                    newData: pendingRolePayload.newData
+                });
+                localStorage.setItem('atr_supervisor_approvals', JSON.stringify(supQueue));
+            } else {
+                const newReq = {
+                    reqId: "OFF-ORD-" + Date.now().toString().slice(-5),
+                    userId: loggedUserId,
+                    userName: loggedUserName,
+                    designation: "Office Staff",
+                    module: "SiteOrderEntry.html",
+                    action: pendingRolePayload.actionLabel,
+                    summary: pendingRolePayload.summary,
+                    oldData: pendingRolePayload.oldData,
+                    newData: pendingRolePayload.newData,
+                    reason: reason,
+                    timestamp: new Date().toLocaleString('en-IN'),
+                    status: "Pending"
+                };
+
+                const officeQueue = JSON.parse(localStorage.getItem('atr_office_approvals')) || [];
+                officeQueue.unshift(newReq);
+                localStorage.setItem('atr_office_approvals', JSON.stringify(officeQueue));
+                localStorage.setItem('approve_office_requests', JSON.stringify(officeQueue));
+                localStorage.setItem('ApproveOffice_requests', JSON.stringify(officeQueue));
+
+                // Log in Office Daily Work Report (office_dashboard_home.html)
+                const workLogs = JSON.parse(localStorage.getItem('atr_office_daily_work')) || [];
+                const todayStr = new Date().toISOString().split('T')[0];
+                const nowTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+                workLogs.unshift({
+                    id: "WRK-" + Date.now().toString().slice(-5),
+                    userId: loggedUserId,
+                    userName: loggedUserName,
+                    date: todayStr,
+                    time: nowTime,
+                    module: "Site Order Entry (SiteOrderEntry.html)",
+                    refNo: pendingRolePayload.targetOrderId || newReq.reqId,
+                    desc: `${pendingRolePayload.actionLabel}: ${pendingRolePayload.summary}`,
+                    status: "Sent for Approval"
+                });
+                localStorage.setItem('atr_office_daily_work', JSON.stringify(workLogs));
+
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.refreshNotificationsUI === 'function') {
+                        window.parent.refreshNotificationsUI();
+                    }
+                } catch (e) {}
+            }
+
+            const actionType = pendingRolePayload.type;
+            closeRoleApprovalModal();
+
+            if (actionType === 'CREATE' || actionType === 'EDIT') {
+                alert(`📤 Order Request sent to ${targetApprovalPage} for Admin Approval!`);
+                toggleView();
+            } else {
+                renderOrderListTable();
+                alert(`📤 Deletion Request sent to ${targetApprovalPage} for Admin Approval!`);
+            }
+        }
+    </script>
+</body>
+</html>

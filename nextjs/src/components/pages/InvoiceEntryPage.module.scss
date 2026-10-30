@@ -1,0 +1,81 @@
+.toolbarRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 200px;
+}
+
+.actionButtons {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+
+.btnIcon {
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 6px 8px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 16px;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+
+  &:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: var(--accent-glow);
+  }
+}
+
+.btnIconDanger {
+  &:hover {
+    color: var(--danger);
+    border-color: var(--danger);
+    background: rgba(231, 76, 60, 0.1);
+  }
+}
+
+.invoiceSummary {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.summaryLine {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  font-size: 14px;
+
+  span {
+    min-width: 120px;
+    text-align: right;
+    color: var(--text-muted);
+  }
+
+  strong {
+    min-width: 120px;
+    text-align: right;
+  }
+}
+
+.grandTotal {
+  font-size: 18px;
+  padding-top: 8px;
+  border-top: 2px solid var(--border-color);
+  margin-top: 4px;
+
+  strong {
+    color: var(--success);
+  }
+}

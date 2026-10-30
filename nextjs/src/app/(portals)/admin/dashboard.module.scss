@@ -1,0 +1,285 @@
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 1rem;
+  margin-bottom: 2rem;
+
+  @media (max-width: 1200px) { grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 768px) { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: 480px) { grid-template-columns: 1fr; }
+}
+
+.kpiCard {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    border-radius: 12px 0 0 12px;
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.kpiCard:nth-child(1)::before { background: #3b82f6; }
+.kpiCard:nth-child(2)::before { background: #10b981; }
+.kpiCard:nth-child(3)::before { background: #f59e0b; }
+.kpiCard:nth-child(4)::before { background: #8b5cf6; }
+.kpiCard:nth-child(5)::before { background: #06b6d4; }
+.kpiCard:nth-child(6)::before { background: #ef4444; }
+
+.kpiIcon {
+  font-size: 24px;
+  color: var(--accent);
+}
+
+.kpiValue {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1;
+}
+
+.kpiLabel {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.chartsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+
+  @media (max-width: 768px) { grid-template-columns: 1fr; }
+}
+
+.chartCard {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.25rem;
+
+  h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+.chartPlaceholder {
+  height: 250px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.dashboardFooter {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+
+  @media (max-width: 1024px) { grid-template-columns: 1fr; }
+}
+
+.widgetCard {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.25rem;
+
+  h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+.widgetDues {
+  h3 { color: #ef4444; }
+  border-top: 3px solid #ef4444;
+}
+
+.widgetLoan {
+  h3 { color: #8b5cf6; }
+  border-top: 3px solid #8b5cf6;
+}
+
+.widgetHandover {
+  h3 { color: #f59e0b; }
+  border-top: 3px solid #f59e0b;
+}
+
+.widgetTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  th, td {
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  th {
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: 11px;
+    text-transform: uppercase;
+  }
+}
+
+.btnClear {
+  padding: 4px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+  &:hover { border-color: var(--accent); color: var(--accent); }
+}
+
+.loanItem {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border-color);
+  &:last-child { border-bottom: none; }
+}
+
+.loanHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+
+  strong { font-size: 13px; color: var(--text-main); }
+}
+
+.loanDetails {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.handoverItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 13px;
+  &:last-child { border-bottom: none; }
+}
+
+.logSection {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.logHeaderBar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.logTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+
+  h3 {
+    font-size: 14px;
+    font-weight: 700;
+    margin: 0;
+  }
+}
+
+.logControls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.logInput {
+  padding: 6px 10px;
+  background: var(--input-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-main);
+  font-size: 12px;
+  outline: none;
+  min-width: 180px;
+  &:focus { border-color: var(--accent); }
+}
+
+.logSelect {
+  padding: 6px 10px;
+  background: var(--input-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-main);
+  font-size: 12px;
+  outline: none;
+  &:focus { border-color: var(--accent); }
+  option { background: var(--card-bg); }
+}
+
+.btnCleanLogs {
+  padding: 6px 12px;
+  border: 1px solid #ef4444;
+  border-radius: 6px;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  font-size: 12px;
+  cursor: pointer;
+  &:hover { background: rgba(239, 68, 68, 0.2); }
+}
+
+.btnDelLog {
+  padding: 3px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  &:hover { border-color: #ef4444; color: #ef4444; }
+}

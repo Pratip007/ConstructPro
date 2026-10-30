@@ -1,0 +1,107 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: var(--shadow);
+  transition: transform 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+}
+
+.iconArea {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.value {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-main);
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.prefix, .suffix {
+  font-size: 14px;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+.trendUp { color: var(--success); font-size: 16px; }
+.trendDown { color: var(--danger); font-size: 16px; }
+
+.cardSuccess {
+  border-left: 3px solid var(--success);
+
+  .iconArea { background: rgba(46, 204, 113, 0.12); color: var(--success); }
+}
+
+.cardDanger {
+  border-left: 3px solid var(--danger);
+
+  .iconArea { background: rgba(231, 76, 60, 0.12); color: var(--danger); }
+}
+
+.cardWarning {
+  border-left: 3px solid var(--warning);
+
+  .iconArea { background: rgba(253, 126, 20, 0.12); color: var(--warning); }
+}
+
+.cardInfo {
+  border-left: 3px solid var(--info);
+
+  .iconArea { background: rgba(52, 152, 219, 0.12); color: var(--info); }
+}
+
+.cardPrimary {
+  border-left: 3px solid var(--accent);
+
+  .iconArea { background: var(--accent-glow); color: var(--accent); }
+}
+
+@media (max-width: 768px) {
+  .grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .card { padding: 14px; }
+  .value { font-size: 18px; }
+  .iconArea { width: 40px; height: 40px; font-size: 18px; }
+}
+
+@media (max-width: 480px) {
+  .grid { grid-template-columns: 1fr; }
+}

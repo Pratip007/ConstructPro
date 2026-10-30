@@ -1,0 +1,26 @@
+.page { width: 100%; }
+
+.filters {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.typeBadge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.income { background: rgba(34, 197, 94, 0.15); color: var(--success); }
+.expense { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
+
+.netBalance {
+  font-weight: 700;
+}
+
+.surplus { color: var(--success); }
+.deficit { color: var(--danger); }

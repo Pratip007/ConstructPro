@@ -1,0 +1,134 @@
+.wrapper {
+  position: relative;
+  width: 100%;
+
+  &.disabled { opacity: 0.5; pointer-events: none; }
+}
+
+.label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 7px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.req { color: var(--danger); }
+
+.control {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input {
+  width: 100%;
+  padding: 11px 60px 11px 14px;
+  background: var(--input-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 500;
+  font-family: 'Montserrat', sans-serif;
+  outline: none;
+  transition: all 0.25s;
+  cursor: pointer;
+
+  &:focus {
+    border-color: var(--accent);
+    background: var(--input-focus-bg);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+
+  &.hasValue { color: var(--text-main); }
+
+  &::placeholder { color: var(--text-muted); font-weight: 400; }
+}
+
+.arrow {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 18px;
+  pointer-events: none;
+  transition: transform 0.2s;
+
+  &.rotated { transform: translateY(-50%) rotate(180deg); }
+}
+
+.clearBtn {
+  position: absolute;
+  right: 34px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 50%;
+  transition: all 0.15s;
+
+  &:hover { color: var(--danger); background: rgba(231, 76, 60, 0.1); }
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 1000;
+  animation: slideDown 0.15s ease-out;
+}
+
+.item {
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: background 0.1s;
+
+  &:hover, &.highlighted {
+    background: var(--hover-bg);
+  }
+
+  &.selected {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  &.addNew {
+    color: var(--accent);
+    font-weight: 600;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    i { font-size: 16px; }
+  }
+}
+
+.empty {
+  padding: 14px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}

@@ -1,0 +1,22 @@
+.toggle {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--glass-bg);
+  color: var(--accent);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: var(--accent-glow);
+    border-color: var(--accent);
+  }
+
+  i {
+    font-size: 18px;
+  }
+}

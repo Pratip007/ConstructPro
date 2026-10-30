@@ -1,0 +1,119 @@
+.bulkBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: rgba(255, 193, 7, 0.08);
+  border: 1px solid rgba(255, 193, 7, 0.25);
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+.bulkCount {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-right: 6px;
+}
+
+.btnSm {
+  padding: 6px 12px !important;
+  font-size: 11px !important;
+}
+
+.thCheckbox,
+.tdCheckbox {
+  width: 36px;
+  text-align: center;
+
+  input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--accent);
+  }
+}
+
+.rowSelected {
+  background: rgba(255, 193, 7, 0.06) !important;
+}
+
+.tdActions {
+  white-space: nowrap;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.btnAction {
+  background: var(--glass-bg);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'Montserrat', sans-serif;
+
+  i { font-size: 13px; }
+
+  &:hover {
+    background: var(--hover-bg);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+}
+
+.avatarImg {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--border-color);
+}
+
+.avatarPlaceholder {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--glass-bg);
+  border: 2px solid var(--border-color);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 16px;
+}
+
+.currencyCell {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--success);
+}
+
+.footerTotals td {
+  background: var(--bg-body);
+  border-top: 2px solid var(--accent);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.btnExportPdf {
+  color: var(--danger) !important;
+  border-color: rgba(231, 76, 60, 0.3) !important;
+
+  &:hover { background: var(--danger) !important; color: #fff !important; }
+}
+
+.btnExportPrint {
+  color: var(--text-muted) !important;
+  border-color: var(--border-color) !important;
+
+  &:hover { background: var(--text-muted) !important; color: #fff !important; }
+}

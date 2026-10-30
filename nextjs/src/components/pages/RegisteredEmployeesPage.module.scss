@@ -1,0 +1,241 @@
+.headerActions {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.searchInput {
+  padding: 10px 15px;
+  background: var(--input-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-main);
+  font-size: 13px;
+  outline: none;
+  min-width: 220px;
+  transition: all 0.3s;
+  &:focus {
+    border-color: var(--accent);
+  }
+}
+
+.recordCount {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.filterSelect {
+  padding: 9px 14px;
+  background: var(--input-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-main);
+  font-size: 13px;
+  outline: none;
+  min-width: 140px;
+  transition: all 0.3s;
+  &:focus {
+    border-color: var(--accent);
+  }
+}
+
+.formActions {
+  display: flex;
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.tabBar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.tabBtn {
+  padding: 8px 18px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.3s;
+}
+
+.tabBtnActive {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.tabBtn:hover:not(.tabBtnActive) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.tabSpacer {
+  flex: 1;
+}
+
+.exportDropdown {
+  position: relative;
+}
+
+.dropdownMenu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  min-width: 140px;
+  overflow: hidden;
+}
+
+.dropdownMenu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 16px;
+  border: none;
+  background: transparent;
+  color: var(--text-main);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.dropdownMenu button:hover {
+  background: var(--hover-bg);
+}
+
+.avatarImg {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.avatarPlaceholder {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 18px;
+}
+
+.btnWarning {
+  padding: 6px 10px;
+  border: 1px solid #f59e0b;
+  border-radius: 6px;
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.btnWarning:hover {
+  background: rgba(245, 158, 11, 0.2);
+}
+
+.btnSuccess {
+  padding: 6px 10px;
+  border: 1px solid var(--success);
+  border-radius: 6px;
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--success);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.btnSuccess:hover {
+  background: rgba(16, 185, 129, 0.2);
+}
+
+.profileModal {
+  max-width: 600px;
+}
+
+.profileHeader {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.profileHeader h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.profileHeaderMuted {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin: 0;
+}
+
+.profileAvatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.profileAvatarPlaceholder {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 28px;
+}
+
+.detailSection {
+  margin-bottom: 1.25rem;
+}
+
+.detailSection h4 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 0.75rem;
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 16px;
+  font-size: 13px;
+}
+
+.detailGrid strong {
+  color: var(--text-muted);
+}
+
+.detailGrid > div {
+  color: var(--text-main);
+}

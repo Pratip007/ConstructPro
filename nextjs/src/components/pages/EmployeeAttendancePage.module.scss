@@ -1,0 +1,49 @@
+.filterBar {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filterInput {
+  padding: 9px 14px;
+  background: var(--input-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-main);
+  font-size: 13px;
+  outline: none;
+  min-width: 160px;
+  transition: all 0.3s;
+}
+
+.filterInput:focus {
+  border-color: var(--accent);
+}
+
+.compactInput {
+  width: 90px;
+  padding: 4px 8px;
+  background: var(--input-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-main);
+  font-size: 13px;
+  outline: none;
+  text-align: right;
+}
+
+.compactInput:focus {
+  border-color: var(--accent);
+}
+
+.computedCell {
+  font-weight: 600;
+  color: var(--text-main);
+  text-align: right;
+}
+
+.total {
+  font-weight: 700;
+  color: var(--accent);
+}

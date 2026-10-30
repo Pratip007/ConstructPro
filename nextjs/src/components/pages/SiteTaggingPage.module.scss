@@ -1,0 +1,98 @@
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 1.5rem 0 1rem;
+}
+
+.sectionHeader h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.employeeSelectSection {
+  margin-top: 1rem;
+  border-top: 1px solid var(--border-color);
+  padding-top: 1rem;
+}
+
+.employeeSelectHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.employeeSelectHeader h4 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.employeeCheckboxList {
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--input-bg);
+}
+
+.checkboxRow {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.checkboxRow:last-child {
+  border-bottom: none;
+}
+
+.selectAll {
+  background: var(--card-bg);
+  padding: 10px 12px;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.checkboxRow label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.checkboxRow input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
+.empName {
+  font-weight: 600;
+}
+
+.empId {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+.searchInput {
+  padding: 8px 14px;
+  background: var(--input-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-main);
+  font-size: 13px;
+  outline: none;
+}
+
+.searchInput:focus {
+  border-color: var(--accent);
+}

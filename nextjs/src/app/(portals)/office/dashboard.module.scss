@@ -1,0 +1,106 @@
+.quickActionsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+
+  @media (max-width: 900px) { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: 480px) { grid-template-columns: 1fr; }
+}
+
+.quickActionBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.25rem 1rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  text-decoration: none;
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.3s;
+  cursor: pointer;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+    border-color: var(--accent);
+  }
+}
+
+.actionIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+}
+
+.actionLabel {
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.activityTimeline {
+  position: relative;
+  padding-left: 24px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--border-color);
+  }
+}
+
+.timelineItem {
+  position: relative;
+  padding: 0.75rem 0;
+  padding-left: 1rem;
+
+  &:last-child { padding-bottom: 0; }
+}
+
+.timelineDot {
+  position: absolute;
+  left: -20px;
+  top: 1rem;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--border-color);
+  border: 2px solid var(--card-bg);
+
+  &.pending { background: #f59e0b; }
+  &.approved { background: #10b981; }
+  &.rejected { background: #ef4444; }
+}
+
+.timelineContent {
+  font-size: 13px;
+}
+
+.timelineHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+
+  strong { color: var(--text-main); }
+}
+
+.timelineMeta {
+  display: flex;
+  gap: 1rem;
+  font-size: 12px;
+  color: var(--text-muted);
+}

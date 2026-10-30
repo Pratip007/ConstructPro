@@ -1,0 +1,131 @@
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.autoIdBadge {
+  padding: 6px 14px;
+  background: rgba(var(--accent-rgb, 99, 102, 241), 0.1);
+  border: 1px solid var(--accent);
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.formWithPhoto {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+
+  .form-grid,
+  > div:first-child {
+    flex: 1;
+  }
+}
+
+.photoUpload {
+  width: 150px;
+  height: 180px;
+  border: 2px dashed var(--border-color);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  overflow: hidden;
+  flex-shrink: 0;
+
+  &:hover {
+    border-color: var(--accent);
+    background: rgba(var(--accent-rgb, 99, 102, 241), 0.05);
+  }
+}
+
+.photoPreview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.photoPlaceholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.ageBadge {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 8px;
+  background: rgba(var(--accent-rgb, 99, 102, 241), 0.1);
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.checkboxGroup {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+  padding-top: 8px;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-main);
+
+  input[type='checkbox'] {
+    accent-color: var(--accent);
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.termsSection {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.formActions {
+  display: flex;
+  gap: 12px;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .formWithPhoto {
+    flex-direction: column-reverse;
+  }
+
+  .photoUpload {
+    width: 120px;
+    height: 144px;
+    align-self: center;
+  }
+
+  .autoIdBadge {
+    display: none;
+  }
+}

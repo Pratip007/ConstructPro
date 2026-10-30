@@ -1,0 +1,133 @@
+.formActions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.radioGroup {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.radioLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.avatarPreview {
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
+  object-fit: cover;
+  margin-top: 8px;
+  border: 2px solid var(--border-color);
+}
+
+.toolbarRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 200px;
+}
+
+.exportButtons {
+  display: flex;
+  gap: 8px;
+}
+
+.actionButtons {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+
+.btnIcon {
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 6px 8px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 16px;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+
+  &:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: var(--accent-glow);
+  }
+}
+
+.btnIconDanger {
+  &:hover {
+    color: var(--danger);
+    border-color: var(--danger);
+    background: rgba(231, 76, 60, 0.1);
+  }
+}
+
+.pendingRow {
+  opacity: 0.7;
+}
+
+.kycRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.kycLabel {
+  min-width: 140px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.kycActions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.kycDoc {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: var(--bg-secondary);
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.uploadLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border: 1px dashed var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--accent);
+  transition: all 0.15s;
+
+  &:hover {
+    border-color: var(--accent);
+    background: var(--accent-glow);
+  }
+}

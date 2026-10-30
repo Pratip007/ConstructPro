@@ -1,0 +1,21 @@
+.activateBtn {
+  padding: 4px 10px;
+  font-size: 11px;
+  background: rgba(40, 167, 69, 0.15);
+  color: #28a745;
+  border: 1px solid rgba(40, 167, 69, 0.3);
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.deactivateBtn {
+  padding: 4px 10px;
+  font-size: 11px;
+  background: rgba(108, 117, 125, 0.15);
+  color: #6c757d;
+  border: 1px solid rgba(108, 117, 125, 0.3);
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 700;
+}

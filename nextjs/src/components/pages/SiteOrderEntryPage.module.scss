@@ -1,0 +1,74 @@
+.formActions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.toolbarRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 200px;
+}
+
+.totalSection {
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--glass-bg);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.totalRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid var(--border-color);
+  }
+}
+
+.textRight { text-align: right; }
+.textDanger { color: var(--danger); }
+.textSuccess { color: var(--success); }
+
+.actionButtons {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+
+.btnIcon {
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 6px 8px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 16px;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+
+  &:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: var(--accent-glow);
+  }
+}
+
+.btnIconDanger {
+  &:hover {
+    color: var(--danger);
+    border-color: var(--danger);
+    background: rgba(231, 76, 60, 0.1);
+  }
+}

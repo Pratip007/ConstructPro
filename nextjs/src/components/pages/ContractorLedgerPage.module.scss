@@ -1,0 +1,47 @@
+.toolbarRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 200px;
+}
+
+.exportButtons {
+  display: flex;
+  gap: 8px;
+}
+
+.textRight { text-align: right; }
+.textDanger { color: var(--danger); }
+.textSuccess { color: var(--success); }
+.textDangerHeader { color: var(--danger); }
+
+.highlightNet {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.refLabel {
+  font-family: monospace;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--accent-glow);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.totalsRow {
+  background: var(--glass-bg);
+  font-weight: 600;
+
+  td {
+    border-top: 2px solid var(--border-color);
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+}

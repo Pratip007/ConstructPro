@@ -1,0 +1,30 @@
+.cartSummary {
+  margin-top: 20px;
+  padding: 16px 20px;
+  background: rgba(59, 130, 246, 0.05);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  border-radius: 10px;
+}
+
+.summaryLabel {
+  font-size: 12px;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.summaryValue {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.summaryValueAccent {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.grandTotal {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-main);
+}

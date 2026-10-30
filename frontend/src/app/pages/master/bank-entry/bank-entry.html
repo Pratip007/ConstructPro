@@ -1,0 +1,111 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1><i class="ri-bank-line"></i> Company Bank Entry</h1>
+    @if (roleBadge()) {
+      <span class="role-badge">{{ roleBadge() }}</span>
+    }
+  </div>
+
+  <!-- Add Form -->
+  @if (canModify()) {
+    <div class="card-container">
+      <form (ngSubmit)="onSubmit()" class="form-grid form-grid-3">
+        <div class="form-group">
+          <label>Bank Name</label>
+          <input type="text" [ngModel]="bankName()" (ngModelChange)="bankName.set($event)" name="bankName" placeholder="e.g., State Bank of India" required />
+        </div>
+        <div class="form-group">
+          <label>Account Name</label>
+          <input type="text" [ngModel]="accountName()" (ngModelChange)="accountName.set($event)" name="accountName" placeholder="e.g., ATR Construction Pvt Ltd" required />
+        </div>
+        <div class="form-group">
+          <label>Account Number</label>
+          <input type="text" [ngModel]="accountNumber()" (ngModelChange)="accountNumber.set($event)" name="accountNumber" placeholder="e.g., 0000123456789" required />
+        </div>
+        <div class="form-group">
+          <label>IFSC Code</label>
+          <input type="text" [ngModel]="ifscCode()" (ngModelChange)="ifscCode.set($event)" name="ifscCode" placeholder="e.g., SBIN0001234" required />
+        </div>
+        <div class="form-group">
+          <label>Branch Name</label>
+          <input type="text" [ngModel]="branchName()" (ngModelChange)="branchName.set($event)" name="branchName" placeholder="e.g., Kolkata Main Branch" required />
+        </div>
+        <div class="form-group" style="align-self: end;">
+          <button type="submit" class="btn-primary" [disabled]="loading()">
+            @if (approval.requiresApproval()) {
+              {{ loading() ? 'Submitting...' : 'Request New Bank Approval' }}
+            } @else {
+              {{ loading() ? 'Adding...' : 'Register Bank Account' }}
+            }
+          </button>
+        </div>
+      </form>
+    </div>
+  }
+
+  <!-- Banks Table -->
+  <div class="card-container" style="margin-top: 16px;">
+    <h3 style="margin: 0 0 12px; display: flex; justify-content: space-between; align-items: center; color: var(--accent);">
+      <span><i class="ri-bank-line"></i> Registered Corporate Banks</span>
+      @if (role.isAdmin()) {
+        <span class="admin-badge">Protected Actions</span>
+      }
+    </h3>
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>Bank Name</th>
+            <th>A/C Name</th>
+            <th>A/C Number</th>
+            <th>IFSC Code</th>
+            <th>Branch</th>
+            @if (canModify()) {
+              <th style="text-align: center;">Actions</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (bank of banks(); track bank.id) {
+            @if (bank.editing) {
+              <tr>
+                <td><input type="text" class="edit-input" [(ngModel)]="bank.editBankName" /></td>
+                <td><input type="text" class="edit-input" [(ngModel)]="bank.editAccountName" /></td>
+                <td><input type="text" class="edit-input" [(ngModel)]="bank.editAccountNumber" /></td>
+                <td><input type="text" class="edit-input" [(ngModel)]="bank.editIfsc" /></td>
+                <td><input type="text" class="edit-input" [(ngModel)]="bank.editBranch" /></td>
+                <td style="text-align: center; white-space: nowrap;">
+                  <button class="btn-icon btn-success" (click)="saveEdit(bank)">Save</button>
+                  <button class="btn-icon" (click)="cancelEdit()">Cancel</button>
+                </td>
+              </tr>
+            } @else {
+              <tr>
+                <td style="font-weight: 700;">{{ bank.bank_name }}</td>
+                <td>{{ bank.account_name }}</td>
+                <td style="font-family: monospace; font-weight: 700; color: var(--accent);">{{ bank.account_number }}</td>
+                <td style="font-family: monospace; font-weight: 700; color: var(--accent);">{{ bank.ifsc_code }}</td>
+                <td>
+                  {{ bank.branch_name }}
+                  @if (bank.pending_status) {
+                    <br><span class="badge badge-warning" style="font-size: 10px; margin-top: 4px;">{{ bank.pending_status }}</span>
+                  }
+                </td>
+                @if (canModify()) {
+                  <td style="text-align: center; white-space: nowrap;">
+                    <button class="btn-icon" (click)="startEdit(bank)">Edit</button>
+                    <button class="btn-icon btn-danger" (click)="deleteBank(bank)">Delete</button>
+                  </td>
+                }
+              </tr>
+            }
+          } @empty {
+            <tr>
+              <td [attr.colspan]="canModify() ? 6 : 5" class="empty-state">No company banks registered.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

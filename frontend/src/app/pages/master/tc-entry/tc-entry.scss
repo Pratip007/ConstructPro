@@ -1,0 +1,42 @@
+:host { display: block; }
+
+.bullet-point-text {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.bullet-dot {
+  color: #ffc107;
+  font-size: 20px;
+  user-select: none;
+  line-height: 1;
+  margin-top: -3px;
+}
+
+.clause-content {
+  flex: 1;
+}
+
+.edit-textarea {
+  width: 100%;
+  padding: 10px;
+  background: var(--input-bg);
+  border: 1px solid var(--accent);
+  color: var(--text-main);
+  border-radius: 4px;
+  font-size: 14px;
+  outline: none;
+  resize: vertical;
+  min-height: 60px;
+  transition: 0.3s;
+  &:focus {
+    box-shadow: 0 0 8px var(--accent-glow);
+  }
+}
+
+.row-disabled {
+  opacity: 0.4;
+}

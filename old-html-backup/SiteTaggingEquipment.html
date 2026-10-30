@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Equipment Site Taging & Transfer</title>
+    
+    <!-- Sync theme with Master Dashboard -->
+    <script>
+        const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        window.addEventListener('storage', function(e) {
+            if(e.key === 'atr_theme') { document.documentElement.setAttribute('data-theme', e.newValue); }
+        });
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap');
+
+        :root {
+            --bg-body: transparent; 
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.1);
+            
+            /* Dynamic Glass & Input Variables */
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(0, 0, 0, 0.2);
+            --input-focus-bg: rgba(0, 0, 0, 0.4);
+            
+            --shadow: 0 4px 15px rgba(0,0,0,0.3);
+            
+            /* Theme Color (Purple for Equipment / Mobilization Section) */
+            --theme-color: #6f42c1;
+            --theme-glow: rgba(111, 66, 193, 0.4);
+            --theme-transition: all 0.4s ease;
+        }
+
+        [data-theme="light"] {
+            --bg-body: transparent;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #555555;
+            --border-color: rgba(0, 0, 0, 0.1);
+            
+            --glass-bg: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --input-bg: rgba(255, 255, 255, 0.5);
+            --input-focus-bg: #ffffff;
+            
+            --shadow: 0 8px 25px rgba(0,0,0,0.05);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; scroll-behavior: smooth; }
+        body { background-color: var(--bg-body); color: var(--text-main); display: flex; min-height: 100vh; transition: var(--theme-transition); }
+        
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(136, 136, 136, 0.3); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(136, 136, 136, 0.6); }
+
+        .main-content { flex: 1; padding: 40px; overflow-y: auto; max-width: 1250px; margin: 0 auto; width: 100%; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid var(--border-color); padding-bottom: 20px; flex-wrap: wrap; gap: 15px; transition: var(--theme-transition); }
+        .header h1 { font-size: 26px; color: var(--text-main); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .header-actions { display: flex; gap: 15px; flex-wrap: wrap; align-items: center; }
+
+        .role-mode-badge {
+            display: none;
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 700;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Semantic Action Buttons */
+        .btn-new-entry { background-color: #dc3545; color: #fff; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(220,53,69,0.3); }
+        .btn-new-entry:hover { background-color: #c82333; transform: translateY(-2px); }
+        
+        .btn-transfer { background-color: #17a2b8; color: #fff; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(23,162,184,0.3); }
+        .btn-transfer:hover { background-color: #138496; transform: translateY(-2px); }
+
+        /* Dashboard & Back Buttons */
+        .btn-back-dash { background-color: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color); text-decoration: none; padding: 9px 16px; border-radius: 6px; font-weight: bold; font-size: 13px; transition: all 0.3s; display: flex; align-items: center; cursor: pointer; }
+        .btn-back-dash:hover { background-color: var(--theme-color); color: #fff; border-color: var(--theme-color); transform: translateY(-2px); box-shadow: 0 4px 10px var(--theme-glow); }
+
+        .btn-back { background-color: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color); padding: 10px 20px; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; transition: 0.3s; display: none; align-items: center; gap: 8px; }
+        .btn-back:hover { background-color: var(--theme-color); color: #fff; border-color: var(--theme-color); transform: translateY(-2px); }
+
+        /* Glassy Box Container */
+        .box-container { background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--glass-border); border-top: 4px solid var(--theme-color); border-radius: 12px; padding: 30px; box-shadow: var(--shadow); margin-bottom: 30px; transition: var(--theme-transition); }
+        
+        /* Tabs System */
+        .tab-container { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; flex-wrap: wrap; }
+        .tab-btn { background: transparent; color: var(--text-muted); border: 1px solid var(--border-color); padding: 8px 20px; border-radius: 20px; font-weight: 600; cursor: pointer; transition: 0.3s; font-size: 13px; }
+        .tab-btn:hover { border-color: var(--theme-color); color: var(--theme-color); }
+        .tab-btn.active { background: var(--theme-color); color: #fff; border-color: var(--theme-color); box-shadow: 0 4px 10px var(--theme-glow); }
+
+        /* Filter Bar */
+        .filter-bar { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
+        .filter-input, .filter-select { background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 10px 15px; border-radius: 6px; font-size: 13px; outline: none; transition: 0.3s; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); }
+        .filter-input { flex: 2; min-width: 200px; }
+        .filter-select { flex: 1; min-width: 150px; }
+        .filter-input:focus, .filter-select:focus { border-color: var(--theme-color); box-shadow: 0 0 10px var(--theme-glow); }
+
+        /* Form Grids */
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+        .form-group { display: flex; flex-direction: column; gap: 8px; }
+        .form-group label { font-size: 12px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; transition: color 0.3s; }
+        .form-group input, .form-group select, .form-group textarea { background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 12px 15px; border-radius: 6px; font-size: 14px; transition: all 0.3s; width: 100%; outline: none; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); color-scheme: dark; }
+        [data-theme="light"] input[type="date"] { color-scheme: light; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--theme-color); background-color: var(--input-focus-bg); box-shadow: 0 0 10px var(--theme-glow); }
+        .form-group:focus-within label { color: var(--theme-color); }
+        select option { background: var(--bg-card); color: var(--text-main); }
+        
+        /* Table Styles */
+        .table-responsive { overflow-x: auto; width: 100%; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 12px 15px; border-bottom: 1px solid var(--border-color); font-size: 13px; color: var(--text-main); transition: var(--theme-transition); vertical-align: middle; }
+        th { color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 11px; background: var(--input-bg); }
+        tr:hover { background: var(--glass-bg); }
+        
+        .status-active { color: #28a745; font-weight: bold; background: rgba(40,167,69,0.1); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(40,167,69,0.3); display: inline-block; }
+        .status-transfer { color: #17a2b8; font-weight: bold; background: rgba(23,162,184,0.1); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(23,162,184,0.3); display: inline-block; }
+        .pending-status-pill {
+            display: inline-block;
+            background: rgba(255, 193, 7, 0.16);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.45);
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            margin-top: 4px;
+            text-transform: uppercase;
+        }
+
+        /* Semantic Submit Buttons */
+        .btn-submit { background-color: #dc3545; color: #fff; border: none; padding: 15px 30px; border-radius: 6px; font-weight: 700; font-size: 14px; cursor: pointer; text-transform: uppercase; transition: all 0.3s; width: 100%; margin-top: 25px; letter-spacing: 1px; box-shadow: 0 4px 15px rgba(220,53,69,0.2); }
+        .btn-submit:hover { background-color: #c82333; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(220,53,69,0.4); }
+        
+        .btn-submit-transfer { background-color: #17a2b8; color: #fff; border: none; padding: 15px 30px; border-radius: 6px; font-weight: 700; font-size: 14px; cursor: pointer; text-transform: uppercase; transition: all 0.3s; width: 100%; margin-top: 25px; letter-spacing: 1px; box-shadow: 0 4px 15px rgba(23,162,184,0.2); }
+        .btn-submit-transfer:hover { background-color: #138496; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(23,162,184,0.4); }
+
+        #leaveView, #transferView { display: none; }
+        .box-container h2 { font-size: 18px; margin-bottom: 20px; color: var(--theme-color); text-transform: uppercase; border-bottom: 1px dashed var(--border-color); padding-bottom: 10px; }
+
+        /* ================= OFFICE APPROVAL REQUEST MODAL ================= */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.68); backdrop-filter: blur(5px); z-index: 2000;
+            justify-content: center; align-items: center; padding: 20px;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-card {
+            background: var(--bg-card); border: 1px solid var(--border-color); border-top: 4px solid #ffc107;
+            border-radius: 12px; width: 100%; max-width: 480px; padding: 28px; box-shadow: var(--shadow);
+        }
+        .modal-card h3 { font-size: 18px; color: #ffc107; margin-bottom: 10px; }
+        .modal-card p { font-size: 12.5px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5; }
+        .modal-btn-row { display: flex; gap: 10px; margin-top: 18px; }
+        .btn-modal { flex: 1; padding: 11px 16px; border-radius: 6px; font-weight: 700; font-size: 12.5px; border: none; cursor: pointer; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+
+    <div class="main-content">
+        <div class="header">
+            <h1>
+                📍 Equipment Site Taging Management
+                <span id="roleModeBadge" class="role-mode-badge">🏢 Office Mode</span>
+            </h1>
+            
+            <div class="header-actions" id="headerActionButtons">
+                <button class="btn-transfer" onclick="showView('transfer')">🔄 Transfer Site</button>
+                <button class="btn-new-entry" onclick="showView('leave')">🛑 Process Release</button>
+                <a href="dashboard_home.html" id="btnBackDashboard" class="btn-back-dash" onclick="handleBackToDashboard(event)">← Dashboard</a>
+            </div>
+            <button class="btn-back" id="btnBack" onclick="showView('list')">⬅️ Back to Master List</button>
+            
+        </div>
+
+        <!-- LIST VIEW -->
+        <div id="listView" class="box-container">
+            <!-- Tabs -->
+            <div class="tab-container">
+                <button class="tab-btn active" id="tabActive" onclick="switchTab('active')">🟢 Active Equipment</button>
+                <button class="tab-btn" id="tabLeft" onclick="switchTab('left')">🔴 Released / Transferred History</button>
+            </div>
+
+            <!-- Smart Filter Bar -->
+            <div class="filter-bar">
+                <input type="text" id="searchInput" class="filter-input" placeholder="🔍 Search by Equipment Name or ID..." onkeyup="applyFilters()">
+                <select id="filterSite" class="filter-select" onchange="applyFilters()">
+                    <option value="All">🏢 All Sites</option>
+                    <option value="Commercial Complex B3">Commercial Complex B3</option>
+                    <option value="Residential Villa">Residential Villa</option>
+                    <option value="Apartment Phase 2">Apartment Phase 2</option>
+                    <option value="Salt Lake Sector V">Salt Lake Sector V</option>
+                </select>
+            </div>
+
+            <!-- Table Data -->
+            <div class="table-responsive">
+                <table>
+                    <thead id="equipmentTableHead">
+                        <!-- Dynamic Headers -->
+                    </thead>
+                    <tbody id="equipmentTableBody">
+                        <!-- Data -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- LEAVE / RELEASE FORM VIEW -->
+        <div id="leaveView">
+            <div class="box-container" style="border-top-color: #dc3545;">
+                <h2 style="color: #dc3545; border-bottom-color: rgba(220,53,69,0.3);">🛑 Process Equipment Release / Leave</h2>
+                <div class="form-grid">
+                    
+                    <div class="form-group">
+                        <label>1. Select Current Site *</label>
+                        <select id="leaveSiteSelect" onchange="loadEquipmentDropdown('leaveSiteSelect', 'leaveEquipmentSelect')">
+                            <option value="">-- Select a Site --</option>
+                            <option value="Commercial Complex B3">Commercial Complex B3</option>
+                            <option value="Residential Villa">Residential Villa</option>
+                            <option value="Apartment Phase 2">Apartment Phase 2</option>
+                            <option value="Salt Lake Sector V">Salt Lake Sector V</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>2. Select Equipment to Release *</label>
+                        <select id="leaveEquipmentSelect">
+                            <option value="">-- Select Site First --</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Leave / Release Date *</label>
+                        <input type="date" id="leaveDate" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Condition at Release</label>
+                        <select id="leaveCondition">
+                            <option value="Good">Good / Working Condition</option>
+                            <option value="Needs Repair">Needs Repair / Maintenance</option>
+                            <option value="Damaged">Damaged / Breakdown</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label>Remarks / Destination</label>
+                        <textarea id="leaveRemarks" rows="2" placeholder="Where is it going next? (e.g., Returned to Head Office)"></textarea>
+                    </div>
+                </div>
+
+                <button type="button" id="btnConfirmLeave" class="btn-submit" onclick="processLeave()">✅ Confirm Release</button>
+            </div>
+        </div>
+
+        <!-- TRANSFER SITE FORM VIEW -->
+        <div id="transferView">
+            <div class="box-container" style="border-top-color: #17a2b8;">
+                <h2 style="color: #17a2b8; border-bottom-color: rgba(23, 162, 184, 0.3);">🔄 Transfer Equipment to Another Site</h2>
+                <div class="form-grid">
+                    
+                    <div class="form-group">
+                        <label>1. Select Current Site *</label>
+                        <select id="transferCurrentSite" onchange="handleTransferCurrentSiteChange()">
+                            <option value="">-- Select Current Site --</option>
+                            <option value="Commercial Complex B3">Commercial Complex B3</option>
+                            <option value="Residential Villa">Residential Villa</option>
+                            <option value="Apartment Phase 2">Apartment Phase 2</option>
+                            <option value="Salt Lake Sector V">Salt Lake Sector V</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>2. Select Equipment *</label>
+                        <select id="transferEquipmentSelect">
+                            <option value="">-- Select Site First --</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>3. Select New Site *</label>
+                        <select id="transferNewSite">
+                            <option value="">-- Select Destination Site --</option>
+                            <option value="Commercial Complex B3">Commercial Complex B3</option>
+                            <option value="Residential Villa">Residential Villa</option>
+                            <option value="Apartment Phase 2">Apartment Phase 2</option>
+                            <option value="Salt Lake Sector V">Salt Lake Sector V</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Transfer Date *</label>
+                        <input type="date" id="transferDate" required>
+                    </div>
+
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label>Transfer Remarks (Optional)</label>
+                        <textarea id="transferRemarks" rows="2" placeholder="Any special note for the transfer?"></textarea>
+                    </div>
+                </div>
+
+                <button type="button" id="btnConfirmTransfer" class="btn-submit-transfer" onclick="processTransfer()">🔄 Confirm Transfer</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ================= OFFICE / SUPERVISOR APPROVAL MODAL (ROUTES TO ApproveOffice.html) ================= -->
+    <div class="modal-overlay" id="roleApprovalModal">
+        <div class="modal-card">
+            <h3 id="roleApprovalTitle">🏢 Send Request to ApproveOffice.html</h3>
+            <p id="roleApprovalDesc">
+                অফিস পোর্টাল থেকে ইকুইপমেন্ট রিলিজ বা অন্য সাইটে ট্রান্সফার করলে তা অ্যাডমিনের <strong>ApproveOffice.html</strong>-এ পাঠানো হবে। অ্যাডমিন অ্যাপ্রুভ করলেই এটি চূড়ান্ত হবে।
+            </p>
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label>Equipment Action Summary</label>
+                <input type="text" id="roleApprovalSummary" readonly style="color: #ffc107; font-weight: 700;">
+            </div>
+            <div class="form-group">
+                <label>Reason / Remarks for Admin Approval <span style="color: #ff4d4d;">*</span></label>
+                <textarea id="roleApprovalReason" rows="3" placeholder="Explain why this equipment is being released or transferred..." style="resize: none;"></textarea>
+            </div>
+            <div class="modal-btn-row">
+                <button type="button" class="btn-modal" style="background: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color);" onclick="closeRoleApprovalModal()">Cancel</button>
+                <button type="button" class="btn-modal" style="background: #ffc107; color: #121212;" onclick="confirmRoleApprovalRequest()">📤 Send for Approval</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================================================
+        // 1. PORTAL ROLE DETECTION & LOCALSTORAGE PERSISTENCE ENGINE
+        // =========================================================================================
+        let currentPortalMode = "admin"; // 'admin', 'office', or 'supervisor'
+        let loggedUserId = "ADMIN";
+        let loggedUserName = "Super Admin";
+        let assignedSite = "";
+        let pendingRolePayload = null;
+
+        const defaultEquipmentDB = [
+            { recordKey: "REC-101", id: "EQ-101", name: "JCB Excavator 3DX", site: "Commercial Complex B3", date: "2026-05-10", status: "active", remarks: "", pendingStatus: null },
+            { recordKey: "REC-102", id: "EQ-102", name: "Concrete Mixer Machine", site: "Commercial Complex B3", date: "2026-06-15", status: "active", remarks: "", pendingStatus: null },
+            { recordKey: "REC-103", id: "EQ-103", name: "Tower Crane 50T", site: "Residential Villa", date: "2026-02-20", status: "active", remarks: "", pendingStatus: null },
+            { recordKey: "REC-104", id: "EQ-104", name: "Vibrator Machine", site: "Residential Villa", date: "2026-07-01", status: "active", remarks: "", pendingStatus: null },
+            { recordKey: "REC-105", id: "EQ-105", name: "Diesel Generator 125kVA", site: "Apartment Phase 2", date: "2026-01-10", status: "active", remarks: "", pendingStatus: null },
+            { recordKey: "REC-099", id: "EQ-099", name: "Water Pump 5HP", site: "Commercial Complex B3", date: "2025-12-01", leaveDate: "2026-03-10", condition: "Needs Repair", remarks: "Sent to mechanic shop", status: "left", pendingStatus: null }
+        ];
+
+        let equipmentDB = [];
+        let currentTab = 'active'; 
+
+        function loadEquipmentDatabase() {
+            const stored = JSON.parse(localStorage.getItem('atr_equipment_site_db'));
+            if (Array.isArray(stored) && stored.length > 0) {
+                equipmentDB = stored;
+            } else {
+                equipmentDB = [...defaultEquipmentDB];
+                localStorage.setItem('atr_equipment_site_db', JSON.stringify(equipmentDB));
+            }
+        }
+
+        function saveEquipmentDatabase() {
+            localStorage.setItem('atr_equipment_site_db', JSON.stringify(equipmentDB));
+        }
+
+        function checkPortalPermissions() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewParam = (urlParams.get('view') || '').toLowerCase();
+            const badge = document.getElementById('roleModeBadge');
+            const backBtn = document.getElementById('btnBackDashboard');
+            const btnLeave = document.getElementById('btnConfirmLeave');
+            const btnTransfer = document.getElementById('btnConfirmTransfer');
+            const modalTitle = document.getElementById('roleApprovalTitle');
+            const modalDesc = document.getElementById('roleApprovalDesc');
+
+            let parentPath = "";
+            try {
+                if (window.parent && window.parent !== window) {
+                    parentPath = (window.parent.location.pathname || '').toLowerCase();
+                }
+            } catch (e) {}
+
+            if (viewParam === 'office' || parentPath.includes('officedashboard')) {
+                currentPortalMode = 'office';
+                loggedUserId = urlParams.get('userId') || sessionStorage.getItem('atr_logged_office_id') || localStorage.getItem('atr_logged_office_id') || "OFF-101";
+                loggedUserName = urlParams.get('userName') || "Office Staff";
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🏢 Office Mode (${loggedUserName}) — Synced with ApproveOffice.html`;
+                }
+                if (backBtn) {
+                    backBtn.href = "office/office_dashboard_home.html";
+                }
+                if (btnLeave) {
+                    btnLeave.innerText = "📤 Submit Release Request for Approval";
+                }
+                if (btnTransfer) {
+                    btnTransfer.innerText = "📤 Submit Transfer Request for Approval";
+                }
+                if (modalTitle) modalTitle.innerText = "🏢 Send Request to ApproveOffice.html";
+                if (modalDesc) modalDesc.innerHTML = "অফিস পোর্টাল থেকে ইকুইপমেন্ট রিলিজ বা অন্য সাইটে ট্রান্সফার করলে তা অ্যাডমিনের <strong>ApproveOffice.html</strong>-এ পাঠানো হবে। অ্যাডমিন অ্যাপ্রুভ করলেই এটি চূড়ান্ত হবে।";
+
+            } else if (viewParam === 'supervisor' || parentPath.includes('supervisordashboard')) {
+                currentPortalMode = 'supervisor';
+                assignedSite = (urlParams.get('site') || sessionStorage.getItem('atr_supervisor_site') || "Salt Lake Sector V").trim();
+                loggedUserId = urlParams.get('supId') || "SUP-003";
+                loggedUserName = urlParams.get('supName') || "Supervisor";
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🛡️ Supervisor Mode (🔒 Site: ${assignedSite})`;
+                }
+                if (backBtn) {
+                    backBtn.href = "supervisor/supervisor_dashboard_home.html";
+                }
+                if (btnLeave) {
+                    btnLeave.innerText = "📤 Submit Release Request for Approval";
+                }
+                if (btnTransfer) {
+                    btnTransfer.innerText = "📤 Submit Transfer Request for Approval";
+                }
+                if (modalTitle) modalTitle.innerText = "🛡️ Send Request to ApproveSupervisor.html";
+                if (modalDesc) modalDesc.innerHTML = `সুপারভাইজার পোর্টাল (<strong>${assignedSite}</strong>) থেকে ইকুইপমেন্ট রিলিজ বা ট্রান্সফার করলে তা অ্যাডমিনের <strong>ApproveSupervisor.html</strong>-এ পাঠানো হবে।`;
+
+            } else {
+                currentPortalMode = 'admin';
+                if (backBtn) {
+                    backBtn.href = "dashboard_home.html";
+                }
+            }
+        }
+
+        function handleBackToDashboard(event) {
+            if (currentPortalMode === 'office') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.loadOfficeWorkspaceHome === 'function') {
+                        window.parent.loadOfficeWorkspaceHome();
+                        return;
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "office_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "office/office_dashboard_home.html";
+            } else if (currentPortalMode === 'supervisor') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window) {
+                        const parentHomeLink = window.parent.document.querySelector('.dashboard-home-link');
+                        if (parentHomeLink) {
+                            window.location.href = parentHomeLink.href;
+                            return;
+                        }
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "supervisor_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "supervisor/supervisor_dashboard_home.html";
+            }
+        }
+
+        window.onload = () => {
+            checkPortalPermissions();
+            loadEquipmentDatabase();
+            applyFilters(); 
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('leaveDate').value = today;
+            document.getElementById('transferDate').value = today;
+        };
+
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'atr_equipment_site_db') {
+                loadEquipmentDatabase();
+                applyFilters();
+            }
+        });
+
+        // =========================================================================================
+        // 2. VIEW & TAB NAVIGATION
+        // =========================================================================================
+        function showView(viewName) {
+            const listView = document.getElementById('listView');
+            const leaveView = document.getElementById('leaveView');
+            const transferView = document.getElementById('transferView');
+            const headerBtns = document.getElementById('headerActionButtons');
+            const backBtn = document.getElementById('btnBack');
+
+            listView.style.display = (viewName === 'list') ? 'block' : 'none';
+            leaveView.style.display = (viewName === 'leave') ? 'block' : 'none';
+            transferView.style.display = (viewName === 'transfer') ? 'block' : 'none';
+
+            if(viewName === 'list') {
+                headerBtns.style.display = 'flex';
+                backBtn.style.display = 'none';
+            } else {
+                headerBtns.style.display = 'none';
+                backBtn.style.display = 'flex';
+                
+                if(viewName === 'leave') resetLeaveForm();
+                if(viewName === 'transfer') resetTransferForm();
+            }
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.getElementById('tabActive').classList.toggle('active', tab === 'active');
+            document.getElementById('tabLeft').classList.toggle('active', tab === 'left');
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const searchText = document.getElementById('searchInput').value.toLowerCase();
+            const filterSite = document.getElementById('filterSite').value;
+            
+            const filteredData = equipmentDB.filter(eq => {
+                const matchTab = eq.status === currentTab;
+                const matchSearch = eq.id.toLowerCase().includes(searchText) || eq.name.toLowerCase().includes(searchText);
+                const matchSite = (filterSite === "All" || eq.site === filterSite);
+                
+                return matchTab && matchSearch && matchSite;
+            });
+
+            renderTable(filteredData);
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('equipmentTableBody');
+            const thead = document.getElementById('equipmentTableHead');
+            tbody.innerHTML = '';
+            
+            if(currentTab === 'active') {
+                thead.innerHTML = `<tr><th>Eq. ID</th><th>Equipment Name</th><th>Current Site</th><th>Assigned Date</th><th>Remarks/Note</th><th>Status</th></tr>`;
+            } else {
+                thead.innerHTML = `<tr><th>Eq. ID</th><th>Equipment Name</th><th>Site</th><th>Release/Transfer Date</th><th>Condition</th><th>Remarks</th></tr>`;
+            }
+
+            if(data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:25px;">No matching records found.</td></tr>`;
+                return;
+            }
+
+            data.forEach(eq => {
+                const pendingBadge = eq.pendingStatus
+                    ? `<br><span class="pending-status-pill">⏳ ${eq.pendingStatus}</span>`
+                    : '';
+
+                if(currentTab === 'active') {
+                    let remarksText = eq.remarks ? `<span style="font-size:11px; color:var(--text-muted);">${eq.remarks}</span>` : '-';
+                    tbody.innerHTML += `
+                        <tr>
+                            <td><strong>${eq.id}</strong></td>
+                            <td>${eq.name}</td>
+                            <td>${eq.site}</td>
+                            <td>${eq.date}</td>
+                            <td>${remarksText}</td>
+                            <td>
+                                <span class="status-active">Active</span>
+                                ${pendingBadge}
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    let conditionColor = eq.condition === "Transferred" ? "color:#17a2b8; font-weight:bold;" : "color:var(--theme-color); font-weight:bold;";
+                    tbody.innerHTML += `
+                        <tr>
+                            <td><strong>${eq.id}</strong></td>
+                            <td>${eq.name}</td>
+                            <td>${eq.site}</td>
+                            <td>${eq.leaveDate}</td>
+                            <td style="${conditionColor}">
+                                ${eq.condition}
+                                ${pendingBadge}
+                            </td>
+                            <td style="font-size:12px; color:var(--text-muted);">${eq.remarks || 'N/A'}</td>
+                        </tr>
+                    `;
+                }
+            });
+        }
+
+        // =========================================================================================
+        // 3. EQUIPMENT DROPDOWNS & RELEASE / TRANSFER LOGIC
+        // =========================================================================================
+        function loadEquipmentDropdown(siteSelectId, equipmentSelectId) {
+            const site = document.getElementById(siteSelectId).value;
+            const eqSelect = document.getElementById(equipmentSelectId);
+            
+            eqSelect.innerHTML = '<option value="">-- Select Equipment --</option>';
+            if(!site) return;
+
+            const availableEq = equipmentDB.filter(eq => eq.status === "active" && eq.site === site);
+
+            if(availableEq.length === 0) {
+                eqSelect.innerHTML = '<option value="">No Active Equipment in this Site</option>';
+            } else {
+                availableEq.forEach(eq => {
+                    let option = document.createElement('option');
+                    option.value = eq.id;
+                    option.text = `${eq.name} (${eq.id})`;
+                    eqSelect.appendChild(option);
+                });
+            }
+        }
+
+        function handleTransferCurrentSiteChange() {
+            loadEquipmentDropdown('transferCurrentSite', 'transferEquipmentSelect');
+            const currentSite = document.getElementById('transferCurrentSite').value;
+            const newSiteSelect = document.getElementById('transferNewSite');
+
+            // Prevent selecting the same site in Destination Site dropdown
+            Array.from(newSiteSelect.options).forEach(opt => {
+                if (!opt.value) return;
+                opt.disabled = (opt.value === currentSite);
+            });
+            if (newSiteSelect.value === currentSite) {
+                newSiteSelect.value = '';
+            }
+        }
+
+        function resetLeaveForm() {
+            document.getElementById('leaveSiteSelect').value = '';
+            document.getElementById('leaveEquipmentSelect').innerHTML = '<option value="">-- Select Site First --</option>';
+            document.getElementById('leaveCondition').value = 'Good';
+            document.getElementById('leaveRemarks').value = '';
+            document.getElementById('leaveDate').value = new Date().toISOString().split('T')[0];
+        }
+
+        function processLeave() {
+            const site = document.getElementById('leaveSiteSelect').value;
+            const eqId = document.getElementById('leaveEquipmentSelect').value;
+            const date = document.getElementById('leaveDate').value;
+            const condition = document.getElementById('leaveCondition').value;
+            const remarks = document.getElementById('leaveRemarks').value.trim();
+            
+            if(!site || !eqId || !date) { alert("Please fill all mandatory fields."); return; }
+
+            let index = equipmentDB.findIndex(eq => eq.id === eqId && eq.status === 'active' && eq.site === site);
+            if(index !== -1) {
+                const targetEq = equipmentDB[index];
+
+                // OFFICE / SUPERVISOR PORTAL: Route Equipment Release to Approval Modal
+                if (currentPortalMode !== 'admin') {
+                    openRoleApprovalModal({
+                        type: 'RELEASE',
+                        eqIndex: index,
+                        site: site,
+                        eqId: eqId,
+                        eqName: targetEq.name,
+                        date: date,
+                        condition: condition,
+                        remarks: remarks,
+                        actionLabel: "EQUIPMENT RELEASE / LEAVE",
+                        summary: `Release ${targetEq.name} (${eqId}) from ${site} on ${date} | Condition: ${condition}`,
+                        oldData: { ...targetEq },
+                        newData: { ...targetEq, status: "left", leaveDate: date, condition: condition, remarks: remarks }
+                    });
+                    return;
+                }
+
+                // ADMIN DIRECT RELEASE
+                equipmentDB[index].status = "left";
+                equipmentDB[index].leaveDate = date;
+                equipmentDB[index].condition = condition;
+                equipmentDB[index].remarks = remarks;
+                equipmentDB[index].pendingStatus = null;
+                saveEquipmentDatabase();
+
+                alert(`✅ Success! ${equipmentDB[index].name} marked as Released from ${site}.`);
+                
+                switchTab('left');
+                document.getElementById('filterSite').value = site;
+                applyFilters();
+
+                showView('list'); 
+            }
+        }
+
+        function resetTransferForm() {
+            document.getElementById('transferCurrentSite').value = '';
+            document.getElementById('transferEquipmentSelect').innerHTML = '<option value="">-- Select Site First --</option>';
+            document.getElementById('transferNewSite').value = '';
+            Array.from(document.getElementById('transferNewSite').options).forEach(opt => opt.disabled = false);
+            document.getElementById('transferRemarks').value = '';
+            document.getElementById('transferDate').value = new Date().toISOString().split('T')[0];
+        }
+
+        function processTransfer() {
+            const currentSite = document.getElementById('transferCurrentSite').value;
+            const eqId = document.getElementById('transferEquipmentSelect').value;
+            const newSite = document.getElementById('transferNewSite').value;
+            const date = document.getElementById('transferDate').value;
+            const remarks = document.getElementById('transferRemarks').value.trim();
+            
+            if(!currentSite || !eqId || !newSite || !date) { 
+                alert("Please fill all mandatory fields."); return; 
+            }
+            if(currentSite === newSite) {
+                alert("Current site and New site cannot be the same!"); return;
+            }
+
+            let index = equipmentDB.findIndex(eq => eq.id === eqId && eq.status === 'active' && eq.site === currentSite);
+            
+            if(index !== -1) {
+                let oldRecord = equipmentDB[index];
+
+                // OFFICE / SUPERVISOR PORTAL: Route Equipment Site Transfer to Approval Modal
+                if (currentPortalMode !== 'admin') {
+                    openRoleApprovalModal({
+                        type: 'TRANSFER',
+                        eqIndex: index,
+                        currentSite: currentSite,
+                        newSite: newSite,
+                        eqId: eqId,
+                        eqName: oldRecord.name,
+                        date: date,
+                        remarks: remarks,
+                        actionLabel: "EQUIPMENT SITE TRANSFER",
+                        summary: `Transfer ${oldRecord.name} (${eqId}) from '${currentSite}' to '${newSite}' on ${date}`,
+                        oldData: { ...oldRecord },
+                        newData: { id: oldRecord.id, name: oldRecord.name, siteFrom: currentSite, siteTo: newSite, date: date, remarks: remarks }
+                    });
+                    return;
+                }
+
+                // ADMIN DIRECT TRANSFER
+                oldRecord.status = "left";
+                oldRecord.leaveDate = date;
+                oldRecord.condition = "Transferred";
+                let extraRemarks = remarks ? ` Note: ${remarks}` : "";
+                oldRecord.remarks = `Transferred to ${newSite}.${extraRemarks}`;
+                oldRecord.pendingStatus = null;
+
+                let newRecord = {
+                    recordKey: "REC-" + Date.now(),
+                    id: oldRecord.id,
+                    name: oldRecord.name,
+                    site: newSite,
+                    date: date,
+                    status: "active",
+                    remarks: `Received from ${currentSite}.${extraRemarks}`,
+                    pendingStatus: null
+                };
+                
+                equipmentDB.push(newRecord);
+                saveEquipmentDatabase();
+
+                alert(`🔄 Success! ${oldRecord.name} has been transferred to ${newSite}.`);
+                
+                switchTab('active');
+                document.getElementById('filterSite').value = newSite;
+                applyFilters();
+
+                showView('list'); 
+            }
+        }
+
+        // =========================================================================================
+        // 4. OFFICE & SUPERVISOR APPROVAL MODAL ENGINE (ROUTES TO ApproveOffice.html)
+        // =========================================================================================
+        function openRoleApprovalModal(payload) {
+            pendingRolePayload = payload;
+            document.getElementById('roleApprovalSummary').value = `${payload.actionLabel}: ${payload.summary}`;
+            document.getElementById('roleApprovalReason').value = payload.remarks || '';
+            document.getElementById('roleApprovalModal').classList.add('active');
+            setTimeout(() => document.getElementById('roleApprovalReason').focus(), 50);
+        }
+
+        function closeRoleApprovalModal() {
+            document.getElementById('roleApprovalModal').classList.remove('active');
+            pendingRolePayload = null;
+        }
+
+        function confirmRoleApprovalRequest() {
+            const reason = document.getElementById('roleApprovalReason').value.trim();
+            if (!reason) {
+                alert("⚠️ Please enter a reason/remark for Admin Approval.");
+                return;
+            }
+            if (!pendingRolePayload) return;
+
+            const targetApprovalPage = currentPortalMode === 'supervisor' ? 'ApproveSupervisor.html' : 'ApproveOffice.html';
+            const idx = pendingRolePayload.eqIndex;
+
+            if (equipmentDB[idx]) {
+                if (pendingRolePayload.type === 'RELEASE') {
+                    equipmentDB[idx].pendingStatus = `Release Pending (${targetApprovalPage})`;
+                } else if (pendingRolePayload.type === 'TRANSFER') {
+                    equipmentDB[idx].pendingStatus = `Transfer to ${pendingRolePayload.newSite} Pending`;
+                }
+                saveEquipmentDatabase();
+            }
+
+            if (currentPortalMode === 'supervisor') {
+                const supQueue = JSON.parse(localStorage.getItem('atr_supervisor_approvals')) || [];
+                supQueue.unshift({
+                    id: "SUP-EQT-" + Date.now().toString().slice(-5),
+                    module: "SiteTaggingEquipment.html",
+                    action: pendingRolePayload.actionLabel,
+                    site: assignedSite || pendingRolePayload.site || pendingRolePayload.currentSite,
+                    requestedBy: loggedUserName,
+                    reason: reason,
+                    summary: pendingRolePayload.summary,
+                    requestedAt: new Date().toISOString(),
+                    status: "Pending",
+                    oldData: pendingRolePayload.oldData,
+                    newData: pendingRolePayload.newData
+                });
+                localStorage.setItem('atr_supervisor_approvals', JSON.stringify(supQueue));
+            } else {
+                const newReq = {
+                    reqId: "OFF-EQT-" + Date.now().toString().slice(-5),
+                    userId: loggedUserId,
+                    userName: loggedUserName,
+                    designation: "Office Staff",
+                    module: "SiteTaggingEquipment.html",
+                    action: pendingRolePayload.actionLabel,
+                    summary: pendingRolePayload.summary,
+                    oldData: pendingRolePayload.oldData,
+                    newData: pendingRolePayload.newData,
+                    reason: reason,
+                    timestamp: new Date().toLocaleString('en-IN'),
+                    status: "Pending"
+                };
+
+                const officeQueue = JSON.parse(localStorage.getItem('atr_office_approvals')) || [];
+                officeQueue.unshift(newReq);
+                localStorage.setItem('atr_office_approvals', JSON.stringify(officeQueue));
+                localStorage.setItem('approve_office_requests', JSON.stringify(officeQueue));
+                localStorage.setItem('ApproveOffice_requests', JSON.stringify(officeQueue));
+
+                // Log in Office Daily Work Report (office_dashboard_home.html)
+                const workLogs = JSON.parse(localStorage.getItem('atr_office_daily_work')) || [];
+                const todayStr = new Date().toISOString().split('T')[0];
+                const nowTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+                workLogs.unshift({
+                    id: "WRK-" + Date.now().toString().slice(-5),
+                    userId: loggedUserId,
+                    userName: loggedUserName,
+                    date: todayStr,
+                    time: nowTime,
+                    module: "Equipment Site Tagging (SiteTaggingEquipment.html)",
+                    refNo: pendingRolePayload.eqId || newReq.reqId,
+                    desc: `${pendingRolePayload.actionLabel}: ${pendingRolePayload.summary}`,
+                    status: "Sent for Approval"
+                });
+                localStorage.setItem('atr_office_daily_work', JSON.stringify(workLogs));
+
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.refreshNotificationsUI === 'function') {
+                        window.parent.refreshNotificationsUI();
+                    }
+                } catch (e) {}
+            }
+
+            closeRoleApprovalModal();
+            switchTab('active');
+            applyFilters();
+            showView('list');
+            alert(`📤 Request sent to ${targetApprovalPage} for Admin Approval!`);
+        }
+    </script>
+</body>
+</html>

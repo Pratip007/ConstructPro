@@ -1,0 +1,151 @@
+<div class="app-shell" [class.sidebar-hidden]="sidebarHidden()" (click)="closeDropdowns()">
+
+  <!-- Mobile sidebar overlay -->
+  @if (isMobile() && !sidebarHidden()) {
+    <div class="sidebar-overlay" (click)="toggleSidebar()"></div>
+  }
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+
+    <!-- PROFILE SECTION -->
+    <div class="profile-container" [class.active]="profileMenuOpen()">
+      <div class="avatar-wrapper" (click)="toggleProfileMenu($event)">
+        <img
+          src="https://ui-avatars.com/api/?name=Supervisor&background=2b2b2b&color=ffc107"
+          class="profile-img"
+          alt="Supervisor"
+        />
+      </div>
+      <div class="profile-badge">Supervisor</div>
+
+      <div class="profile-dropdown">
+        <h4>{{ auth.currentUser()?.name || 'Supervisor' }}</h4>
+        <span>{{ supervisorId() || auth.currentUser()?.displayId || 'Site Supervisor' }}</span>
+        @if (assignedSiteName()) {
+          <div class="site-tag"><i class="ri-map-pin-2-fill"></i> {{ assignedSiteName() }}</div>
+        }
+        <hr />
+        <a routerLink="change-password" (click)="closeDropdowns()"><i class="ri-key-line"></i> Change Password</a>
+        <a class="logout-btn" (click)="logout()"><i class="ri-logout-box-r-line"></i> Logout</a>
+      </div>
+    </div>
+
+    <!-- Site Info Card -->
+    @if (assignedSiteName()) {
+      <div class="site-info-card">
+        <i class="ri-map-pin-2-fill"></i>
+        <div>
+          <span class="site-label">Assigned Site</span>
+          <span class="site-name">{{ assignedSiteName() }}</span>
+        </div>
+      </div>
+    }
+
+    <!-- DASHBOARD HOME -->
+    <a routerLink="" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="dashboard-home-link">
+      <i class="ri-dashboard-line"></i> Supervisor Dashboard
+    </a>
+
+    <!-- EMPLOYEE SECTION -->
+    <div class="tree-container" [class.open]="isTreeOpen('employee')">
+      <div class="tree-toggle" (click)="toggleTree('employee')">
+        <span><i class="ri-team-line"></i> Employee Section</span>
+        <span class="arrow"><i class="ri-arrow-right-s-line"></i></span>
+      </div>
+      <ul class="tree-menu employee-tree">
+        <li><a routerLink="employee/employee-attendance" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-calendar-check-line"></i> Attendance</a></li>
+        <li><a routerLink="employee/site-leave-entry" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-door-open-line"></i> Site Leave Entry</a></li>
+        <li><a routerLink="employee/employee-ledger" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-book-open-line"></i> Employee Ledger</a></li>
+      </ul>
+    </div>
+
+    <!-- PURCHASE SECTION -->
+    <div class="tree-container" [class.open]="isTreeOpen('purchase')">
+      <div class="tree-toggle" (click)="toggleTree('purchase')">
+        <span><i class="ri-store-line"></i> Purchase Section</span>
+        <span class="arrow"><i class="ri-arrow-right-s-line"></i></span>
+      </div>
+      <ul class="tree-menu purchase-tree">
+        <li><a routerLink="purchase/retail-site-invoice" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-receipt-line"></i> Retail Site Invoice</a></li>
+      </ul>
+    </div>
+
+    <!-- PAYMENT SECTION -->
+    <div class="tree-container" [class.open]="isTreeOpen('payment')">
+      <div class="tree-toggle" (click)="toggleTree('payment')">
+        <span><i class="ri-send-plane-line"></i> Payment Section</span>
+        <span class="arrow"><i class="ri-arrow-right-s-line"></i></span>
+      </div>
+      <ul class="tree-menu payment-tree">
+        <li><a routerLink="payment/all-type-payment" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-money-cny-circle-line"></i> All Type Payment</a></li>
+      </ul>
+    </div>
+
+    <!-- SUPERVISOR SECTION -->
+    <div class="tree-container" [class.open]="isTreeOpen('supervisor')">
+      <div class="tree-toggle" (click)="toggleTree('supervisor')">
+        <span><i class="ri-shield-user-line"></i> Supervisor Section</span>
+        <span class="arrow"><i class="ri-arrow-right-s-line"></i></span>
+      </div>
+      <ul class="tree-menu supervisor-tree">
+        <li><a routerLink="supervisor/supervisor-ledger" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-book-line"></i> Supervisor Ledger</a></li>
+      </ul>
+    </div>
+
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main-content">
+
+    <!-- HEADER -->
+    <div class="header">
+      <div class="header-left">
+        <button class="icon-btn" (click)="toggleSidebar()" title="Toggle Sidebar">
+          <i class="ri-menu-line"></i>
+        </button>
+        <h1>ATR Supervisor Portal</h1>
+        @if (assignedSiteName()) {
+          <span class="header-site-tag"><i class="ri-map-pin-line"></i> {{ assignedSiteName() }}</span>
+        }
+      </div>
+      <div class="header-right">
+        <!-- Notification Bell -->
+        <div class="notif-wrapper" (click)="toggleNotification($event)">
+          <button class="icon-btn" title="Notifications">
+            <i class="ri-notification-3-line"></i>
+          </button>
+          @if (notifCount() > 0) {
+            <span class="notif-badge">{{ notifCount() }}</span>
+          }
+          @if (notifMenuOpen()) {
+            <div class="notif-dropdown">
+              <div class="notif-header">Pending Actions</div>
+              <div class="notif-body">
+                @if (notifCount() === 0) {
+                  <div class="notif-empty"><i class="ri-checkbox-circle-line"></i> All clear</div>
+                } @else {
+                  <div class="notif-item">
+                    <i class="ri-time-line"></i>
+                    <span>{{ notifCount() }} item(s) pending approval</span>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+
+        <button class="icon-btn" (click)="theme.toggleTheme()" title="Switch Light/Dark Mode">
+          <i [class]="theme.currentTheme() === 'dark' ? 'ri-moon-line' : 'ri-sun-line'"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- ROUTER OUTLET -->
+    <div class="content-area">
+      <router-outlet />
+    </div>
+
+  </div>
+
+</div>

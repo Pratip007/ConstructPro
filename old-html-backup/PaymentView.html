@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment History & Ledger View</title>
+    <!-- Load Bootstrap & FontAwesome -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Libraries for Export (Excel & PDF) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+    <!-- MASTER THEME MEMORY INTEGRATION -->
+    <script>
+        const savedTheme = localStorage.getItem('atr_theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        window.addEventListener('storage', function(e) {
+            if(e.key === 'atr_theme') { document.documentElement.setAttribute('data-theme', e.newValue); }
+        });
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
+
+        /* ================= THEME VARIABLES ================= */
+        :root {
+            --bg-page: #f4f7f6;
+            --bg-card: #ffffff;
+            --text-main: #2c3e50;
+            --text-muted: #6c757d;
+            --border-color: #e0e0e0;
+            --input-bg: #ffffff;
+            --table-header: #f8f9fa;
+            --table-hover: #f1f3f5;
+            --primary: #007bff;
+            --success: #28a745;
+            --danger: #dc3545;
+            --shadow: 0 4px 20px rgba(0,0,0,0.08);
+            --footer-bg: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            --inline-edit-bg: #eef5ff;
+        }
+
+        [data-theme="dark"] {
+            --bg-page: #121212;
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --input-bg: #2b2b2b;
+            --table-header: #2b2b2b;
+            --table-hover: #333333;
+            --primary: #ffc107;
+            --success: #20c997;
+            --danger: #ff6b6b;
+            --shadow: 0 4px 20px rgba(0,0,0,0.5);
+            --footer-bg: linear-gradient(135deg, #2b2b2b 0%, #1a1a1a 100%);
+            --inline-edit-bg: rgba(0, 123, 255, 0.1);
+        }
+
+        * { font-family: 'Montserrat', sans-serif; transition: background-color 0.3s ease, color 0.3s ease; }
+        body { background-color: var(--bg-page); color: var(--text-main); margin-bottom: 80px; }
+
+        /* Top Action Bar & Export Buttons */
+        .top-action-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
+        .action-left { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+        .action-right { display: flex; gap: 15px; align-items: center; }
+        
+        .btn-back { background-color: #6c757d; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: 0.3s; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .btn-back:hover { background-color: #5a6268; color: white; transform: translateY(-2px); }
+
+        .btn-export { background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color); padding: 10px 15px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 6px; box-shadow: var(--shadow); }
+        .btn-export:hover { border-color: var(--primary); color: var(--primary); transform: translateY(-2px); }
+        .btn-export.pdf:hover { border-color: #dc3545; color: #dc3545; }
+        .btn-export.excel:hover { border-color: #28a745; color: #28a745; }
+        
+        /* Modern Search Box */
+        .search-wrapper { position: relative; width: 100%; min-width: 300px; }
+        .search-wrapper i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+        .search-input { width: 100%; padding: 12px 20px 12px 45px; border-radius: 30px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-main); outline: none; font-weight: 500; box-shadow: var(--shadow); transition: 0.3s; }
+        .search-input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.1); }
+        [data-theme="dark"] .search-input:focus { box-shadow: 0 0 0 4px rgba(255, 193, 7, 0.1); }
+
+        /* Tabs Styling */
+        .nav-tabs { border-bottom: 2px solid var(--border-color); margin-bottom: 20px; }
+        .nav-tabs .nav-link { font-weight: 600; color: var(--text-muted); border: none; padding: 12px 20px; border-radius: 8px 8px 0 0; transition: 0.3s; }
+        .nav-tabs .nav-link:hover { color: var(--primary); background: var(--input-bg); }
+        .nav-tabs .nav-link.active { color: var(--primary); border-bottom: 3px solid var(--primary); background: transparent; }
+
+        /* Table Design */
+        .table-custom-wrapper { background: var(--bg-card); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); border: 1px solid var(--border-color); }
+        .table { margin-bottom: 0; color: var(--text-main); }
+        .table th { background-color: var(--table-header); color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.5px; border-bottom: 1px solid var(--border-color); padding: 15px; }
+        .table td { padding: 15px; border-bottom: 1px solid var(--border-color); vertical-align: middle; font-size: 0.95rem; }
+        .table-hover tbody tr:hover { background-color: var(--table-hover); color: var(--text-main); }
+        
+        .amount-text { font-weight: 700; color: var(--success); }
+        .due-text { font-weight: 700; color: #dc3545; }
+        .bal-text { font-weight: 700; color: #0dcaf0; }
+        [data-theme="dark"] .due-text { color: #ff6b6b; }
+
+        /* Inline Edit Styling */
+        tr.editing-row { background-color: var(--inline-edit-bg) !important; box-shadow: inset 0 0 0 1px var(--primary); }
+        .inline-input { width: 100%; padding: 6px 10px; border: 1px solid var(--primary); border-radius: 4px; background: var(--input-bg); color: var(--text-main); font-size: 0.9rem; font-weight: 600; outline: none; }
+        .inline-input:focus { box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2); }
+        [data-theme="dark"] .inline-input:focus { box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.2); }
+        .inline-amount-wrapper { display: flex; align-items: center; gap: 5px; }
+
+        /* Action Buttons */
+        .btn-action-group { display: flex; gap: 8px; justify-content: center; }
+        .btn-icon { width: 32px; height: 32px; border-radius: 6px; border: none; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s; font-size: 0.85rem; }
+        .btn-edit { background: rgba(0, 123, 255, 0.1); color: var(--primary); }
+        .btn-edit:hover { background: var(--primary); color: white; transform: translateY(-2px); }
+        .btn-delete { background: rgba(220, 53, 69, 0.1); color: var(--danger); }
+        .btn-delete:hover { background: var(--danger); color: white; transform: translateY(-2px); }
+        
+        /* Save / Cancel Inline Buttons */
+        .btn-save-inline { background: var(--success); color: white; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 5px;}
+        .btn-cancel-inline { background: var(--danger); color: white; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 5px;}
+        .btn-save-inline:hover { background: #218838; }
+        .btn-cancel-inline:hover { background: #c82333; }
+
+        /* Status & View Buttons */
+        .badge-gst { background: #17a2b8; color: white; font-size: 0.75rem; padding: 4px 8px; border-radius: 4px; font-weight: bold; margin-left: 8px; }
+        .btn-view-invoice { background: rgba(23, 162, 184, 0.1); color: #17a2b8; border: 1px solid #17a2b8; padding: 5px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: 0.3s; display: inline-flex; align-items: center; gap: 5px; }
+        .btn-view-invoice:hover { background: #17a2b8; color: white; transform: translateY(-2px); }
+
+        /* ================= STICKY CALCULATION FOOTER ================= */
+        .sticky-footer { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--footer-bg); padding: 15px 30px; display: flex; justify-content: space-around; align-items: center; box-shadow: 0 -4px 20px rgba(0,0,0,0.15); z-index: 1000; border-top: 1px solid var(--border-color); }
+        .calc-box { text-align: center; color: white; transition: 0.3s; }
+        .calc-title { font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; transition: 0.3s;}
+        .calc-value { font-size: 1.5rem; font-weight: 700; margin-top: 5px; transition: 0.3s;}
+        .val-paid { color: #4ade80; }
+        .val-due { color: #ff8787; }
+
+        /* ================= MODALS ================= */
+        .custom-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); z-index: 2000; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s; }
+        .custom-modal.show { display: flex; opacity: 1; }
+        .modal-box { background: var(--bg-card); width: 90%; max-width: 450px; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); overflow: hidden; transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); border: 1px solid var(--border-color); }
+        .custom-modal.show .modal-box { transform: scale(1); }
+        
+        .modal-header { padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); }
+        .modal-header h3 { margin: 0; font-size: 1.2rem; font-weight: 600; color: var(--primary); }
+        .btn-close-modal { background: none; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer; transition: 0.2s; }
+        .btn-close-modal:hover { color: var(--danger); }
+        
+        .modal-body { padding: 25px; }
+        .admin-input-group { margin-bottom: 20px; }
+        .admin-input-group label { display: block; font-size: 0.9rem; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; }
+        .admin-input { width: 100%; padding: 12px 15px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-main); font-size: 1rem; outline: none; transition: 0.3s; }
+        .admin-input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.1); }
+        
+        .modal-footer { padding: 15px 20px; background: var(--table-header); border-top: 1px solid var(--border-color); display: flex; gap: 10px; }
+        .btn-modal-action { flex: 1; padding: 10px 0; border-radius: 8px; font-weight: 600; border: none; cursor: pointer; transition: 0.3s; }
+        .btn-auth-confirm { background: var(--primary); color: white; }
+        .btn-auth-confirm:hover { background: var(--primary-hover); }
+        .btn-auth-cancel { background: var(--border-color); color: var(--text-main); }
+        .btn-auth-cancel:hover { background: #cbd3da; }
+
+        #invoiceModal .modal-box { max-width: 600px; }
+        .invoice-preview-area { width: 100%; height: 300px; background: var(--readonly-bg); border: 2px dashed var(--border-color); border-radius: 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; color: var(--text-muted); margin-bottom: 20px; }
+        .btn-download { background: #28a745; color: white; border: none; padding: 10px 25px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.3s; }
+        .btn-download:hover { background: #218838; }
+
+        /* ================= PRINT SPECIFIC CSS (TALLY STYLE) ================= */
+        .print-header { display: none; text-align: center; margin-bottom: 30px; color: #000; }
+        .print-header h1 { font-weight: bold; margin: 0; font-size: 24px; text-transform: uppercase; border-bottom: 2px solid #000; display: inline-block; padding-bottom: 5px; }
+        .print-header h3 { margin: 10px 0 5px 0; font-size: 16px; text-transform: uppercase; }
+        .print-header p { margin: 0; font-size: 12px; }
+
+        @media print {
+            body { background: #fff; color: #000; margin: 0; padding: 0; font-family: monospace; }
+            * { visibility: hidden; } 
+            .print-header, .print-header * { visibility: visible; }
+            .tab-content, .tab-content * { visibility: visible; }
+            
+            .print-header { display: block; position: absolute; top: 0; left: 0; width: 100%; }
+            .tab-content { position: absolute; top: 100px; left: 0; width: 100%; }
+            
+            .table-custom-wrapper { box-shadow: none; border: none; }
+            .table { border: 1px solid #000; }
+            .table th { background-color: #eee !important; color: #000; border: 1px solid #000; -webkit-print-color-adjust: exact; padding: 8px; }
+            .table td { border: 1px solid #000; padding: 8px; color: #000; }
+            
+            .top-action-bar, .nav-tabs, .action-cell, .sticky-footer, .btn-view-invoice, .badge-gst { display: none !important; }
+            
+            .print-totals { display: block !important; margin-top: 20px; border: 1px solid #000; padding: 15px; visibility: visible; page-break-inside: avoid; }
+            .print-totals * { visibility: visible; }
+            .print-totals table { width: 100%; border: none; }
+            .print-totals td { border: none; font-weight: bold; font-size: 14px; text-align: right; }
+        }
+        .print-totals { display: none; }
+
+    </style>
+</head>
+<body>
+
+<div class="container mt-4">
+    
+    <!-- TOP ACTION BAR & REPORT EXPORT OPTIONS -->
+    <div class="top-action-bar">
+        <div class="action-left">
+            <a href="AllTypePayment.html" class="btn-back">
+                <i class="fas fa-arrow-left"></i> Back to Payment Entry
+            </a>
+            
+            <div class="search-wrapper">
+                <i class="fas fa-search"></i>
+                <input type="text" id="globalSearch" class="search-input" placeholder="Search data here..." onkeyup="filterTables()">
+            </div>
+        </div>
+
+        <div class="action-right">
+            <button class="btn-export print" onclick="printLedger()"><i class="fas fa-print"></i> Print Ledger</button>
+            <button class="btn-export pdf" onclick="exportToPDF()"><i class="fas fa-file-pdf"></i> Export PDF</button>
+            <button class="btn-export excel" onclick="exportToExcel()"><i class="fas fa-file-excel"></i> Export Excel</button>
+        </div>
+    </div>
+
+    <!-- Hidden Header for Printing -->
+    <div class="print-header" id="printHeader">
+        <h1>ATR CONSTRUCTION</h1>
+        <h3 id="printReportName">Payment Ledger Report</h3>
+        <p>Generated on: <span id="printDate"></span></p>
+    </div>
+
+    <h4 class="mb-4" style="font-weight: 700;">📊 Payment Records & Ledger</h4>
+    
+    <!-- TABS -->
+    <ul class="nav nav-tabs" id="paymentTabs" role="tablist">
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#empView" onclick="calculateTotals()">Employees</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#contView" onclick="calculateTotals()">Contractors</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#mobView" onclick="calculateTotals()">Mobilization/Retailer</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#supView" onclick="calculateTotals()">Supervisors</button></li>
+    </ul>
+
+    <div class="tab-content">
+        <!-- 1. EMPLOYEE VIEW -->
+        <div class="tab-pane fade show active" id="empView">
+            <div class="table-custom-wrapper">
+                <table class="table table-hover align-middle" id="empTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Emp Name & ID</th>
+                            <th>Account (Head)</th>
+                            <th>Amount Paid</th>
+                            <th>Mode</th>
+                            <th>Remarks</th>
+                            <th class="text-center action-cell">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr id="emp-row-1" data-type="employee">
+                            <td class="edit-cell date-col">2026-08-09</td>
+                            <td class="target-name">Rahul (Emp-101)</td>
+                            <td class="edit-cell acc-col">ATR Construction</td>
+                            <td class="amount-text pay-col edit-cell">₹5000.00</td>
+                            <td class="edit-cell mode-col">Bank Transfer</td>
+                            <td class="edit-cell rem-col">August Advance</td>
+                            <td class="action-cell">
+                                <div class="btn-action-group">
+                                    <button class="btn-icon btn-edit" onclick="initiateAdminAction('edit', 'emp-row-1')" title="Edit"><i class="fas fa-edit"></i></button>
+                                    <button class="btn-icon btn-delete" onclick="initiateAdminAction('delete', 'emp-row-1')" title="Delete"><i class="fas fa-trash-alt"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr id="emp-row-2" data-type="employee">
+                            <td class="edit-cell date-col">2026-08-10</td>
+                            <td class="target-name">Sumi (Emp-102)</td>
+                            <td class="edit-cell acc-col">Cash Fund</td>
+                            <td class="amount-text pay-col edit-cell">₹2500.00</td>
+                            <td class="edit-cell mode-col">Cash</td>
+                            <td class="edit-cell rem-col">Site Allowance</td>
+                            <td class="action-cell">
+                                <div class="btn-action-group">
+                                    <button class="btn-icon btn-edit" onclick="initiateAdminAction('edit', 'emp-row-2')" title="Edit"><i class="fas fa-edit"></i></button>
+                                    <button class="btn-icon btn-delete" onclick="initiateAdminAction('delete', 'emp-row-2')" title="Delete"><i class="fas fa-trash-alt"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 2. CONTRACTOR VIEW -->
+        <div class="tab-pane fade" id="contView">
+            <div class="table-custom-wrapper">
+                <table class="table table-hover align-middle" id="contTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Contractor & Invoice</th>
+                            <th>Account (Head)</th>
+                            <th>Amount Paid</th>
+                            <th>Remaining Due</th>
+                            <th>Mode</th>
+                            <th class="text-center action-cell">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr id="cont-row-1" data-type="contractor">
+                            <td class="edit-cell date-col">2026-08-08</td>
+                            <td class="target-name">
+                                <strong>Amitabha Roy</strong> <span class="badge-gst">GST</span><br>
+                                <small style="color:var(--text-muted);">INV-ATR-2026-001</small>
+                                <button class="btn-view-invoice mt-1" onclick="openInvoiceModal('INV-ATR-2026-001', 'Amitabha Roy')"><i class="fas fa-eye"></i> View Invoice</button>
+                            </td>
+                            <td class="edit-cell acc-col">Digital Point</td>
+                            <td class="amount-text pay-col edit-cell">₹15000.00</td>
+                            <td class="due-text due-col edit-cell">₹5000.00</td>
+                            <td class="edit-cell mode-col">Bank Transfer</td>
+                            <td class="action-cell">
+                                <div class="btn-action-group">
+                                    <button class="btn-icon btn-edit" onclick="initiateAdminAction('edit', 'cont-row-1')" title="Edit"><i class="fas fa-edit"></i></button>
+                                    <button class="btn-icon btn-delete" onclick="initiateAdminAction('delete', 'cont-row-1')" title="Delete"><i class="fas fa-trash-alt"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 3. MOBILIZATION / RETAILER VIEW -->
+        <div class="tab-pane fade" id="mobView">
+            <div class="table-custom-wrapper">
+                <table class="table table-hover align-middle" id="mobTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Party / Vendor</th>
+                            <th>Invoice No</th>
+                            <th>Account (Head)</th>
+                            <th>Paid Amount</th>
+                            <th>Remaining Due</th>
+                            <th>Mode</th>
+                            <th class="text-center action-cell">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr id="mob-row-1" data-type="mobilization">
+                            <td class="edit-cell date-col">2026-08-07</td>
+                            <td class="target-name">JCB Earthmovers</td>
+                            <td>MOB-INV-001</td>
+                            <td class="edit-cell acc-col">HDFC Bank (ATR)</td>
+                            <td class="amount-text pay-col edit-cell">₹25000.00</td>
+                            <td class="due-text due-col edit-cell">₹0.00</td> 
+                            <td class="edit-cell mode-col">Bank Transfer</td>
+                            <td class="action-cell">
+                                <div class="btn-action-group">
+                                    <button class="btn-icon btn-edit" onclick="initiateAdminAction('edit', 'mob-row-1')" title="Edit"><i class="fas fa-edit"></i></button>
+                                    <button class="btn-icon btn-delete" onclick="initiateAdminAction('delete', 'mob-row-1')" title="Delete"><i class="fas fa-trash-alt"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 4. SUPERVISOR VIEW -->
+        <div class="tab-pane fade" id="supView">
+            <div class="table-custom-wrapper">
+                <table class="table table-hover align-middle" id="supTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Site Assigned</th>
+                            <th>Supervisor Name</th>
+                            <th>Account (Head)</th>
+                            <th>Available Balance</th>
+                            <th>Fund Transferred</th>
+                            <th>Mode</th>
+                            <th>Remarks</th>
+                            <th class="text-center action-cell">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr id="sup-row-1" data-type="supervisor">
+                            <td class="edit-cell date-col">2026-08-16</td>
+                            <td>Dum Dum Project</td>
+                            <td class="target-name"><strong>Bikram Saha</strong></td>
+                            <td class="edit-cell acc-col">HDFC Bank (ATR)</td>
+                            <td class="bal-text bal-col edit-cell">₹12500.00</td>
+                            <td class="amount-text pay-col edit-cell">₹5000.00</td>
+                            <td class="edit-cell mode-col">Bank Transfer</td>
+                            <td class="edit-cell rem-col">Weekly Site Expense</td>
+                            <td class="action-cell">
+                                <div class="btn-action-group">
+                                    <button class="btn-icon btn-edit" onclick="initiateAdminAction('edit', 'sup-row-1')" title="Edit"><i class="fas fa-edit"></i></button>
+                                    <button class="btn-icon btn-delete" onclick="initiateAdminAction('delete', 'sup-row-1')" title="Delete"><i class="fas fa-trash-alt"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Print Footer (Appears only on print) -->
+        <div class="print-totals" id="printTotalsBox">
+            <table>
+                <tr>
+                    <td style="text-align: left;">Authorized Signatory: ________________</td>
+                    <td id="printTotalPaidText">Total Paid: Rs.0.00</td>
+                    <td id="printTotalDueText">Total Due: Rs.0.00</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ================= STICKY CALCULATION FOOTER ================= -->
+<div class="sticky-footer">
+    <div class="calc-box">
+        <div class="calc-title">Total Amount Paid</div>
+        <div class="calc-value val-paid" id="totalPaidDisplay">₹0.00</div>
+    </div>
+    <div class="calc-box">
+        <div class="calc-title" id="dynamicCalcTitle">Total Remaining Due</div>
+        <div class="calc-value val-due" id="totalDueDisplay">₹0.00</div>
+    </div>
+</div>
+
+<!-- ================= ADMIN AUTHENTICATION MODAL ================= -->
+<div class="custom-modal" id="authModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3 id="authModalTitle"><i class="fas fa-user-shield"></i> Admin Verification</h3>
+            <button class="btn-close-modal" onclick="closeAuthModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">
+                You are about to <strong id="actionTypeSpan" style="color: var(--primary);">edit</strong> the record for <strong id="targetNameSpan">...</strong>. Admin permission is required.
+            </p>
+            <div class="admin-input-group">
+                <label>Enter Admin Password</label>
+                <input type="password" id="adminPasswordInput" class="admin-input" placeholder="Type password here...">
+                <div id="authErrorMsg" style="color: var(--danger); font-size: 0.85rem; font-weight: bold; margin-top: 8px; display: none;">❌ Incorrect Password!</div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-modal-action btn-auth-cancel" onclick="closeAuthModal()">Cancel</button>
+            <button class="btn-modal-action btn-auth-confirm" onclick="executeAdminAction()">Confirm Action</button>
+        </div>
+    </div>
+</div>
+
+<!-- ================= INVOICE VIEW MODAL ================= -->
+<div class="custom-modal" id="invoiceModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3><i class="fas fa-file-pdf"></i> Invoice Document</h3>
+            <button class="btn-close-modal" onclick="closeInvoiceModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body" style="text-align: center;">
+            <div class="invoice-preview-area">
+                <i class="fas fa-image" style="font-size: 4rem; margin-bottom: 15px; opacity: 0.5;"></i>
+                <h5 id="modalInvTitle" style="color: var(--text-main);">INV-XXXX</h5>
+                <p>Preview of the uploaded document will appear here.</p>
+            </div>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Vendor: <strong id="modalVendorName">Name</strong></p>
+        </div>
+        <div class="modal-footer" style="justify-content: flex-end;">
+            <button class="btn-download" onclick="downloadMockInvoice()"><i class="fas fa-download"></i> Download PDF</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // ================= GLOBAL SEARCH FILTER =================
+    function filterTables() {
+        const query = document.getElementById('globalSearch').value.toLowerCase();
+        const activeTabPane = document.querySelector('.tab-pane.active');
+        const activeTable = activeTabPane.querySelector('table');
+        
+        const rows = activeTable.querySelectorAll('tbody tr');
+        rows.forEach(row => {
+            const textData = row.innerText.toLowerCase();
+            row.style.display = textData.includes(query) ? '' : 'none';
+        });
+        calculateTotals();
+    }
+
+    // ================= DYNAMIC CALCULATION ENGINE =================
+    function calculateTotals() {
+        setTimeout(() => {
+            const activeTabPane = document.querySelector('.tab-pane.active');
+            if(!activeTabPane) return;
+
+            // Calculate Paid Amount
+            const paidCells = activeTabPane.querySelectorAll('tbody tr:not([style*="display: none"]) .pay-col');
+            let totalPaid = 0;
+            paidCells.forEach(cell => {
+                let val = parseFloat(cell.innerText.replace(/[^0-9.-]+/g,"")) || parseFloat(cell.querySelector('input')?.value) || 0;
+                totalPaid += val;
+            });
+            let paidText = '₹' + totalPaid.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('totalPaidDisplay').innerText = paidText;
+
+            // Calculate Due / Balance Amount
+            const dynamicTitle = document.getElementById('dynamicCalcTitle');
+            const dynamicDisplay = document.getElementById('totalDueDisplay');
+            let dueText = '';
+            let titleText = '';
+
+            if (activeTabPane.id === 'supView') {
+                titleText = "Total Available Balance";
+                dynamicTitle.innerText = titleText;
+                dynamicDisplay.style.color = "#0dcaf0"; 
+                const balCells = activeTabPane.querySelectorAll('tbody tr:not([style*="display: none"]) .bal-col');
+                let totalBal = 0;
+                balCells.forEach(cell => { totalBal += parseFloat(cell.innerText.replace(/[^0-9.-]+/g,"")) || parseFloat(cell.querySelector('input')?.value) || 0; });
+                dueText = '₹' + totalBal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                dynamicDisplay.innerText = dueText;
+            } else {
+                titleText = "Total Remaining Due";
+                dynamicTitle.innerText = titleText;
+                dynamicDisplay.style.color = "#ff8787"; 
+                const dueCells = activeTabPane.querySelectorAll('tbody tr:not([style*="display: none"]) .due-col');
+                let totalDue = 0;
+                dueCells.forEach(cell => { totalDue += parseFloat(cell.innerText.replace(/[^0-9.-]+/g,"")) || parseFloat(cell.querySelector('input')?.value) || 0; });
+                dueText = '₹' + totalDue.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                dynamicDisplay.innerText = dueText;
+            }
+
+            // Sync with Print Totals (Replace ₹ with Rs. for print/pdf safety)
+            document.getElementById('printTotalPaidText').innerText = `Total Paid: ${paidText.replace('₹', 'Rs. ')}`;
+            document.getElementById('printTotalDueText').innerText = `${titleText}: ${dueText.replace('₹', 'Rs. ')}`;
+
+        }, 50); 
+    }
+
+    window.onload = function() { calculateTotals(); document.getElementById('printDate').innerText = new Date().toLocaleString(); };
+
+    // ================= ADMIN AUTH & INLINE EDIT/DELETE ENGINE =================
+    let currentAction = { type: '', rowId: '' };
+
+    function initiateAdminAction(type, rowId) {
+        currentAction = { type, rowId };
+        const row = document.getElementById(rowId);
+        const targetName = row.querySelector('.target-name').innerText.split('\n')[0].trim();
+        
+        document.getElementById('actionTypeSpan').innerText = type.toUpperCase();
+        document.getElementById('actionTypeSpan').style.color = type === 'delete' ? 'var(--danger)' : 'var(--primary)';
+        document.getElementById('targetNameSpan').innerText = targetName;
+        
+        document.getElementById('authErrorMsg').style.display = 'none';
+        document.getElementById('adminPasswordInput').value = '';
+        
+        document.getElementById('authModal').classList.add('show');
+        setTimeout(() => document.getElementById('adminPasswordInput').focus(), 100);
+    }
+
+    function closeAuthModal() { document.getElementById('authModal').classList.remove('show'); }
+
+    function executeAdminAction() {
+        const pass = document.getElementById('adminPasswordInput').value;
+        if(pass !== 'admin') { document.getElementById('authErrorMsg').style.display = 'block'; return; }
+        closeAuthModal();
+
+        if (currentAction.type === 'delete') {
+            const row = document.getElementById(currentAction.rowId);
+            if(row) {
+                row.style.background = 'rgba(220, 53, 69, 0.2)';
+                setTimeout(() => { row.remove(); calculateTotals(); alert("🗑️ Record deleted successfully!"); }, 300);
+            }
+        } 
+        else if (currentAction.type === 'edit') { enableInlineEdit(currentAction.rowId); }
+    }
+
+    // ================= INLINE EDIT LOGIC =================
+    let originalRowHTML = {};
+
+    function enableInlineEdit(rowId) {
+        const row = document.getElementById(rowId);
+        row.classList.add('editing-row');
+        originalRowHTML[rowId] = row.innerHTML;
+        
+        const editCells = row.querySelectorAll('.edit-cell');
+        editCells.forEach(cell => {
+            let originalText = cell.innerText.trim();
+            let cleanVal = originalText.replace('₹', '');
+            
+            if(cell.classList.contains('date-col')) {
+                cell.innerHTML = `<input type="date" class="inline-input" value="${cleanVal}">`;
+            } else if(cell.classList.contains('pay-col') || cell.classList.contains('due-col') || cell.classList.contains('bal-col')) {
+                cell.innerHTML = `<div class="inline-amount-wrapper"><span>₹</span><input type="number" step="0.01" class="inline-input" value="${cleanVal}" oninput="calculateTotals()"></div>`;
+            } else if(cell.classList.contains('mode-col')) {
+                cell.innerHTML = `
+                    <select class="inline-input">
+                        <option value="Bank Transfer" ${cleanVal==='Bank Transfer'?'selected':''}>Bank Transfer</option>
+                        <option value="Cash" ${cleanVal==='Cash'?'selected':''}>Cash</option>
+                        <option value="UPI" ${cleanVal==='UPI'?'selected':''}>UPI</option>
+                        <option value="Cheque" ${cleanVal==='Cheque'?'selected':''}>Cheque</option>
+                    </select>`;
+            } else {
+                cell.innerHTML = `<input type="text" class="inline-input" value="${cleanVal}">`;
+            }
+        });
+
+        const actionCell = row.querySelector('.action-cell');
+        actionCell.innerHTML = `
+            <div class="btn-action-group flex-column align-items-center">
+                <button class="btn-save-inline" onclick="saveInlineEdit('${rowId}')"><i class="fas fa-check"></i> Save</button>
+                <button class="btn-cancel-inline" onclick="cancelInlineEdit('${rowId}')"><i class="fas fa-times"></i> Cancel</button>
+            </div>
+        `;
+    }
+
+    function saveInlineEdit(rowId) {
+        const row = document.getElementById(rowId);
+        const editCells = row.querySelectorAll('.edit-cell');
+        
+        editCells.forEach(cell => {
+            const input = cell.querySelector('input, select');
+            if(input) {
+                let val = input.value;
+                if(cell.classList.contains('pay-col') || cell.classList.contains('due-col') || cell.classList.contains('bal-col')) {
+                    val = parseFloat(val).toFixed(2);
+                    cell.innerHTML = `₹${val}`;
+                } else { cell.innerHTML = val; }
+            }
+        });
+
+        row.classList.remove('editing-row');
+        const actionCell = row.querySelector('.action-cell');
+        actionCell.innerHTML = `
+            <div class="btn-action-group justify-content-center">
+                <button class="btn-icon btn-edit" onclick="initiateAdminAction('edit', '${rowId}')" title="Edit"><i class="fas fa-edit"></i></button>
+                <button class="btn-icon btn-delete" onclick="initiateAdminAction('delete', '${rowId}')" title="Delete"><i class="fas fa-trash-alt"></i></button>
+            </div>
+        `;
+        calculateTotals();
+        alert("💾 Record updated successfully!");
+    }
+
+    function cancelInlineEdit(rowId) {
+        const row = document.getElementById(rowId);
+        row.innerHTML = originalRowHTML[rowId];
+        row.classList.remove('editing-row');
+        calculateTotals();
+    }
+
+    // ================= EXPORT & PRINT ENGINE (TALLY STYLE) =================
+    
+    function extractActiveTableData() {
+        const activePane = document.querySelector('.tab-pane.active');
+        const table = activePane.querySelector('table');
+        let headers = [];
+        let rows = [];
+        
+        const ths = table.querySelectorAll('thead th');
+        for(let i=0; i<ths.length - 1; i++) { 
+            headers.push(ths[i].innerText.trim());
+        }
+        
+        const trs = table.querySelectorAll('tbody tr:not([style*="display: none"])');
+        trs.forEach(tr => {
+            let rowData = [];
+            const tds = tr.querySelectorAll('td');
+            for(let i=0; i<tds.length - 1; i++) { 
+                let input = tds[i].querySelector('input, select');
+                let val = "";
+                if(input) { val = input.value; } 
+                else {
+                    let clone = tds[i].cloneNode(true);
+                    let btns = clone.querySelectorAll('button'); 
+                    btns.forEach(b => b.remove());
+                    // Replace Rupee symbol with Rs. for export safety
+                    val = clone.innerText.replace(/₹/g, "Rs. ").replace(/\n/g, " ").trim();
+                }
+                rowData.push(val);
+            }
+            rows.push(rowData);
+        });
+        return { headers, rows };
+    }
+
+    // 1. Print Ledger
+    function printLedger() {
+        const activeTabName = document.querySelector('.nav-link.active').innerText;
+        document.getElementById('printReportName').innerText = `${activeTabName} Payment Ledger`;
+        window.print();
+    }
+
+    // 2. Export PDF (FIXED FONT)
+    function exportToPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('landscape'); 
+        const activeTabName = document.querySelector('.nav-link.active').innerText;
+        
+        doc.setFontSize(22);
+        doc.setFont("helvetica", "bold");
+        doc.text("ATR CONSTRUCTION", 148, 15, { align: "center" });
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "normal");
+        doc.text(`${activeTabName} Payment Ledger`, 148, 23, { align: "center" });
+        doc.setFontSize(10);
+        doc.text(`Generated on: ${new Date().toLocaleString()}`, 148, 30, { align: "center" });
+        
+        const tableData = extractActiveTableData();
+        
+        // Setup autotable with Courier font for clear numbers
+        doc.autoTable({
+            head: [tableData.headers],
+            body: tableData.rows,
+            startY: 35,
+            theme: 'grid',
+            headStyles: { fillColor: [44, 62, 80], textColor: [255, 255, 255], font: "helvetica", fontStyle: "bold" },
+            styles: { fontSize: 9, font: "courier" } // Changed font to Courier
+        });
+        
+        let finalY = doc.lastAutoTable.finalY + 10;
+        let totalPaid = document.getElementById('totalPaidDisplay').innerText.replace('₹', 'Rs. ');
+        let totalDue = document.getElementById('totalDueDisplay').innerText.replace('₹', 'Rs. ');
+        let dueLabel = document.getElementById('dynamicCalcTitle').innerText;
+        
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.text(`Total Paid: ${totalPaid}`, 14, finalY);
+        doc.text(`${dueLabel}: ${totalDue}`, 140, finalY); 
+        
+        doc.save(`ATR_Ledger_${activeTabName}.pdf`);
+    }
+
+    // 3. Export Excel
+    function exportToExcel() {
+        const tableData = extractActiveTableData();
+        const activeTabName = document.querySelector('.nav-link.active').innerText;
+        
+        let aoa = [];
+        aoa.push(["ATR CONSTRUCTION"]);
+        aoa.push([`${activeTabName} Payment Ledger`]);
+        aoa.push([`Generated on: ${new Date().toLocaleString()}`]);
+        aoa.push([]); 
+        
+        aoa.push(tableData.headers);
+        tableData.rows.forEach(r => aoa.push(r));
+        
+        aoa.push([]); 
+        let totalPaid = document.getElementById('totalPaidDisplay').innerText.replace('₹', 'Rs. ');
+        let totalDue = document.getElementById('totalDueDisplay').innerText.replace('₹', 'Rs. ');
+        let dueLabel = document.getElementById('dynamicCalcTitle').innerText;
+        
+        aoa.push(["TOTALS:", "", "", `Paid: ${totalPaid}`, `${dueLabel}: ${totalDue}`]);
+        
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Ledger");
+        XLSX.writeFile(wb, `ATR_Ledger_${activeTabName}.xlsx`);
+    }
+
+    // ================= INVOICE MODAL CONTROLS =================
+    function openInvoiceModal(invNo, vendor) {
+        document.getElementById('modalInvTitle').innerText = invNo;
+        document.getElementById('modalVendorName').innerText = vendor;
+        document.getElementById('invoiceModal').classList.add('show');
+    }
+    function closeInvoiceModal() { document.getElementById('invoiceModal').classList.remove('show'); }
+    window.onclick = function(event) { if(event.target.classList.contains('custom-modal')) event.target.classList.remove('show'); }
+    function downloadMockInvoice() { alert(`📥 Downloading invoice: ${document.getElementById('modalInvTitle').innerText}.pdf`); }
+
+</script>
+</body>
+</html>

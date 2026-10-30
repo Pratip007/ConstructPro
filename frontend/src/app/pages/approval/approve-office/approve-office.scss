@@ -1,0 +1,108 @@
+.header-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.filter-select {
+  background-color: var(--input-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  outline: none;
+  &:focus { border-color: var(--accent); }
+  option { background-color: var(--bg-card); color: var(--text-main); }
+}
+.action-btns {
+  display: flex;
+  gap: 8px;
+}
+.approval-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.remarks-input {
+  background-color: var(--input-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  outline: none;
+  min-width: 160px;
+  &:focus { border-color: var(--accent); }
+}
+.btn-approve {
+  background: rgba(40, 167, 69, 0.15);
+  color: #28a745;
+  border: 1px solid rgba(40, 167, 69, 0.4);
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s;
+  &:hover { background: #28a745; color: #fff; }
+}
+.btn-reject {
+  background: rgba(220, 53, 69, 0.15);
+  color: #ff6b6b;
+  border: 1px solid rgba(220, 53, 69, 0.4);
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s;
+  &:hover { background: #dc3545; color: #fff; }
+}
+.btn-expand {
+  display: inline-block;
+  background: transparent;
+  color: var(--accent);
+  border: none;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 0;
+  margin-top: 4px;
+  text-decoration: underline;
+}
+.detail-row td {
+  background: var(--bg-card);
+  padding: 12px 16px;
+}
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.detail-section {
+  h4 {
+    margin: 0 0 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-main);
+  }
+}
+.detail-table {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.detail-field {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+}
+.detail-label {
+  font-weight: 600;
+  color: var(--text-muted);
+  min-width: 100px;
+}
+.detail-value {
+  color: var(--text-main);
+}

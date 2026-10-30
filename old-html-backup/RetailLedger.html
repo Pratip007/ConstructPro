@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Retailer Ledger</title>
+    
+    <!-- Sync theme with Master Dashboard -->
+    <script>
+        const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        window.addEventListener('storage', function(e) {
+            if(e.key === 'atr_theme') { document.documentElement.setAttribute('data-theme', e.newValue); }
+        });
+    </script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- SheetJS (XLSX) Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- jsPDF & AutoTable Library for Professional Tally-Style PDF Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-body: transparent; 
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #b0b0b0;
+            --border-color: rgba(255, 255, 255, 0.12);
+            
+            /* Dynamic Glass & Input Variables */
+            --glass-bg: rgba(30, 30, 30, 0.75);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --input-bg: rgba(15, 15, 15, 0.6);
+            --input-focus-bg: rgba(20, 20, 20, 0.9);
+            
+            --shadow: 0 4px 20px rgba(0,0,0,0.4);
+            
+            /* Primary Theme Color (#0888C9) */
+            --theme-color: #0888C9;
+            --theme-glow: rgba(8, 136, 201, 0.3);
+            --theme-transition: all 0.3s ease;
+        }
+
+        [data-theme="light"] {
+            --bg-body: transparent;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #666666;
+            --border-color: rgba(0, 0, 0, 0.12);
+            
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(0, 0, 0, 0.1);
+            --input-bg: rgba(240, 240, 240, 0.8);
+            --input-focus-bg: #ffffff;
+            
+            --shadow: 0 8px 25px rgba(0,0,0,0.06);
+        }
+
+        /* Crisp Font Rendering */
+        * { 
+            margin: 0; padding: 0; box-sizing: border-box; 
+            font-family: 'Montserrat', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+        }
+        
+        body { background-color: var(--bg-body); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; transition: var(--theme-transition); }
+        .main-content { flex: 1; display: flex; flex-direction: column; padding: 20px 40px; overflow: hidden; width: 100%; max-width: 1600px; margin: 0 auto; }
+
+        /* HEADER */
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; flex-shrink: 0; flex-wrap: wrap; gap: 15px; transition: var(--theme-transition); }
+        .header h1 { font-size: 26px; color: var(--theme-color); display: flex; align-items: center; gap: 12px; margin-top: 8px; font-weight: 700; flex-wrap: wrap; }
+        
+        .sup-site-badge {
+            display: none;
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-back-dash { 
+            background-color: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color); 
+            text-decoration: none; padding: 9px 16px; border-radius: 6px; font-weight: bold; font-size: 13px; 
+            transition: all 0.3s; display: flex; align-items: center; width: max-content; margin-bottom: 10px; cursor: pointer;
+        }
+        .btn-back-dash:hover { background-color: var(--theme-color); color: #ffffff; border-color: var(--theme-color); transform: translateY(-2px); box-shadow: 0 4px 10px var(--theme-glow); }
+
+        /* ACTION BAR */
+        .top-action-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-shrink: 0; gap: 15px; flex-wrap: wrap;}
+        
+        .btn-reset { padding: 10px 20px; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; border: none; display: flex; align-items: center; gap: 8px; text-transform: uppercase; transition: all 0.3s; background: rgba(220, 53, 69, 0.15); color: #dc3545; border: 1px solid rgba(220, 53, 69, 0.4); }
+        .btn-reset:hover { background-color: #dc3545; color: #ffffff; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(220,53,69,0.3); }
+
+        /* EXPORT DROPDOWN */
+        .export-dropdown { position: relative; display: inline-block; }
+        .btn-export-main { padding: 10px 20px; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; border: none; display: flex; align-items: center; gap: 8px; text-transform: uppercase; transition: all 0.3s; background: rgba(40, 167, 69, 0.15); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.4); }
+        .btn-export-main:hover { background-color: #28a745; color: white; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(40,167,69,0.3); }
+        .export-dropdown-content { display: none; position: absolute; right: 0; top: calc(100% + 5px); background-color: var(--bg-card); min-width: 180px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: 8px; z-index: 999; border: 1px solid var(--theme-color); overflow: hidden; }
+        .export-dropdown-content.show { display: block; animation: fadeIn 0.2s ease; }
+        .export-dropdown-content button { color: var(--text-main); padding: 12px 15px; display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: none; border: none; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.2s; border-bottom: 1px solid var(--border-color); }
+        .export-dropdown-content button:last-child { border-bottom: none; }
+        .export-dropdown-content button:hover { background-color: var(--theme-color); color: white; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* FILTER SECTION */
+        .filter-section { background: var(--bg-card); padding: 15px 20px; border-radius: 10px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 15px; border: 1px solid var(--border-color); border-left: 4px solid var(--theme-color); box-shadow: var(--shadow); flex-shrink: 0; transition: var(--theme-transition); position: relative; z-index: 50; }
+        .filter-row { display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap; position: relative; }
+        .filter-row.row-top { z-index: 30; }
+        .filter-row.row-bottom { z-index: 20; }
+        .filter-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .filter-group label { font-size: 12px; color: var(--text-muted); font-weight: bold; text-transform: uppercase; }
+        
+        .filter-controls input[type="date"] { background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 10px 12px; border-radius: 6px; font-size: 13px; outline: none; transition: 0.3s; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); font-weight: 500; cursor: pointer; color-scheme: dark; }
+        [data-theme="light"] .filter-controls input[type="date"] { color-scheme: light; }
+        ::-webkit-calendar-picker-indicator { filter: invert(0.8); cursor: pointer; }
+        [data-theme="light"] ::-webkit-calendar-picker-indicator { filter: invert(0); }
+        .filter-controls input[type="date"]:focus { border-color: var(--theme-color); box-shadow: 0 0 8px var(--theme-glow); }
+
+        /* CUSTOM ULTRA-SMOOTH SEARCHABLE DROPDOWN */
+        .custom-select { position: relative; min-width: 250px; user-select: none; }
+        .custom-select.wide { width: 350px; }
+        
+        .select-header { background: var(--input-bg); border: 1px solid var(--border-color); padding: 10px 15px; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s ease; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); font-size: 13px; font-weight: 600; color: var(--text-main); }
+        .select-header:hover { border-color: rgba(8, 136, 201, 0.5); }
+        .select-header.active { border-color: var(--theme-color); box-shadow: 0 0 8px var(--theme-glow); background: var(--input-focus-bg); }
+        .select-header .arrow { transition: transform 0.3s ease; font-size: 14px; }
+        .select-header.active .arrow { transform: rotate(180deg); color: var(--theme-color); }
+        
+        .select-header.locked-dropdown {
+            background: rgba(255, 193, 7, 0.08);
+            border-color: rgba(255, 193, 7, 0.4);
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .select-options-container { position: absolute; top: calc(100% + 8px); left: 0; width: 100%; background: var(--bg-card); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--theme-color); border-radius: 8px; box-shadow: 0 15px 35px rgba(0,0,0,0.65); z-index: 999; opacity: 0; visibility: hidden; transform: translateY(-10px); transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); overflow: hidden; }
+        [data-theme="light"] .select-options-container { box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
+        .select-options-container.active { opacity: 1; visibility: visible; transform: translateY(0); }
+        
+        .select-search { padding: 10px; border-bottom: 1px solid var(--border-color); background: rgba(0,0,0,0.2); }
+        [data-theme="light"] .select-search { background: rgba(255,255,255,0.5); }
+        .select-search input { width: 100%; padding: 8px 12px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-main); font-size: 13px; font-weight: 500; outline: none; transition: 0.3s; }
+        .select-search input:focus { border-color: var(--theme-color); }
+        
+        .select-options { max-height: 220px; overflow-y: auto; list-style: none; margin: 0; padding: 5px 0; }
+        .select-options::-webkit-scrollbar { width: 6px; }
+        .select-options::-webkit-scrollbar-thumb { background: rgba(8, 136, 201, 0.4); border-radius: 3px; }
+        .select-options li { padding: 10px 15px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text-main); transition: background 0.2s; display: flex; justify-content: space-between; align-items: center; }
+        .select-options li:hover { background: var(--theme-color); color: #ffffff; }
+
+        /* TABLE SECTION */
+        .table-container { flex: 1; background: var(--bg-card); border-radius: 10px 10px 0 0; border: 1px solid var(--border-color); border-top: 4px solid var(--theme-color); box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: hidden; min-height: 0; transition: var(--theme-transition); position: relative; z-index: 1; }
+        .table-scroll { flex: 1; overflow-y: auto; padding: 0 15px; }
+        
+        .table-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+        .table-scroll::-webkit-scrollbar-track { background: transparent; }
+        .table-scroll::-webkit-scrollbar-thumb { background: rgba(8, 136, 201, 0.3); border-radius: 4px; }
+        .table-scroll::-webkit-scrollbar-thumb:hover { background: var(--theme-color); }
+
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        thead th { position: sticky; top: 0; background-color: var(--input-bg); z-index: 10; padding: 15px 10px; color: var(--theme-color); font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; border-bottom: 2px solid var(--theme-color); white-space: nowrap; transition: var(--theme-transition); }
+        tbody td { padding: 12px 10px; border-bottom: 1px solid var(--border-color); font-size: 13px; color: var(--text-main); vertical-align: middle; transition: var(--theme-transition); font-weight: 500; }
+        tbody tr:hover { background: var(--glass-bg); }
+        
+        .text-dr { color: #dc3545; font-weight: bold; } 
+        .text-cr { color: #28a745; font-weight: bold; } 
+        .text-bal { color: var(--theme-color); font-weight: bold; } 
+        .align-right { text-align: right; }
+        
+        .empty-state { text-align: center; padding: 50px; color: var(--text-muted); font-size: 14px; font-weight: 600; }
+
+        /* SUMMARY BAR */
+        .summary-bar { background: var(--input-bg); padding: 15px 25px; border-radius: 0 0 10px 10px; display: flex; justify-content: space-around; align-items: center; border-top: 2px solid var(--theme-color); flex-shrink: 0; box-shadow: 0 -4px 15px rgba(0,0,0,0.2); z-index: 20; transition: var(--theme-transition); flex-wrap: wrap; gap: 15px; }
+        .summary-box { text-align: center; }
+        .summary-box span { display: block; font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: bold; margin-bottom: 5px; }
+        .summary-box h3 { font-size: 20px; margin: 0; font-weight: 700; color: var(--text-main); }
+    </style>
+</head>
+<body>
+
+    <div class="main-content">
+        <!-- HEADER -->
+        <div class="header">
+            <div>
+                <a href="dashboard_home.html" id="btnBackDashboard" class="btn-back-dash" onclick="handleBackToDashboard(event)">← Back to Dashboard</a>
+                <h1>
+                    📒 Retailer Ledger Book
+                    <span id="supSiteBadge" class="sup-site-badge">🔒 Site Locked</span>
+                    <span id="officeRoleBadge" class="sup-site-badge" style="border-color: #17a2b8; color: #17a2b8;">🏢 Office Mode (View Only)</span>
+                </h1>
+            </div>
+            <div style="color: var(--theme-color); font-size: 14px; font-weight: 600; margin-top: 10px;">Accounts & Settlement</div>
+        </div>
+
+        <!-- ACTION BAR -->
+        <div class="top-action-bar">
+            <div>
+                <p id="pageSubDesc" style="font-size: 13px; color: var(--text-muted); font-weight: 500;">Search a retailer to generate their complete accounting ledger.</p>
+            </div>
+            
+            <div class="export-dropdown" id="exportDropdownContainer">
+                <button class="btn-export-main" onclick="toggleExportMenu(event)">📥 Export Data ▼</button>
+                <div class="export-dropdown-content" id="exportDropdownMenu">
+                    <button onclick="exportLedgerPDF()">📄 Export PDF (A4 Tally Style)</button>
+                    <button onclick="exportLedgerExcel()">📊 Export Excel</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- FILTERS -->
+        <div class="filter-section filter-controls">
+            
+            <!-- Hidden inputs to store actual selected values -->
+            <input type="hidden" id="retailerSearch" value="">
+            <input type="hidden" id="siteFilter" value="">
+
+            <!-- Row 1: Retailer Selection -->
+            <div class="filter-row row-top">
+                <div class="filter-group">
+                    <label id="retailerSelectLabel">Select Retailer / Party:</label>
+                    
+                    <!-- CUSTOM SEARCHABLE DROPDOWN FOR RETAILER -->
+                    <div class="custom-select wide" id="retailerDropdown">
+                        <div class="select-header" id="retailerSelectHeader">
+                            <span class="selected-text" id="retailerSelectedText" style="color: var(--text-muted);">Search and Select Retailer...</span>
+                            <span class="arrow">▼</span>
+                        </div>
+                        <div class="select-options-container">
+                            <div class="select-search">
+                                <input type="text" placeholder="Type to search..." class="search-input">
+                            </div>
+                            <ul class="select-options" id="retailerOptionsList">
+                                <!-- Populated by JS -->
+                            </ul>
+                        </div>
+                    </div>
+
+                </div>
+                <button class="btn-reset" onclick="resetFilters()">🔄 Full Ledger (Clear Filters)</button>
+            </div>
+
+            <!-- Row 2: Date & Site Filters -->
+            <div class="filter-row row-bottom" style="border-top: 1px dashed var(--border-color); padding-top: 15px;">
+                <div class="filter-group">
+                    <label>From Date:</label>
+                    <input type="date" id="fromDate" onchange="generateLedger()">
+                </div>
+                <div class="filter-group">
+                    <label>To Date:</label>
+                    <input type="date" id="toDate" onchange="generateLedger()">
+                </div>
+                <div class="filter-group">
+                    <label>Site / Project:</label>
+                    
+                    <!-- CUSTOM SEARCHABLE DROPDOWN FOR SITE -->
+                    <div class="custom-select" id="siteDropdown">
+                        <div class="select-header" id="siteSelectHeader">
+                            <span class="selected-text" id="siteSelectedText">All Sites</span>
+                            <span class="arrow" id="siteSelectArrow">▼</span>
+                        </div>
+                        <div class="select-options-container" id="siteOptionsContainer">
+                            <div class="select-search">
+                                <input type="text" placeholder="Search Site..." class="search-input">
+                            </div>
+                            <ul class="select-options" id="siteOptionsList">
+                                <li data-value="">All Sites</li>
+                                <li data-value="Salt Lake Sector V">Salt Lake Sector V</li>
+                                <li data-value="Dum Dum Project">Dum Dum Project</li>
+                                <li data-value="Commercial Complex B3">Commercial Complex B3</li>
+                                <li data-value="Barasat Highway">Barasat Highway</li>
+                                <li data-value="Office">Office</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- TABLE AREA -->
+        <div class="table-container">
+            <div class="table-scroll">
+                <table id="ledgerTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Particulars (Bill / Ref No)</th>
+                            <th>Site Name</th>
+                            <th class="align-right">Bill Amount (Debit)</th>
+                            <th class="align-right">Paid Amount (Credit)</th>
+                            <th class="align-right">Running Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr>
+                            <td colspan="6" class="empty-state">
+                                🔍 Please select a Retailer from the search box above to view their ledger.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- SUMMARY BAR -->
+            <div class="summary-bar">
+                <div class="summary-box">
+                    <span>Total Billed Amount (Dr)</span>
+                    <h3 class="text-dr" id="sumBilled">₹ 0.00</h3>
+                </div>
+                <div class="summary-box">
+                    <span>Total Paid Amount (Cr)</span>
+                    <h3 class="text-cr" id="sumPaid">₹ 0.00</h3>
+                </div>
+                <div class="summary-box">
+                    <span>Closing Due Balance</span>
+                    <h3 class="text-bal" id="sumDue">₹ 0.00</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ================= ROLE & SITE LOCKING VARIABLES (ADMIN / OFFICE / SUPERVISOR) =================
+        let currentPortalMode = "admin";
+        let isSupervisorMode = false;
+        let assignedSite = "";
+
+        const baseMockLedgerData = [
+            { date: "2026-08-05", type: "BILL", refNo: "INV-SL-501", retailer: "BuildTech Supplies", site: "Salt Lake Sector V", billAmount: 120000, paidAmount: 0 },
+            { date: "2026-08-18", type: "PAYMENT", refNo: "NEFT-SL-881", retailer: "BuildTech Supplies", site: "Salt Lake Sector V", billAmount: 0, paidAmount: 45000 },
+            { date: "2026-09-04", type: "BILL", refNo: "INV-SL-612", retailer: "BuildTech Supplies", site: "Salt Lake Sector V", billAmount: 90000, paidAmount: 0 },
+            { date: "2026-09-27", type: "PAYMENT", refNo: "NEFT-SL-992", retailer: "BuildTech Supplies", site: "Salt Lake Sector V", billAmount: 0, paidAmount: 15000 },
+
+            { date: "2026-09-02", type: "BILL", refNo: "INV-MT-110", retailer: "Maa Tara Hardware", site: "Salt Lake Sector V", billAmount: 18500, paidAmount: 0 },
+            { date: "2026-09-12", type: "PAYMENT", refNo: "UPI-MT-404", retailer: "Maa Tara Hardware", site: "Salt Lake Sector V", billAmount: 0, paidAmount: 15000 },
+            { date: "2026-09-25", type: "BILL", refNo: "INV-SL-895", retailer: "Maa Tara Hardware", site: "Salt Lake Sector V", billAmount: 5310, paidAmount: 2000 },
+
+            { date: "2026-09-10", type: "BILL", refNo: "INV-BE-205", retailer: "Bengal Electricals", site: "Salt Lake Sector V", billAmount: 34000, paidAmount: 0 },
+            { date: "2026-09-20", type: "PAYMENT", refNo: "CHQ-7741", retailer: "Bengal Electricals", site: "Salt Lake Sector V", billAmount: 0, paidAmount: 20000 },
+
+            { date: "2025-06-10", type: "BILL", refNo: "INV-101", retailer: "M/S Bengal Traders", site: "Dum Dum Project", billAmount: 45000, paidAmount: 0 },
+            { date: "2025-06-15", type: "PAYMENT", refNo: "CHQ-00123", retailer: "M/S Bengal Traders", site: "Dum Dum Project", billAmount: 0, paidAmount: 20000 },
+            { date: "2026-02-05", type: "BILL", refNo: "INV-189", retailer: "M/S Bengal Traders", site: "Commercial Complex B3", billAmount: 32000, paidAmount: 0 },
+            { date: "2026-02-20", type: "PAYMENT", refNo: "NEFT-TRX998", retailer: "M/S Bengal Traders", site: "Commercial Complex B3", billAmount: 0, paidAmount: 50000 },
+            { date: "2026-09-14", type: "BILL", refNo: "INV-SL-710", retailer: "M/S Bengal Traders", site: "Salt Lake Sector V", billAmount: 64000, paidAmount: 0 },
+            { date: "2026-09-22", type: "PAYMENT", refNo: "NEFT-SL-715", retailer: "M/S Bengal Traders", site: "Salt Lake Sector V", billAmount: 0, paidAmount: 30000 },
+
+            { date: "2026-03-10", type: "BILL", refNo: "RT-8845", retailer: "Roy Stores", site: "Commercial Complex B3", billAmount: 15000, paidAmount: 0 },
+            { date: "2026-04-12", type: "BILL", refNo: "RT-8900", retailer: "Roy Stores", site: "Barasat Highway", billAmount: 8500, paidAmount: 0 },
+            { date: "2026-05-01", type: "PAYMENT", refNo: "CASH", retailer: "Roy Stores", site: "Office", billAmount: 0, paidAmount: 10000 },
+            { date: "2026-08-01", type: "BILL", refNo: "KACHA", retailer: "Local Sand Supplier", site: "Dum Dum Project", billAmount: 12000, paidAmount: 0 },
+            { date: "2026-08-05", type: "PAYMENT", refNo: "UPI-1234", retailer: "Local Sand Supplier", site: "Dum Dum Project", billAmount: 0, paidAmount: 12000 }
+        ];
+
+        let mockLedgerData = [];
+
+        function syncLedgerDataFromStorage() {
+            mockLedgerData = JSON.parse(JSON.stringify(baseMockLedgerData));
+
+            const storedBills = JSON.parse(localStorage.getItem('atr_retailer_bills_db')) || [];
+            storedBills.forEach(bill => {
+                if (!bill.ret || !bill.site) return;
+                const ref = bill.invNo || bill.id || "BILL";
+                const exists = mockLedgerData.some(m =>
+                    m.refNo === ref &&
+                    m.retailer.toLowerCase() === bill.ret.toLowerCase() &&
+                    m.date === bill.date
+                );
+                if (!exists) {
+                    mockLedgerData.push({
+                        date: bill.date || new Date().toISOString().split('T')[0],
+                        type: "BILL",
+                        refNo: ref,
+                        retailer: bill.ret,
+                        site: bill.site,
+                        billAmount: Number(bill.totalAmt) || 0,
+                        paidAmount: Number(bill.paidAmt) || 0
+                    });
+                }
+            });
+
+            const siteListEl = document.getElementById('siteOptionsList');
+            if (siteListEl && !isSupervisorMode) {
+                const defaultSites = ["Salt Lake Sector V", "Dum Dum Project", "Commercial Complex B3", "Barasat Highway", "Office"];
+                const dynamicSites = [...new Set([...defaultSites, ...mockLedgerData.map(d => d.site).filter(Boolean)])];
+                siteListEl.innerHTML = `<li data-value="">All Sites</li>`;
+                dynamicSites.forEach(s => {
+                    siteListEl.innerHTML += `<li data-value="${s}">${s}</li>`;
+                });
+            }
+        }
+
+        window.onload = function() {
+            checkUrlPermissions();
+            syncLedgerDataFromStorage();
+            populateRetailerList();
+            initCustomDropdowns();
+        };
+
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'atr_retailer_bills_db' || e.key === 'atr_retailers_db') {
+                syncLedgerDataFromStorage();
+                populateRetailerList();
+                if (document.getElementById('retailerSearch').value) {
+                    generateLedger();
+                }
+            }
+        });
+
+        // ================= CHECK ADMIN vs OFFICE vs SUPERVISOR PERMISSIONS =================
+        function checkUrlPermissions() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewParam = (urlParams.get('view') || '').toLowerCase();
+            const siteParam = urlParams.get('site');
+
+            let parentPath = "";
+            try {
+                if (window.parent && window.parent !== window) {
+                    parentPath = (window.parent.location.pathname || '').toLowerCase();
+                }
+            } catch (e) {}
+
+            const backBtn = document.getElementById('btnBackDashboard');
+            const supBadge = document.getElementById('supSiteBadge');
+            const offBadge = document.getElementById('officeRoleBadge');
+            const siteHeader = document.getElementById('siteSelectHeader');
+            const siteText = document.getElementById('siteSelectedText');
+            const siteArrow = document.getElementById('siteSelectArrow');
+            const siteHiddenInput = document.getElementById('siteFilter');
+            const retailerLabel = document.getElementById('retailerSelectLabel');
+            const pageSubDesc = document.getElementById('pageSubDesc');
+
+            if (viewParam === 'supervisor' || parentPath.includes('supervisordashboard')) {
+                currentPortalMode = 'supervisor';
+                isSupervisorMode = true;
+                assignedSite = (siteParam || sessionStorage.getItem('atr_supervisor_site') || "Salt Lake Sector V").trim();
+
+                if (supBadge) {
+                    supBadge.style.display = 'inline-flex';
+                    supBadge.innerText = `🔒 Site Locked: ${assignedSite}`;
+                }
+
+                if (retailerLabel) {
+                    retailerLabel.innerText = `Select Site Retailer (${assignedSite}):`;
+                }
+
+                if (pageSubDesc) {
+                    pageSubDesc.innerText = `Viewing retailer accounting ledgers exclusively for ${assignedSite}.`;
+                }
+
+                if (siteHiddenInput && siteText && siteHeader) {
+                    siteHiddenInput.value = assignedSite;
+                    siteText.innerText = `📍 ${assignedSite}`;
+                    siteText.style.color = "#ffc107";
+                    siteText.style.fontWeight = "700";
+                    siteHeader.classList.add('locked-dropdown');
+                    if (siteArrow) siteArrow.innerText = "🔒";
+                }
+
+                if (backBtn) {
+                    backBtn.href = "supervisor/supervisor_dashboard_home.html";
+                }
+            } else if (viewParam === 'office' || parentPath.includes('officedashboard')) {
+                currentPortalMode = 'office';
+                isSupervisorMode = false;
+                assignedSite = "";
+                if (offBadge) {
+                    offBadge.style.display = 'inline-flex';
+                }
+                if (backBtn) {
+                    backBtn.href = "office/office_dashboard_home.html";
+                }
+            } else {
+                currentPortalMode = 'admin';
+                isSupervisorMode = false;
+                assignedSite = "";
+                if (backBtn) {
+                    backBtn.href = "dashboard_home.html";
+                }
+            }
+        }
+
+        // ================= SMART BACK TO DASHBOARD NAVIGATION =================
+        function handleBackToDashboard(event) {
+            if (currentPortalMode === 'office') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.loadOfficeWorkspaceHome === 'function') {
+                        window.parent.loadOfficeWorkspaceHome();
+                        return;
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "office_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "office/office_dashboard_home.html";
+            } else if (currentPortalMode === 'supervisor') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window) {
+                        const parentHomeLink = window.parent.document.querySelector('.dashboard-home-link');
+                        if (parentHomeLink) {
+                            if (typeof window.parent.clearTreeActiveLinks === 'function') {
+                                window.parent.clearTreeActiveLinks();
+                            }
+                            window.location.href = parentHomeLink.href;
+                            return;
+                        }
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "supervisor_dashboard_home.html";
+                    return;
+                }
+
+                window.location.href = "supervisor/supervisor_dashboard_home.html";
+            }
+        }
+
+        // ================= CUSTOM DROPDOWN ENGINE =================
+        function initCustomDropdowns() {
+            setupDropdown('retailerDropdown', 'retailerSearch');
+            setupDropdown('siteDropdown', 'siteFilter');
+            
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.custom-select')) {
+                    document.querySelectorAll('.select-options-container.active').forEach(c => c.classList.remove('active'));
+                    document.querySelectorAll('.select-header.active').forEach(h => h.classList.remove('active'));
+                }
+                if (!e.target.closest('#exportDropdownContainer')) {
+                    const expMenu = document.getElementById('exportDropdownMenu');
+                    if (expMenu) expMenu.classList.remove('show');
+                }
+            });
+        }
+
+        function setupDropdown(dropdownId, hiddenInputId) {
+            const dropdown = document.getElementById(dropdownId);
+            const header = dropdown.querySelector('.select-header');
+            const container = dropdown.querySelector('.select-options-container');
+            const searchInput = dropdown.querySelector('.search-input');
+            const optionsList = dropdown.querySelector('.select-options');
+            const selectedText = dropdown.querySelector('.selected-text');
+            const hiddenInput = document.getElementById(hiddenInputId);
+
+            header.addEventListener('click', () => {
+                if (dropdownId === 'siteDropdown' && isSupervisorMode) {
+                    return;
+                }
+
+                document.querySelectorAll('.select-options-container.active').forEach(c => {
+                    if (c !== container) {
+                        c.classList.remove('active');
+                        c.parentElement.querySelector('.select-header').classList.remove('active');
+                    }
+                });
+                
+                container.classList.toggle('active');
+                header.classList.toggle('active');
+                
+                if(container.classList.contains('active')) {
+                    searchInput.value = '';
+                    filterDropdownOptions('', optionsList);
+                    setTimeout(() => searchInput.focus(), 100);
+                }
+            });
+
+            searchInput.addEventListener('keyup', (e) => filterDropdownOptions(e.target.value, optionsList));
+
+            optionsList.addEventListener('click', (e) => {
+                const liItem = e.target.closest('li');
+                if(liItem && !liItem.hasAttribute('data-disabled')) {
+                    if (dropdownId === 'siteDropdown' && isSupervisorMode) return;
+
+                    const value = liItem.getAttribute('data-value');
+                    const text = liItem.getAttribute('data-label') || liItem.innerText;
+                    
+                    selectedText.innerText = text;
+                    selectedText.style.color = value === "" ? "var(--text-main)" : "var(--theme-color)";
+                    selectedText.style.fontWeight = value === "" ? "600" : "700";
+                    
+                    hiddenInput.value = value;
+                    
+                    container.classList.remove('active');
+                    header.classList.remove('active');
+                    
+                    generateLedger();
+                }
+            });
+        }
+
+        function filterDropdownOptions(term, list) {
+            const searchTerm = term.toLowerCase();
+            const items = list.querySelectorAll('li');
+            items.forEach(item => {
+                const text = item.innerText.toLowerCase();
+                if (text.includes(searchTerm)) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        function populateRetailerList() {
+            const list = document.getElementById('retailerOptionsList');
+            const relevantRecords = (isSupervisorMode && assignedSite) ? mockLedgerData.filter(item => item.site === assignedSite) : mockLedgerData;
+
+            const storedRetailers = JSON.parse(localStorage.getItem('atr_retailers_db')) || [];
+            const extraRetailerNames = storedRetailers
+                .filter(r => !isSupervisorMode || !assignedSite || r.site === assignedSite || r.site === 'All Sites')
+                .map(r => r.retailer)
+                .filter(Boolean);
+
+            const uniqueRetailers = [...new Set([...relevantRecords.map(item => item.retailer), ...extraRetailerNames])];
+            
+            list.innerHTML = '';
+            
+            if (uniqueRetailers.length === 0) {
+                const li = document.createElement('li');
+                li.setAttribute('data-disabled', 'true');
+                li.style.color = 'var(--text-muted)';
+                li.style.cursor = 'default';
+                li.innerText = `No retailers found for ${assignedSite}`;
+                list.appendChild(li);
+                return;
+            }
+
+            uniqueRetailers.forEach(r => {
+                const li = document.createElement('li');
+                li.setAttribute('data-value', r);
+                li.setAttribute('data-label', r);
+                li.innerHTML = `<span>${r}</span>`;
+                list.appendChild(li);
+            });
+        }
+
+        function resetFilters() {
+            document.getElementById('fromDate').value = '';
+            document.getElementById('toDate').value = '';
+            
+            if (isSupervisorMode && assignedSite) {
+                document.getElementById('siteFilter').value = assignedSite;
+                const siteText = document.getElementById('siteSelectedText');
+                siteText.innerText = `📍 ${assignedSite}`;
+                siteText.style.color = '#ffc107';
+                siteText.style.fontWeight = '700';
+            } else {
+                document.getElementById('siteFilter').value = '';
+                const siteText = document.querySelector('#siteDropdown .selected-text');
+                siteText.innerText = 'All Sites';
+                siteText.style.color = 'var(--text-main)';
+                siteText.style.fontWeight = '600';
+            }
+            
+            if(document.getElementById('retailerSearch').value !== '') {
+                generateLedger();
+            } else {
+                alert("Please select a Retailer from the dropdown first.");
+            }
+        }
+
+        // ================= GENERATE LEDGER =================
+        function generateLedger() {
+            const retailer = document.getElementById('retailerSearch').value;
+            const fromDate = document.getElementById('fromDate').value;
+            const toDate = document.getElementById('toDate').value;
+            const site = (isSupervisorMode && assignedSite) ? assignedSite : document.getElementById('siteFilter').value;
+            
+            const tbody = document.getElementById('tableBody');
+            
+            if (!retailer) {
+                tbody.innerHTML = `<tr><td colspan="6" class="empty-state">🔍 Please select a Retailer from the search box above to view their ledger.</td></tr>`;
+                updateSummary(0, 0, 0);
+                return;
+            }
+
+            let baseData = mockLedgerData.filter(row => {
+                let matchRetailer = row.retailer.toUpperCase() === retailer.toUpperCase();
+                let matchSite = site === "" || row.site === site;
+                return matchRetailer && matchSite;
+            });
+
+            baseData.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            let openingBalance = 0;
+            let filteredData = [];
+
+            baseData.forEach(row => {
+                if (fromDate && row.date < fromDate) {
+                    openingBalance += (row.billAmount - row.paidAmount);
+                } else {
+                    if (!toDate || row.date <= toDate) {
+                        filteredData.push(row);
+                    }
+                }
+            });
+
+            tbody.innerHTML = '';
+            let runningBalance = openingBalance;
+            let totalBill = 0;
+            let totalPaid = 0;
+
+            if (filteredData.length === 0 && openingBalance === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="empty-state">⚠️ No records found for this filter criteria.</td></tr>`;
+                updateSummary(0, 0, 0);
+                return;
+            }
+
+            if (fromDate) {
+                let openBalText = openingBalance >= 0
+                    ? `${openingBalance.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})} (Dr)`
+                    : `${Math.abs(openingBalance).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})} (Cr)`;
+
+                const openTr = document.createElement('tr');
+                openTr.style.background = "rgba(8, 136, 201, 0.08)";
+                openTr.innerHTML = `
+                    <td>${fromDate}</td>
+                    <td><span style="color: var(--theme-color); font-weight: 700;">OPENING BALANCE (B/F)</span></td>
+                    <td>${site || "All Sites"}</td>
+                    <td class="align-right text-dr">-</td>
+                    <td class="align-right text-cr">-</td>
+                    <td class="align-right text-bal">${openBalText}</td>
+                `;
+                tbody.appendChild(openTr);
+            }
+
+            filteredData.forEach(row => {
+                runningBalance += (row.billAmount - row.paidAmount);
+                totalBill += row.billAmount;
+                totalPaid += row.paidAmount;
+
+                let balText = runningBalance >= 0 ? `${runningBalance.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})} (Dr)` : `${Math.abs(runningBalance).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})} (Cr)`;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${row.date}</td>
+                    <td>
+                        <span style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; font-weight: 700;">${row.type === 'PAYMENT' ? 'Payment: ' : 'Bill: '}</span>
+                        <span style="color: var(--theme-color); font-weight: 700;">${row.refNo}</span>
+                    </td>
+                    <td>${row.site}</td>
+                    <td class="align-right text-dr">${row.billAmount > 0 ? row.billAmount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</td>
+                    <td class="align-right text-cr">${row.paidAmount > 0 ? row.paidAmount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</td>
+                    <td class="align-right text-bal">${balText}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            updateSummary(totalBill, totalPaid, runningBalance);
+        }
+
+        function updateSummary(billed, paid, due) {
+            document.getElementById('sumBilled').innerText = `₹ ${billed.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('sumPaid').innerText = `₹ ${paid.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            
+            let dueDisplay = due >= 0 ? `₹ ${due.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : `+ ₹ ${Math.abs(due).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})} (Advance)`;
+            
+            let dueElement = document.getElementById('sumDue');
+            dueElement.innerText = dueDisplay;
+            
+            dueElement.style.color = due >= 0 ? 'var(--theme-color)' : '#28a745';
+            dueElement.style.textShadow = due >= 0 ? '0 0 10px var(--theme-glow)' : '0 0 10px rgba(40,167,69,0.3)';
+        }
+
+        // ================= EXPORT MENU TOGGLE (CLICK BASED TO FIX HOVER BUG) =================
+        function toggleExportMenu(event) {
+            event.stopPropagation();
+            document.getElementById('exportDropdownMenu').classList.toggle('show');
+            document.querySelectorAll('.select-options-container.active').forEach(c => {
+                c.classList.remove('active');
+                c.parentElement.querySelector('.select-header').classList.remove('active');
+            });
+        }
+
+        // ================= TALLY STYLE A4 PDF EXPORT WITH TIMES FONT =================
+        function exportLedgerPDF() {
+            const retailer = document.getElementById('retailerSearch').value;
+            if(!retailer) {
+                alert("Please select a Retailer first to generate an export.");
+                return;
+            }
+
+            const fromDate = document.getElementById('fromDate').value || "Start";
+            const toDate = document.getElementById('toDate').value || "Till Date";
+            const site = (isSupervisorMode && assignedSite) ? assignedSite : (document.getElementById('siteFilter').value || "All Sites");
+
+            const rows = document.getElementById('tableBody').getElementsByTagName('tr');
+            if(rows.length === 0 || rows[0].innerText.includes("Please select") || rows[0].innerText.includes("No records")) {
+                alert("No data available to export.");
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4'); // A4 Portrait
+
+            // Use 'times' font for professional Tally look and better character support
+            doc.setFont("times", "bold");
+            doc.setFontSize(18);
+            doc.setTextColor(8, 136, 201); 
+            doc.text("ATR CONSTRUCTION", 105, 15, { align: "center" });
+
+            doc.setFontSize(12);
+            doc.setTextColor(50, 50, 50);
+            doc.text("RETAILER LEDGER ACCOUNT", 105, 22, { align: "center" });
+
+            doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0);
+            doc.text(`Party Name : ${retailer}`, 14, 32);
+            doc.text(`Project Site : ${site}`, 14, 38);
+            
+            doc.setFont("times", "normal");
+            doc.text(`Date Period  : ${fromDate} to ${toDate}`, 140, 32);
+            doc.text(`Printed On   : ${new Date().toLocaleDateString('en-IN')}`, 140, 38);
+
+            doc.setLineWidth(0.5);
+            doc.setDrawColor(200, 200, 200);
+            doc.line(14, 42, 196, 42);
+
+            let tableData = [];
+            for(let i=0; i<rows.length; i++) {
+                let cells = rows[i].cells;
+                if(cells.length < 6) continue;
+                tableData.push([
+                    cells[0].innerText.trim(),
+                    cells[1].innerText.replace(/\n/g, ' ').trim(),
+                    cells[2].innerText.trim(),
+                    cells[3].innerText.trim(),
+                    cells[4].innerText.trim(),
+                    cells[5].innerText.trim()
+                ]);
+            }
+
+            // Fix ₹ symbol issue in jsPDF (causes weird characters in numbers)
+            let closingBal = document.getElementById('sumDue').innerText.replace(/₹/g, 'Rs.');
+            let totalBilled = document.getElementById('sumBilled').innerText.replace(/₹/g, 'Rs.');
+            let totalPaid = document.getElementById('sumPaid').innerText.replace(/₹/g, 'Rs.');
+
+            tableData.push([
+                "",
+                "CLOSING BALANCE (C/F)",
+                "",
+                "",
+                "",
+                closingBal
+            ]);
+
+            doc.autoTable({
+                startY: 46,
+                head: [['Date', 'Particulars', 'Site Name', 'Debit (Bill)', 'Credit (Paid)', 'Balance']],
+                body: tableData,
+                theme: 'grid',
+                headStyles: { fillColor: [8, 136, 201], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center', font: 'times' },
+                columnStyles: {
+                    0: { cellWidth: 25, halign: 'center' },
+                    1: { cellWidth: 50 },
+                    2: { cellWidth: 35 },
+                    3: { cellWidth: 25, halign: 'right' },
+                    4: { cellWidth: 25, halign: 'right' },
+                    5: { cellWidth: 25, halign: 'right', fontStyle: 'bold' }
+                },
+                styles: { font: 'times', fontSize: 9, cellPadding: 3, textColor: [30, 30, 30] },
+                alternateRowStyles: { fillColor: [248, 248, 248] },
+                didParseCell: function(data) {
+                    if (data.row.raw && data.row.raw[1] && data.row.raw[1].includes("OPENING BALANCE")) {
+                        data.cell.styles.fontStyle = 'bold';
+                        data.cell.styles.textColor = [8, 136, 201];
+                    }
+                    if (data.row.raw && data.row.raw[1] && data.row.raw[1].includes("CLOSING BALANCE")) {
+                        data.cell.styles.fontStyle = 'bold';
+                        data.cell.styles.fillColor = [240, 240, 240];
+                        data.cell.styles.textColor = [8, 136, 201];
+                    }
+                }
+            });
+
+            let finalY = doc.lastAutoTable.finalY + 10;
+            const pageHeight = doc.internal.pageSize.height || doc.internal.pageSize.getHeight();
+            
+            // Dynamic page break if signature overlaps
+            if (finalY + 45 > pageHeight - 15) {
+                doc.addPage();
+                finalY = 20; 
+            }
+            
+            doc.setFont("times", "bold");
+            doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0);
+            doc.text("ACCOUNT SUMMARY:", 14, finalY);
+            
+            doc.setFont("times", "normal");
+            doc.text(`Total Billed Amount (Dr)  : ${totalBilled}`, 14, finalY + 6);
+            doc.text(`Total Paid Amount (Cr)    : ${totalPaid}`, 14, finalY + 12);
+            
+            doc.setFont("times", "bold");
+            doc.setTextColor(8, 136, 201);
+            doc.text(`FINAL CLOSING BALANCE : ${closingBal}`, 14, finalY + 20);
+
+            doc.setTextColor(0, 0, 0);
+            doc.setFont("times", "normal");
+            doc.setFontSize(9);
+            
+            doc.line(14, finalY + 45, 60, finalY + 45);
+            doc.text("Prepared By", 25, finalY + 50);
+
+            doc.line(150, finalY + 45, 196, finalY + 45);
+            doc.text("Authorized Signatory", 155, finalY + 50);
+
+            let fileName = `Ledger_${retailer.replace(/[^a-z0-9]/gi, '_')}_${new Date().toISOString().slice(0,10)}.pdf`;
+            doc.save(fileName);
+            
+            document.getElementById('exportDropdownMenu').classList.remove('show');
+        }
+
+        // ================= EXCEL EXPORT (TEXT FORMAT LOCKED '@') =================
+        function exportLedgerExcel() {
+            const retailer = document.getElementById('retailerSearch').value;
+            if(!retailer) {
+                alert("Please select a Retailer first to generate an export.");
+                return;
+            }
+
+            const fromDate = document.getElementById('fromDate').value || "Start";
+            const toDate = document.getElementById('toDate').value || "Till Date";
+            const site = (isSupervisorMode && assignedSite) ? assignedSite : (document.getElementById('siteFilter').value || "All Sites");
+
+            const rows = document.getElementById('tableBody').getElementsByTagName('tr');
+            if(rows.length === 0 || rows[0].innerText.includes("Please select") || rows[0].innerText.includes("No records")) {
+                alert("No data available to export.");
+                return;
+            }
+
+            let exportData = [
+                ["ATR CONSTRUCTION - RETAILER LEDGER REPORT"],
+                ["Retailer Name:", retailer],
+                ["Site / Project:", site],
+                ["Date Range:", `${fromDate} to ${toDate}`],
+                [], 
+                ["Date", "Particulars", "Site Name", "Bill Amount (Dr)", "Paid Amount (Cr)", "Running Balance"] 
+            ];
+            
+            for(let i=0; i<rows.length; i++) {
+                let cells = rows[i].cells;
+                if(cells.length < 6) continue;
+                
+                let isOpeningRow = cells[1].innerText.includes("OPENING BALANCE");
+                let drRaw = cells[3].innerText.trim();
+                let crRaw = cells[4].innerText.trim();
+                
+                let drVal = (drRaw !== '-' && !isOpeningRow) ? parseFloat(drRaw.replace(/,/g, '')) : 0;
+                let crVal = (crRaw !== '-' && !isOpeningRow) ? parseFloat(crRaw.replace(/,/g, '')) : 0;
+
+                exportData.push([
+                    cells[0].innerText.trim(),
+                    cells[1].innerText.replace(/\n/g, ' ').trim(),
+                    cells[2].innerText.trim(),
+                    isOpeningRow ? '-' : (!isNaN(drVal) ? drVal : 0),
+                    isOpeningRow ? '-' : (!isNaN(crVal) ? crVal : 0),
+                    cells[5].innerText.trim()
+                ]);
+            }
+
+            exportData.push([]);
+            exportData.push(["SUMMARY", "", "", document.getElementById('sumBilled').innerText, document.getElementById('sumPaid').innerText, document.getElementById('sumDue').innerText]);
+
+            let ws = XLSX.utils.aoa_to_sheet(exportData);
+            
+            // Loop through all cells and force text format so leading zeros & large strings don't break
+            for (let cellKey in ws) {
+                if (cellKey[0] === '!') continue;
+                ws[cellKey].t = 's';
+                ws[cellKey].z = '@';
+                if (ws[cellKey].v !== undefined && ws[cellKey].v !== null) {
+                    ws[cellKey].v = String(ws[cellKey].v);
+                    ws[cellKey].w = String(ws[cellKey].v);
+                }
+            }
+
+            let wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Ledger Report");
+            
+            let fileName = `Ledger_${retailer.replace(/[^a-z0-9]/gi, '_')}_${new Date().toISOString().slice(0,10)}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+            
+            document.getElementById('exportDropdownMenu').classList.remove('show');
+        }
+    </script>
+</body>
+</html>

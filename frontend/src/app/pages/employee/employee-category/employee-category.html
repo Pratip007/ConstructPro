@@ -1,0 +1,70 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1><i class="ri-award-line"></i> Position Category</h1>
+    @if (!role.isAdmin()) {
+      <span class="badge" [class]="role.getRoleBadge().cssClass">{{ role.getRoleBadge().label }} Mode</span>
+    }
+  </div>
+
+  <div class="card-container">
+    <form (ngSubmit)="addCategory()" class="form-grid">
+      <div class="form-group">
+        <label>Category Name *</label>
+        <input id="categoryName" type="text" [ngModel]="categoryName()" (ngModelChange)="categoryName.set($event)"
+          name="categoryName" placeholder="e.g. Mason, Helper, Supervisor" required />
+      </div>
+      <div class="form-group">
+        <label>Working Days (per month)</label>
+        <input type="number" [ngModel]="workingDays()" (ngModelChange)="workingDays.set($event)"
+          name="workingDays" min="1" max="31" placeholder="26" />
+      </div>
+      <div class="form-group" style="display: flex; align-items: flex-end; gap: 10px;">
+        <button type="submit" class="btn-primary">
+          <i [class]="editingId() !== null ? 'ri-edit-line' : 'ri-add-line'"></i>
+          {{ editingId() !== null ? 'Update' : 'Add' }} Category
+        </button>
+        @if (editingId() !== null) {
+          <button type="button" class="btn-secondary" (click)="cancelEdit()">Cancel</button>
+        }
+      </div>
+    </form>
+  </div>
+
+  @if (loading()) {
+    <p class="loading-text">Loading categories...</p>
+  }
+
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Category Name</th>
+          <th>Working Days/Month</th>
+          <th style="text-align: center;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (cat of categories(); track cat.id; let i = $index) {
+          <tr>
+            <td>{{ i + 1 }}</td>
+            <td style="font-weight: 600;">{{ cat.name }}</td>
+            <td>{{ cat.working_days ?? 26 }} days</td>
+            <td style="text-align: center;">
+              <button class="btn-action edit" (click)="editCategory(cat)" title="Edit">
+                <i class="ri-edit-line"></i>
+              </button>
+              <button class="btn-action delete" (click)="deleteCategory(cat.id)" title="Delete">
+                <i class="ri-delete-bin-line"></i>
+              </button>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="4" class="empty-state">No categories added yet.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

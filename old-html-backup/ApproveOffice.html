@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Office User Request & Approval Center</title>
+    
+    <!-- Sync theme with Master Dashboard -->
+    <script>
+        function applyDashboardTheme() {
+            const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        }
+        applyDashboardTheme();
+        window.addEventListener('storage', applyDashboardTheme);
+    </script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- SheetJS (XLSX) Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-body: transparent; 
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.1);
+            
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(0, 0, 0, 0.25);
+            --input-focus-bg: rgba(0, 0, 0, 0.45);
+            
+            --shadow: 0 4px 15px rgba(0,0,0,0.3);
+            
+            --theme-color: #E30B5C;
+            --theme-glow: rgba(227, 11, 92, 0.4);
+            --theme-transition: all 0.3s ease;
+            --calendar-filter: invert(1);
+        }
+
+        [data-theme="light"] {
+            --bg-body: #f4f6f9;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #555555;
+            --border-color: rgba(0, 0, 0, 0.12);
+            
+            --glass-bg: rgba(255, 255, 255, 0.9);
+            --glass-border: rgba(0, 0, 0, 0.1);
+            --input-bg: #f1f3f5;
+            --input-focus-bg: #ffffff;
+            
+            --shadow: 0 8px 25px rgba(0,0,0,0.05);
+            --calendar-filter: invert(0);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; scroll-behavior: smooth; }
+        body { background-color: var(--bg-body); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; transition: var(--theme-transition); }
+
+        /* ================= MAIN CONTENT ================= */
+        .main-content { flex: 1; display: flex; flex-direction: column; padding: 22px 30px; height: 100vh; overflow: hidden; width: 100%; max-width: 1650px; margin: 0 auto; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 14px; flex-shrink: 0; flex-wrap: wrap; gap: 15px; }
+        .header h1 { font-size: 24px; color: var(--text-main); display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+        
+        .btn-back-dash { 
+            background-color: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color); 
+            text-decoration: none; padding: 7px 14px; border-radius: 6px; font-weight: 700; font-size: 12px; 
+            transition: all 0.3s; display: inline-flex; align-items: center; width: max-content;
+        }
+        .btn-back-dash:hover { background-color: var(--theme-color); color: #fff; border-color: var(--theme-color); transform: translateY(-2px); box-shadow: 0 4px 10px var(--theme-glow); }
+
+        .header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+        /* Pending vs History Switcher Buttons */
+        .tab-btn {
+            background: var(--input-bg); color: var(--text-muted); border: 1px solid var(--border-color);
+            padding: 10px 16px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer;
+            text-transform: uppercase; transition: all 0.3s; display: flex; align-items: center; gap: 8px;
+        }
+        .tab-btn:hover { border-color: var(--theme-color); color: var(--text-main); }
+        .tab-btn.active { background: var(--theme-color); color: #ffffff; border-color: var(--theme-color); box-shadow: 0 4px 15px var(--theme-glow); }
+        
+        .count-pill { background: rgba(0,0,0,0.3); color: #fff; padding: 2px 7px; border-radius: 12px; font-size: 10px; font-weight: 800; }
+
+        .btn-export { background: rgba(40, 167, 69, 0.15); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.4); padding: 10px 15px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; text-transform: uppercase; transition: all 0.3s; }
+        .btn-export:hover { background-color: #28a745; color: white; transform: translateY(-2px); }
+
+        /* ================= KPI SUMMARY CARDS ================= */
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 15px; flex-shrink: 0; }
+        .stat-card { 
+            background: var(--glass-bg); backdrop-filter: blur(12px); border: 1px solid var(--border-color);
+            padding: 14px 18px; border-radius: 10px; position: relative; overflow: hidden; box-shadow: var(--shadow);
+        }
+        .stat-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; }
+        .stat-card.blue::before { background: #007bff; }
+        .stat-card.orange::before { background: #ffc107; }
+        .stat-card.green::before { background: #28a745; }
+        .stat-card.red::before { background: #dc3545; }
+        
+        .stat-card h4 { font-size: 10.5px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 5px; letter-spacing: 0.5px; }
+        .stat-card h2 { font-size: 22px; font-weight: 800; color: var(--text-main); }
+        .stat-card .sub-text { font-size: 11px; margin-top: 4px; display: block; color: var(--text-muted); }
+
+        /* ================= FILTER CONTROLS BAR ================= */
+        .controls-bar { 
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; align-items: end; margin-bottom: 14px; 
+            background: var(--glass-bg); backdrop-filter: blur(12px);
+            padding: 13px 18px; border-radius: 12px; border: 1px solid var(--glass-border); flex-shrink: 0;
+        }
+        .filter-item { display: flex; flex-direction: column; gap: 5px; }
+        .filter-item label { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-control { background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 9px 12px; border-radius: 6px; font-size: 12px; outline: none; transition: 0.3s; width: 100%; }
+        .form-control:focus { border-color: var(--theme-color); box-shadow: 0 0 6px var(--theme-glow); background: var(--input-focus-bg); }
+        .form-control option { background: var(--bg-card); color: var(--text-main); }
+        textarea.form-control { resize: none; }
+        ::-webkit-calendar-picker-indicator { filter: var(--calendar-filter); cursor: pointer; }
+
+        /* ================= TABLE & FOOTER ================= */
+        .table-container-box { 
+            background: var(--glass-bg); backdrop-filter: blur(12px);
+            border-radius: 12px 12px 0 0; box-shadow: var(--shadow); flex: 1; min-height: 0; 
+            border: 1px solid var(--glass-border); border-top: 4px solid var(--theme-color); border-bottom: none; overflow: auto; 
+        }
+        .table-container-box::-webkit-scrollbar { width: 8px; height: 8px; }
+        .table-container-box::-webkit-scrollbar-thumb { background: rgba(227, 11, 92, 0.35); border-radius: 4px; }
+        
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        thead { position: sticky; top: 0; background-color: var(--bg-card); z-index: 10; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        th { padding: 13px 14px; color: var(--theme-color); font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; border-bottom: 2px solid var(--theme-color); white-space: nowrap; }
+        td { padding: 12px 14px; border-bottom: 1px solid var(--border-color); font-size: 12.5px; color: var(--text-main); vertical-align: middle; }
+        tbody tr:hover { background: rgba(227, 11, 92, 0.05); }
+
+        /* Badges */
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; display: inline-block; text-transform: uppercase; white-space: nowrap; }
+        .badge-pending { background: rgba(255, 193, 7, 0.15); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.35); }
+        .badge-approved { background: rgba(40, 167, 69, 0.15); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.35); }
+        .badge-rejected { background: rgba(220, 53, 69, 0.15); color: #dc3545; border: 1px solid rgba(220, 53, 69, 0.35); }
+
+        .type-new { background: rgba(0, 123, 255, 0.15); color: #007bff; border: 1px solid rgba(0, 123, 255, 0.35); }
+        .type-edit { background: rgba(253, 126, 20, 0.15); color: #fd7e14; border: 1px solid rgba(253, 126, 20, 0.35); }
+        .type-delete { background: rgba(220, 53, 69, 0.15); color: #dc3545; border: 1px solid rgba(220, 53, 69, 0.35); }
+
+        /* Change Preview Box inside Table */
+        .diff-preview { font-size: 11.5px; line-height: 1.4; max-width: 340px; }
+        .diff-old { color: #ff6b6b; text-decoration: line-through; font-size: 11px; display: block; }
+        .diff-new { color: #28a745; font-weight: 700; display: block; }
+
+        /* Action Cell & Buttons (Fixed so <td> stays a table-cell and never breaks row border line) */
+        td.action-cell { white-space: nowrap; text-align: center; vertical-align: middle; }
+        .action-btns { display: inline-flex; gap: 6px; align-items: center; justify-content: center; white-space: nowrap; flex-wrap: nowrap; }
+        .btn-act { padding: 6px 11px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; border: none; transition: 0.2s; display: inline-flex; align-items: center; gap: 4px; text-transform: uppercase; white-space: nowrap; flex-shrink: 0; }
+        .btn-view { background: rgba(23, 162, 184, 0.15); color: #17a2b8; border: 1px solid rgba(23, 162, 184, 0.4); }
+        .btn-view:hover { background: #17a2b8; color: #fff; }
+        .btn-approve { background: rgba(40, 167, 69, 0.15); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.4); }
+        .btn-approve:hover { background: #28a745; color: #fff; transform: translateY(-1px); }
+        .btn-reject { background: rgba(220, 53, 69, 0.15); color: #dc3545; border: 1px solid rgba(220, 53, 69, 0.4); }
+        .btn-reject:hover { background: #dc3545; color: #fff; transform: translateY(-1px); }
+
+        /* STICKY FOOTER BAR */
+        .summary-footer-bar { 
+            background: var(--input-bg); padding: 12px 25px; border-radius: 0 0 12px 12px; 
+            display: flex; justify-content: space-between; align-items: center; 
+            border: 1px solid var(--border-color); border-top: 2px solid var(--theme-color); 
+            flex-shrink: 0; box-shadow: 0 -4px 15px rgba(0,0,0,0.2); z-index: 20; flex-wrap: wrap; gap: 15px;
+        }
+        .summary-footer-box { text-align: center; }
+        .summary-footer-box span { display: block; font-size: 10px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 2px; }
+        .summary-footer-box h3 { font-size: 15px; margin: 0; font-weight: 800; }
+
+        /* ================= MODALS ================= */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(8px); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 20px; }
+        .modal-overlay.active { display: flex; }
+        .modal-card { background: var(--bg-card); width: 100%; max-width: 720px; border-radius: 12px; border-top: 4px solid var(--theme-color); box-shadow: 0 10px 40px rgba(0,0,0,0.6); max-height: 92vh; display: flex; flex-direction: column; border: 1px solid var(--border-color); }
+        .modal-card.small { max-width: 480px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; border-bottom: 1px solid var(--border-color); }
+        .modal-header h2 { font-size: 17px; color: var(--theme-color); }
+        .close-btn { background: none; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; }
+        .close-btn:hover { color: #dc3545; }
+        .modal-body { padding: 22px; overflow-y: auto; flex: 1; }
+        .modal-footer { padding: 14px 24px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 10px; background: var(--input-bg); border-radius: 0 0 12px 12px; }
+
+        .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
+        .compare-box { background: var(--input-bg); border: 1px solid var(--border-color); padding: 15px; border-radius: 8px; }
+        .compare-box h4 { font-size: 11px; text-transform: uppercase; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px dashed var(--border-color); }
+        .btn-save { background: var(--theme-color); color: white; padding: 10px 20px; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; text-transform: uppercase; transition: 0.3s; box-shadow: 0 4px 10px var(--theme-glow); }
+        .btn-save:hover { filter: brightness(1.1); transform: translateY(-2px); }
+    </style>
+</head>
+<body>
+
+    <div class="main-content">
+        <!-- HEADER -->
+        <div class="header">
+            <div>
+                <a href="dashboard.html" class="btn-back-dash">← Back to Dashboard</a>
+                <h1>🛡️ Office User Request & Admin Approval</h1>
+            </div>
+            <div class="header-actions">
+                <!-- Pending Requests Button -->
+                <button class="tab-btn active" id="btnPendingTab" onclick="switchTab('pending')">
+                    ⏳ Pending Approvals <span class="count-pill" id="pillPending">0</span>
+                </button>
+                
+                <!-- History Button -->
+                <button class="tab-btn" id="btnHistoryTab" onclick="switchTab('history')">
+                    📜 Approval History <span class="count-pill" id="pillHistory">0</span>
+                </button>
+                
+                <!-- Export Button -->
+                <button class="btn-export" onclick="exportRequestsExcel()">📊 Export Excel</button>
+            </div>
+        </div>
+
+        <!-- KPI SUMMARY CARDS -->
+        <div class="stats-grid">
+            <div class="stat-card blue">
+                <h4>Total Office Requests</h4>
+                <h2 id="kpiTotal">0</h2>
+                <span class="sub-text">All entries & modifications logged</span>
+            </div>
+            <div class="stat-card orange">
+                <h4>Pending For Approval</h4>
+                <h2 id="kpiPending" style="color: #ffc107;">0</h2>
+                <span class="sub-text">Awaiting Super Admin decision</span>
+            </div>
+            <div class="stat-card green">
+                <h4>Approved Requests</h4>
+                <h2 id="kpiApproved" style="color: #28a745;">0</h2>
+                <span class="sub-text">Changes applied to master database</span>
+            </div>
+            <div class="stat-card red">
+                <h4>Rejected Requests</h4>
+                <h2 id="kpiRejected" style="color: #dc3545;">0</h2>
+                <span class="sub-text">Declined by Admin with remarks</span>
+            </div>
+        </div>
+
+        <!-- FILTERS BAR -->
+        <div class="controls-bar">
+            <div class="filter-item">
+                <label>🏢 Office User (Staff)</label>
+                <select class="form-control" id="filterStaff" onchange="renderTable()">
+                    <option value="All">All Office Users</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label>⚡ Request Action Type</label>
+                <select class="form-control" id="filterActionType" onchange="renderTable()">
+                    <option value="All">All Action Types</option>
+                    <option value="New Entry">➕ New Entry</option>
+                    <option value="Edit / Update">✏️ Edit / Update</option>
+                    <option value="Delete Record">🗑️ Delete Record</option>
+                </select>
+            </div>
+            <div class="filter-item" id="historyStatusFilterBox" style="display: none;">
+                <label>📌 History Status</label>
+                <select class="form-control" id="filterHistoryStatus" onchange="renderTable()">
+                    <option value="All">All (Approved & Rejected)</option>
+                    <option value="Approved">✔️ Approved Only</option>
+                    <option value="Rejected">❌ Rejected Only</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label>📅 Date Filter</label>
+                <input type="date" class="form-control" id="filterDate" onchange="renderTable()">
+            </div>
+            <div class="filter-item">
+                <label>🔍 Quick Search</label>
+                <input type="text" class="form-control" id="searchBox" placeholder="Req ID, Staff, Ref No, Site..." onkeyup="renderTable()">
+            </div>
+        </div>
+
+        <!-- MAIN TABLE -->
+        <div class="table-container-box">
+            <table id="requestsTable">
+                <thead id="tableHead"></thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+
+        <!-- STICKY FOOTER BAR -->
+        <div class="summary-footer-bar">
+            <div class="summary-footer-box">
+                <span>Current View Mode</span>
+                <h3 id="footViewMode" style="color: var(--theme-color);">PENDING APPROVALS</h3>
+            </div>
+            <div class="summary-footer-box">
+                <span>Records Displayed</span>
+                <h3 id="footDisplayed">0</h3>
+            </div>
+            <div class="summary-footer-box">
+                <span>New Entries / Edits / Deletes</span>
+                <h3 id="footBreakdown" style="color: #007bff;">0 / 0 / 0</h3>
+            </div>
+            <div class="summary-footer-box">
+                <span>Portal Security Level</span>
+                <h3 style="color: #28a745;">🔒 Admin Approval Enforced</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 1. VIEW DETAILS & OLD vs NEW COMPARISON MODAL ================= -->
+    <div class="modal-overlay" id="viewDetailModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2 id="viewModalTitle">👁️ Request Inspection & Data Comparison</h2>
+                <button class="close-btn" onclick="closeViewModal()">×</button>
+            </div>
+            <div class="modal-body" id="viewModalBody">
+                <!-- Dynamically Populated -->
+            </div>
+            <div class="modal-footer" id="viewModalFooter">
+                <!-- Approve/Reject buttons if Pending, or Close if History -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 2. ADMIN DECISION (APPROVE / REJECT WITH REMARKS) MODAL ================= -->
+    <div class="modal-overlay" id="decisionModal" style="z-index: 1500;">
+        <div class="modal-card small">
+            <div class="modal-header">
+                <h2 id="decisionModalTitle">Confirm Decision</h2>
+                <button class="close-btn" onclick="closeDecisionModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p id="decisionPromptText" style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;"></p>
+                <div class="filter-item">
+                    <label>💬 Admin Remarks / Note (Saved in History)</label>
+                    <textarea class="form-control" id="adminDecisionRemark" rows="3" placeholder="Enter approval note or reason for rejection..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-save" id="confirmDecisionBtn" onclick="executeAdminDecision()">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ================= MOCK OFFICE USER REQUESTS DATABASE (Fetched from Backend) =================
+        let officeRequests = [
+            {
+                id: 1, reqNo: "REQ-2026-101", date: "2026-09-28", time: "10:45 AM",
+                staffId: "STF-102", staffName: "Sneha Das", module: "Invoice Management",
+                site: "Dum Dum Complex", actionType: "Edit / Update", refNo: "INV-2026-002",
+                amountText: "₹ 14,700.00",
+                oldData: "River Sand Bill Qty: 200 CFT | Base: ₹8,000 | Gross: ₹8,400",
+                newData: "River Sand Bill Qty: 350 CFT | Base: ₹14,000 | Gross: ₹14,700",
+                staffReason: "Challan #409 had 150 CFT extra sand delivered on same day.",
+                status: "Pending", adminDate: "", adminRemarks: ""
+            },
+            {
+                id: 2, reqNo: "REQ-2026-102", date: "2026-09-28", time: "11:20 AM",
+                staffId: "STF-103", staffName: "Bikram Sen", module: "Stock & Material",
+                site: "Salt Lake Sector V", actionType: "New Entry", refNo: "STK-IN-209",
+                amountText: "₹ 1,92,500.00",
+                oldData: "N/A (Fresh Stock Entry)",
+                newData: "Added 550 Bags Ultratech Cement @ ₹350/Bag (Challan: UT-9920)",
+                staffReason: "Morning stock unloaded at Salt Lake site godown.",
+                status: "Pending", adminDate: "", adminRemarks: ""
+            },
+            {
+                id: 3, reqNo: "REQ-2026-103", date: "2026-09-28", time: "01:15 PM",
+                staffId: "STF-101", staffName: "Amitava Roy", module: "Contractor Bill",
+                site: "Barasat Highway", actionType: "Delete Record", refNo: "CPAY/26/031",
+                amountText: "₹ 45,000.00",
+                oldData: "Duplicate Voucher CPAY/26/031 - Paid ₹45,000 to Royal Electricals",
+                newData: "Requesting Permanent Deletion of Duplicate Payment Voucher",
+                staffReason: "Entry was accidentally saved twice during bank reconciliation.",
+                status: "Pending", adminDate: "", adminRemarks: ""
+            },
+            {
+                id: 4, reqNo: "REQ-2026-104", date: "2026-09-28", time: "03:05 PM",
+                staffId: "STF-102", staffName: "Sneha Das", module: "Retailer Bill Entry",
+                site: "Dum Dum Complex", actionType: "New Entry", refNo: "RTL-26-088",
+                amountText: "₹ 18,400.00",
+                oldData: "N/A (New Retail Hardware Bill)",
+                newData: "Maa Tara Hardware - Grinding Wheel, Welding Rods & Safety Gloves",
+                staffReason: "Urgent site tools purchased as per requisition.",
+                status: "Pending", adminDate: "", adminRemarks: ""
+            },
+            // HISTORICAL RECORDS (Already Approved / Rejected)
+            {
+                id: 5, reqNo: "REQ-2026-098", date: "2026-09-26", time: "04:10 PM",
+                staffId: "STF-101", staffName: "Amitava Roy", module: "Mobilization Ledger",
+                site: "Dum Dum Complex", actionType: "New Entry", refNo: "PAY/26/048",
+                amountText: "₹ 60,000.00",
+                oldData: "N/A (New Payment Entry)",
+                newData: "Part Payment against INV-MOB-102 to Maa Tara Civil Contractors (2% TDS)",
+                staffReason: "NEFT UTR #HDFC9928171 verified with bank statement.",
+                status: "Approved", adminDate: "2026-09-26 05:00 PM", adminRemarks: "UTR verified with HDFC statement. Approved."
+            },
+            {
+                id: 6, reqNo: "REQ-2026-099", date: "2026-09-27", time: "12:30 PM",
+                staffId: "STF-103", staffName: "Bikram Sen", module: "Stock & Material",
+                site: "Barasat Highway", actionType: "Edit / Update", refNo: "STK-OUT-112",
+                amountText: "₹ 82,500.00",
+                oldData: "TMT Bar 12mm Issued: 1.0 MT",
+                newData: "TMT Bar 12mm Issued: 1.5 MT",
+                staffReason: "Updated issue quantity for culvert reinforcement.",
+                status: "Rejected", adminDate: "2026-09-27 02:15 PM", adminRemarks: "Rejected: Gate pass & supervisor signature missing for extra 0.5 MT."
+            },
+            {
+                id: 7, reqNo: "REQ-2026-100", date: "2026-09-27", time: "05:45 PM",
+                staffId: "STF-102", staffName: "Sneha Das", module: "Employee Onboarding",
+                site: "Salt Lake Sector V", actionType: "New Entry", refNo: "EMP-2026-064",
+                amountText: "₹ 650 / Day",
+                oldData: "N/A (New Mason Joining)",
+                newData: "Name: Ratan Mondal | Role: Head Mason | Daily Wage: ₹650",
+                staffReason: "Joined Salt Lake site under Supervisor Subrata Roy.",
+                status: "Approved", adminDate: "2026-09-27 06:30 PM", adminRemarks: "KYC & site tagging verified. Approved."
+            }
+        ];
+
+        let currentTab = 'pending'; // 'pending' or 'history'
+        let pendingDecision = { id: null, status: '' };
+
+        window.onload = function() {
+            populateStaffFilter();
+            renderTable();
+        };
+
+        function populateStaffFilter() {
+            const staffSelect = document.getElementById('filterStaff');
+            const uniqueStaff = [];
+            const map = new Map();
+            officeRequests.forEach(r => {
+                if (!map.has(r.staffId)) {
+                    map.set(r.staffId, true);
+                    uniqueStaff.push({ id: r.staffId, name: r.staffName });
+                }
+            });
+            staffSelect.innerHTML = `<option value="All">All Office Users (${uniqueStaff.length})</option>`;
+            uniqueStaff.forEach(s => {
+                staffSelect.innerHTML += `<option value="${s.id}">${s.name} (${s.id})</option>`;
+            });
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.getElementById('btnPendingTab').classList.toggle('active', tab === 'pending');
+            document.getElementById('btnHistoryTab').classList.toggle('active', tab === 'history');
+            document.getElementById('historyStatusFilterBox').style.display = tab === 'history' ? 'flex' : 'none';
+            document.getElementById('footViewMode').innerText = tab === 'pending' ? '⏳ PENDING APPROVALS' : '📜 APPROVAL HISTORY';
+            renderTable();
+        }
+
+        function getActionBadge(type) {
+            if (type === 'New Entry') return `<span class="badge type-new">➕ New Entry</span>`;
+            if (type === 'Edit / Update') return `<span class="badge type-edit">✏️ Edit / Update</span>`;
+            return `<span class="badge type-delete">🗑️ Delete Record</span>`;
+        }
+
+        function getStatusBadge(status) {
+            if (status === 'Pending') return `<span class="badge badge-pending">⏳ PENDING</span>`;
+            if (status === 'Approved') return `<span class="badge badge-approved">✔️ APPROVED</span>`;
+            return `<span class="badge badge-rejected">❌ REJECTED</span>`;
+        }
+
+        function getFilteredData() {
+            const staff = document.getElementById('filterStaff').value;
+            const actType = document.getElementById('filterActionType').value;
+            const histStatus = document.getElementById('filterHistoryStatus').value;
+            const fDate = document.getElementById('filterDate').value;
+            const query = document.getElementById('searchBox').value.toLowerCase();
+
+            return officeRequests.filter(r => {
+                if (currentTab === 'pending' && r.status !== 'Pending') return false;
+                if (currentTab === 'history' && r.status === 'Pending') return false;
+                if (currentTab === 'history' && histStatus !== 'All' && r.status !== histStatus) return false;
+
+                if (staff !== 'All' && r.staffId !== staff) return false;
+                if (actType !== 'All' && r.actionType !== actType) return false;
+                if (fDate && r.date !== fDate) return false;
+
+                const searchStr = `${r.reqNo} ${r.staffName} ${r.staffId} ${r.module} ${r.site} ${r.refNo} ${r.newData} ${r.staffReason}`.toLowerCase();
+                if (query && !searchStr.includes(query)) return false;
+                return true;
+            });
+        }
+
+        function updateKPIs() {
+            const total = officeRequests.length;
+            const pending = officeRequests.filter(r => r.status === 'Pending').length;
+            const approved = officeRequests.filter(r => r.status === 'Approved').length;
+            const rejected = officeRequests.filter(r => r.status === 'Rejected').length;
+
+            document.getElementById('kpiTotal').innerText = total;
+            document.getElementById('kpiPending').innerText = pending;
+            document.getElementById('kpiApproved').innerText = approved;
+            document.getElementById('kpiRejected').innerText = rejected;
+
+            document.getElementById('pillPending').innerText = pending;
+            document.getElementById('pillHistory').innerText = approved + rejected;
+        }
+
+        function renderTable() {
+            updateKPIs();
+            const list = getFilteredData();
+            const thead = document.getElementById('tableHead');
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            let countNew = 0, countEdit = 0, countDel = 0;
+            list.forEach(r => {
+                if (r.actionType === 'New Entry') countNew++;
+                else if (r.actionType === 'Edit / Update') countEdit++;
+                else countDel++;
+            });
+
+            if (currentTab === 'pending') {
+                thead.innerHTML = `
+                    <tr>
+                        <th>Req ID & Time</th>
+                        <th>Office User (Staff)</th>
+                        <th>Allotted Module & Site</th>
+                        <th>Action Type</th>
+                        <th>Ref No & Value</th>
+                        <th>Requested Change (Old vs New)</th>
+                        <th>Status</th>
+                        <th style="text-align:center;">Admin Decision</th>
+                    </tr>
+                `;
+
+                if (list.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:35px; color:var(--text-muted);">🎉 No pending requests awaiting approval!</td></tr>`;
+                } else {
+                    list.forEach(r => {
+                        const oldHtml = r.actionType !== 'New Entry' ? `<span class="diff-old">Old: ${r.oldData}</span>` : '';
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>
+                                    <strong style="color:var(--theme-color);">${r.reqNo}</strong>
+                                    <div style="font-size:10.5px; color:var(--text-muted);">${r.date} | ${r.time}</div>
+                                </td>
+                                <td>
+                                    <strong>${r.staffName}</strong>
+                                    <div style="font-size:10.5px; color:var(--text-muted);">${r.staffId}</div>
+                                </td>
+                                <td>
+                                    <div style="font-weight:700;">${r.module}</div>
+                                    <div style="font-size:11px; color:var(--theme-color);">📍 ${r.site}</div>
+                                </td>
+                                <td>${getActionBadge(r.actionType)}</td>
+                                <td>
+                                    <div style="font-weight:700;">${r.refNo}</div>
+                                    <div style="font-size:11px; color:#28a745; font-weight:700;">${r.amountText}</div>
+                                </td>
+                                <td>
+                                    <div class="diff-preview">
+                                        ${oldHtml}
+                                        <span class="diff-new">New: ${r.newData}</span>
+                                        <span style="font-size:10.5px; color:var(--text-muted);">💬 "${r.staffReason}"</span>
+                                    </div>
+                                </td>
+                                <td style="white-space:nowrap;">${getStatusBadge(r.status)}</td>
+                                <td class="action-cell">
+                                    <div class="action-btns">
+                                        <button class="btn-act btn-view" onclick="openViewModal(${r.id})" title="Inspect Full Details">👁️ View</button>
+                                        <button class="btn-act btn-approve" onclick="openDecisionModal(${r.id}, 'Approved')">✔️ Approve</button>
+                                        <button class="btn-act btn-reject" onclick="openDecisionModal(${r.id}, 'Rejected')">❌ Reject</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                }
+            } else {
+                // HISTORY VIEW TABLE
+                thead.innerHTML = `
+                    <tr>
+                        <th>Req ID & Date</th>
+                        <th>Office User (Staff)</th>
+                        <th>Allotted Module & Site</th>
+                        <th>Action Type</th>
+                        <th>Ref No & Value</th>
+                        <th>Entry / Change Details</th>
+                        <th>Final Status</th>
+                        <th>Admin Action Date & Remarks</th>
+                        <th style="text-align:center;">Details</th>
+                    </tr>
+                `;
+
+                if (list.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:35px; color:var(--text-muted);">No approval history found for the selected criteria.</td></tr>`;
+                } else {
+                    list.forEach(r => {
+                        const oldHtml = r.actionType !== 'New Entry' ? `<span class="diff-old">Old: ${r.oldData}</span>` : '';
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>
+                                    <strong style="color:var(--theme-color);">${r.reqNo}</strong>
+                                    <div style="font-size:10.5px; color:var(--text-muted);">${r.date} | ${r.time}</div>
+                                </td>
+                                <td>
+                                    <strong>${r.staffName}</strong>
+                                    <div style="font-size:10.5px; color:var(--text-muted);">${r.staffId}</div>
+                                </td>
+                                <td>
+                                    <div style="font-weight:700;">${r.module}</div>
+                                    <div style="font-size:11px; color:var(--theme-color);">📍 ${r.site}</div>
+                                </td>
+                                <td>${getActionBadge(r.actionType)}</td>
+                                <td>
+                                    <div style="font-weight:700;">${r.refNo}</div>
+                                    <div style="font-size:11px; color:#007bff; font-weight:700;">${r.amountText}</div>
+                                </td>
+                                <td>
+                                    <div class="diff-preview">
+                                        ${oldHtml}
+                                        <span class="diff-new">${r.newData}</span>
+                                    </div>
+                                </td>
+                                <td style="white-space:nowrap;">${getStatusBadge(r.status)}</td>
+                                <td>
+                                    <div style="font-size:11px; font-weight:700; color:var(--text-main);">🕒 ${r.adminDate}</div>
+                                    <div style="font-size:11px; color:${r.status === 'Approved' ? '#28a745' : '#ff6b6b'}; margin-top:2px;">
+                                        💬 ${r.adminRemarks || 'No remarks'}
+                                    </div>
+                                </td>
+                                <td class="action-cell">
+                                    <div class="action-btns">
+                                        <button class="btn-act btn-view" onclick="openViewModal(${r.id})">👁️ View</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                }
+            }
+
+            document.getElementById('footDisplayed').innerText = `${list.length} Requests`;
+            document.getElementById('footBreakdown').innerText = `${countNew} New / ${countEdit} Edit / ${countDel} Delete`;
+        }
+
+        // ================= 1. VIEW DETAILS & DIFF MODAL =================
+        function openViewModal(id) {
+            const r = officeRequests.find(item => item.id === id);
+            if (!r) return;
+
+            document.getElementById('viewModalTitle').innerText = `👁️ Request Details — ${r.reqNo}`;
+            const body = document.getElementById('viewModalBody');
+            const footer = document.getElementById('viewModalFooter');
+
+            const historyBlock = r.status !== 'Pending'
+                ? `<div style="margin-top:15px; padding:12px; border-radius:8px; background:rgba(40,167,69,0.08); border:1px solid var(--border-color);">
+                       <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Admin Decision History</div>
+                       <div style="margin-top:5px; font-size:13px;"><strong>Status:</strong> ${getStatusBadge(r.status)} &nbsp;|&nbsp; <strong>Action Time:</strong> ${r.adminDate}</div>
+                       <div style="margin-top:5px; font-size:12.5px;"><strong>Admin Remarks:</strong> ${r.adminRemarks}</div>
+                   </div>`
+                : '';
+
+            body.innerHTML = `
+                <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; background:var(--input-bg); padding:14px; border-radius:8px; border:1px solid var(--border-color);">
+                    <div><span style="font-size:10px; color:var(--text-muted); display:block;">OFFICE USER</span><strong>${r.staffName} (${r.staffId})</strong></div>
+                    <div><span style="font-size:10px; color:var(--text-muted); display:block;">ALLOTTED MODULE</span><strong>${r.module}</strong></div>
+                    <div><span style="font-size:10px; color:var(--text-muted); display:block;">PROJECT / SITE</span><strong style="color:var(--theme-color);">${r.site}</strong></div>
+                    <div><span style="font-size:10px; color:var(--text-muted); display:block;">ACTION TYPE</span>${getActionBadge(r.actionType)}</div>
+                    <div><span style="font-size:10px; color:var(--text-muted); display:block;">REFERENCE NO</span><strong>${r.refNo}</strong></div>
+                    <div><span style="font-size:10px; color:var(--text-muted); display:block;">FINANCIAL IMPACT</span><strong style="color:#28a745;">${r.amountText}</strong></div>
+                </div>
+
+                <div class="compare-grid">
+                    <div class="compare-box" style="border-left: 3px solid #dc3545;">
+                        <h4 style="color:#ff6b6b;">⏮️ Previous / Existing Data</h4>
+                        <p style="font-size:12.5px; line-height:1.5;">${r.oldData}</p>
+                    </div>
+                    <div class="compare-box" style="border-left: 3px solid #28a745;">
+                        <h4 style="color:#28a745;">🆕 Requested Entry / New Data</h4>
+                        <p style="font-size:12.5px; line-height:1.5; font-weight:600;">${r.newData}</p>
+                    </div>
+                </div>
+
+                <div style="margin-top:15px; padding:12px; border-radius:8px; background:var(--input-bg); border:1px solid var(--border-color);">
+                    <span style="font-size:10px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Staff Reason / Note (${r.date} at ${r.time}):</span>
+                    <p style="font-size:12.5px; margin-top:4px;">"${r.staffReason}"</p>
+                </div>
+                ${historyBlock}
+            `;
+
+            if (r.status === 'Pending') {
+                footer.innerHTML = `
+                    <button class="btn-act btn-approve" style="padding:10px 18px; font-size:12px;" onclick="closeViewModal(); openDecisionModal(${r.id}, 'Approved');">✔️ Approve Request</button>
+                    <button class="btn-act btn-reject" style="padding:10px 18px; font-size:12px;" onclick="closeViewModal(); openDecisionModal(${r.id}, 'Rejected');">❌ Reject Request</button>
+                `;
+            } else {
+                footer.innerHTML = `<button class="btn-save" onclick="closeViewModal()">Close</button>`;
+            }
+
+            document.getElementById('viewDetailModal').classList.add('active');
+        }
+
+        function closeViewModal() {
+            document.getElementById('viewDetailModal').classList.remove('active');
+        }
+
+        // ================= 2. ADMIN APPROVE / REJECT DECISION MODAL =================
+        function openDecisionModal(id, status) {
+            pendingDecision = { id, status };
+            const r = officeRequests.find(item => item.id === id);
+            const titleEl = document.getElementById('decisionModalTitle');
+            const promptEl = document.getElementById('decisionPromptText');
+            const btnEl = document.getElementById('confirmDecisionBtn');
+            const remarkInput = document.getElementById('adminDecisionRemark');
+
+            if (status === 'Approved') {
+                titleEl.innerText = `✔️ Approve Request (${r.reqNo})`;
+                titleEl.style.color = '#28a745';
+                promptEl.innerText = `Are you sure you want to APPROVE this ${r.actionType} request from ${r.staffName} (${r.module})?`;
+                btnEl.style.background = '#28a745';
+                btnEl.innerText = '✔️ Confirm Approval';
+                remarkInput.value = 'Verified & Approved by Admin.';
+            } else {
+                titleEl.innerText = `❌ Reject Request (${r.reqNo})`;
+                titleEl.style.color = '#dc3545';
+                promptEl.innerText = `Please specify the reason for REJECTING this ${r.actionType} request from ${r.staffName}:`;
+                btnEl.style.background = '#dc3545';
+                btnEl.innerText = '❌ Confirm Rejection';
+                remarkInput.value = '';
+            }
+
+            document.getElementById('decisionModal').classList.add('active');
+        }
+
+        function closeDecisionModal() {
+            document.getElementById('decisionModal').classList.remove('active');
+        }
+
+        function executeAdminDecision() {
+            const remark = document.getElementById('adminDecisionRemark').value.trim();
+            if (pendingDecision.status === 'Rejected' && !remark) {
+                alert("⚠️ Please provide a reason for rejecting the request!");
+                return;
+            }
+
+            const r = officeRequests.find(item => item.id === pendingDecision.id);
+            if (r) {
+                const now = new Date();
+                r.status = pendingDecision.status;
+                r.adminDate = `${now.toISOString().slice(0, 10)} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                r.adminRemarks = remark || (pendingDecision.status === 'Approved' ? 'Approved by Admin' : 'Rejected by Admin');
+            }
+
+            closeDecisionModal();
+            renderTable();
+        }
+
+        // ================= 3. EXPORT TO EXCEL =================
+        function exportRequestsExcel() {
+            const list = getFilteredData();
+            if (list.length === 0) {
+                alert("No records available to export!");
+                return;
+            }
+
+            const exportData = [
+                ["ATR CONSTRUCTION - OFFICE USER REQUEST & APPROVAL REPORT"],
+                ["View Mode:", currentTab.toUpperCase(), "Export Date:", new Date().toLocaleDateString()],
+                [],
+                ["Req ID", "Request Date", "Time", "Staff ID", "Staff Name", "Allotted Module", "Project / Site", "Action Type", "Ref No", "Value", "Previous Data", "New / Requested Data", "Staff Reason", "Status", "Admin Action Time", "Admin Remarks"]
+            ];
+
+            list.forEach(r => {
+                exportData.push([
+                    r.reqNo, r.date, r.time, r.staffId, r.staffName,
+                    r.module, r.site, r.actionType, r.refNo, r.amountText,
+                    r.oldData, r.newData, r.staffReason, r.status,
+                    r.adminDate || "Pending", r.adminRemarks || "-"
+                ]);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Office_Requests");
+            XLSX.writeFile(wb, `ATR_Office_Requests_${currentTab}_${new Date().toISOString().slice(0,10)}.xlsx`);
+        }
+    </script>
+</body>
+</html>

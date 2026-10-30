@@ -1,0 +1,60 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Stock Report</h1>
+    <div class="header-actions">
+      <button class="btn-export" (click)="exportReport()"><i class="ri-file-excel-2-line"></i> Export</button>
+      <button class="btn-secondary" (click)="printReport()"><i class="ri-printer-line"></i> Print</button>
+    </div>
+  </div>
+
+  <app-summary-cards [cards]="summaryCards" />
+
+  <div class="card-container">
+    <div class="table-toolbar">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;">
+        <div class="form-group" style="margin-bottom:0;min-width:180px;">
+          <label>Site</label>
+          <app-searchable-dropdown [items]="siteItems" placeholder="All Sites" [ngModel]="selectedSite()" (ngModelChange)="selectedSite.set($event); loadReport()" name="site" />
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label>From</label>
+          <input type="date" [ngModel]="dateFrom()" (ngModelChange)="dateFrom.set($event)" name="df" />
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label>To</label>
+          <input type="date" [ngModel]="dateTo()" (ngModelChange)="dateTo.set($event)" name="dt" />
+        </div>
+        <button class="btn-primary" (click)="loadReport()" style="height:38px;">Apply</button>
+        <div class="form-group" style="margin-bottom:0;flex:1;min-width:150px;">
+          <label>Search</label>
+          <input type="text" placeholder="Search..." [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" name="q" />
+        </div>
+      </div>
+    </div>
+
+    @if (loading()) {
+      <div class="skeleton" style="height:200px;"></div>
+    } @else {
+      <div class="table-responsive" id="stockReportTable">
+        <table>
+          <thead><tr><th>Site</th><th>Product</th><th>Unit</th><th>Total Added</th><th>Total Damaged</th><th>Transferred Out</th><th>Net Available</th></tr></thead>
+          <tbody>
+            @for (r of filteredSummary; track $index) {
+              <tr>
+                <td>{{ r.site_name }}</td>
+                <td style="font-weight:600;">{{ r.product_name }}</td>
+                <td>{{ r.unit }}</td>
+                <td style="color:var(--success);font-weight:600;">{{ r.total_added }}</td>
+                <td style="color:var(--danger);">{{ r.total_damaged }}</td>
+                <td>{{ r.total_transferred_out }}</td>
+                <td style="font-weight:700;color:var(--accent);">{{ r.net_available }}</td>
+              </tr>
+            } @empty {
+              <tr><td colspan="7" class="empty-state">No stock data available.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+</div>

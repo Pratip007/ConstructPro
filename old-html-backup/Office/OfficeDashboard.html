@@ -1,0 +1,1333 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Office Staff Portal</title>
+    
+    <!-- GLOBAL THEME MEMORY (Load before rendering to prevent light/dark flickering) -->
+    <script>
+        const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        window.addEventListener('storage', function(e) {
+            if(e.key === 'atr_theme') { document.documentElement.setAttribute('data-theme', e.newValue); }
+        });
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
+
+        /* ================= THEME ENGINE (DARK / LIGHT MODE) ================= */
+        :root {
+            --bg-body: #121212;
+            --bg-sidebar: #1e1e1e;
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --hover-bg: rgba(255, 255, 255, 0.08);
+            --shadow: 0 4px 15px rgba(0,0,0,0.3);
+            --theme-transition: background-color 0.4s ease, color 0.4s ease;
+            --accent: #ffc107;
+            --info: #17a2b8;
+            --success: #28a745;
+            --danger: #dc3545;
+        }
+
+        [data-theme="light"] {
+            --bg-body: #f0f2f5;
+            --bg-sidebar: #ffffff;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #666666;
+            --border-color: rgba(0, 0, 0, 0.1);
+            --glass-bg: rgba(0, 0, 0, 0.02);
+            --hover-bg: rgba(0, 0, 0, 0.05);
+            --shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Montserrat', sans-serif;
+            scroll-behavior: smooth;
+        }
+
+        /* ================= CUSTOM MODERN SCROLLBAR ================= */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(136, 136, 136, 0.3); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(136, 136, 136, 0.6); }
+
+        /* ================= APP LAYOUT (FIXED SHELL) ================= */
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            transition: var(--theme-transition);
+        }
+
+        /* Sidebar Navigation Layout */
+        .sidebar {
+            width: 280px;
+            min-width: 280px;
+            height: 100vh;
+            background-color: var(--bg-sidebar);
+            padding: 25px 15px;
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            transition: margin-left 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease;
+            z-index: 1001;
+            opacity: 1;
+        }
+
+        body.sidebar-hidden .sidebar {
+            margin-left: -280px;
+            opacity: 0;
+        }
+
+        /* Main Workspace Control Frame */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background: var(--bg-body);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+        }
+
+        /* ================= FIXED HEADER ================= */
+        .header {
+            flex-shrink: 0;
+            background: var(--bg-sidebar);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 40px;
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            z-index: 1000;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        /* ================= IFRAME VIEWPORT CONTAINER ================= */
+        .iframe-container {
+            flex: 1;
+            width: 100%;
+            height: 100%;
+            border: none;
+            background-color: var(--bg-body);
+        }
+
+        /* ================= CREATIVE PROFILE SECTION ================= */
+        .creative-profile-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .avatar-wrapper {
+            position: relative;
+            width: 85px;
+            height: 85px;
+            cursor: pointer;
+            border-radius: 50%;
+            border: 3px solid #ffc107;
+            padding: 3px;
+            transition: transform 0.3s;
+        }
+
+        .avatar-wrapper:hover { transform: scale(1.05); }
+
+        .profile-img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            background-color: var(--hover-bg);
+        }
+
+        .camera-overlay {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            background: #007bff;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 12px;
+            border: 2px solid var(--bg-sidebar);
+            transition: all 0.3s;
+        }
+
+        .camera-overlay:hover { background: #ffc107; color: #121212; }
+
+        .profile-user-summary {
+            text-align: center;
+            margin-top: 8px;
+        }
+        .profile-user-summary .u-name { font-size: 14px; font-weight: 700; color: var(--text-main); }
+        .profile-user-summary .u-role { font-size: 11px; color: #ffc107; font-weight: 600; margin-top: 2px; }
+
+        /* Profile Glass Dropdown */
+        .profile-dropdown-menu {
+            position: absolute;
+            top: 100px;
+            width: 210px;
+            background: var(--bg-card);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            padding: 15px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .creative-profile-container.active .profile-dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .profile-dropdown-menu h4 { font-size: 15px; margin-bottom: 2px; color: var(--text-main); text-align: center;}
+        .profile-dropdown-menu span { display: block; font-size: 11px; color: #ffc107; text-align: center; margin-bottom: 10px; font-weight: bold;}
+        .profile-dropdown-menu hr { border: 0; border-top: 1px solid var(--border-color); margin: 10px 0; }
+        
+        .profile-dropdown-menu a {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-main);
+            text-decoration: none;
+            padding: 8px 10px;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .profile-dropdown-menu a:hover { background: var(--hover-bg); color: #ffc107; }
+        .profile-dropdown-menu a.logout-btn:hover { color: #ff6b6b; }
+        
+        /* ================= SIDEBAR LINKS & TREES ================= */
+        .sidebar a, .tree-toggle {
+            color: var(--text-muted);
+            text-decoration: none;
+            padding: 12px 15px;
+            margin-bottom: 5px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            user-select: none;
+        }
+
+        .sidebar a:hover, .sidebar a.active, .tree-toggle:hover, .tree-container.open > .tree-toggle {
+            background-color: #ffc107;
+            color: #121212;
+        }
+
+        .dashboard-home-link {
+            background: var(--glass-bg);
+            border: 1px solid var(--border-color);
+            margin-bottom: 15px;
+            border-radius: 8px;
+        }
+
+        /* TREE MODE DROPDOWN ENGINE LAYOUTS */
+        .tree-container { margin-bottom: 5px; }
+
+        .tree-menu {
+            max-height: 0;
+            overflow: hidden;
+            list-style: none;
+            padding-left: 20px;
+            transition: max-height 0.3s ease-out;
+            background: var(--glass-bg);
+            border-radius: 0 0 6px 6px;
+        }
+
+        .tree-menu li a {
+            font-size: 13px;
+            padding: 10px 15px;
+            margin-bottom: 2px;
+            font-weight: 500;
+            border-radius: 0 4px 4px 0;
+        }
+
+        /* Exact Hierarchy border accents from dashboard.html */
+        #masterTree .tree-menu li a { border-left: 2px solid #007bff; }
+        #approvalTree .tree-menu li a { border-left: 2px solid #17a2b8; }
+        #employeeTree .tree-menu li a { border-left: 2px solid #28a745; }
+        #contractorTree .tree-menu li a { border-left: 2px solid #fd7e14; }
+        #mobilizationTree .tree-menu li a { border-left: 2px solid #6f42c1; }
+        #companyTree .tree-menu li a { border-left: 2px solid #20c997; }
+        #supervisorTree .tree-menu li a { border-left: 2px solid #3f51b5; }
+        #salesTree .tree-menu li a { border-left: 2px solid #e91e63; }
+        #purchaseTree .tree-menu li a { border-left: 2px solid #00bcd4; }
+        #paymentTree .tree-menu li a { border-left: 2px solid #dc3545; }
+        #reportTree .tree-menu li a { border-left: 2px solid #ffc107; }
+        #stockTree .tree-menu li a { border-left: 2px solid #9c27b0; }
+        #docTree .tree-menu li a { border-left: 2px solid #457b9d; }
+
+        .tree-container.open .tree-menu { max-height: 650px; padding-top: 4px; padding-bottom: 4px; }
+        .tree-container.open .arrow { transform: rotate(90deg); }
+        .arrow { transition: transform 0.3s; font-size: 12px; }
+
+        .empty-allotment-alert {
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px dashed rgba(255, 193, 7, 0.4);
+            color: #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            text-align: center;
+            line-height: 1.5;
+            margin-top: 10px;
+        }
+
+        /* ================= HEADER CONTENT ================= */
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .header-left h1 { font-size: 22px; color: var(--text-main); display: flex; align-items: center; gap: 10px; }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .office-mode-pill {
+            background: rgba(23, 162, 184, 0.15);
+            color: #17a2b8;
+            border: 1px solid rgba(23, 162, 184, 0.4);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .icon-btn {
+            background: var(--glass-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s;
+        }
+
+        .icon-btn:hover { background: var(--hover-bg); transform: translateY(-2px); }
+
+        .notification-wrapper { position: relative; }
+        
+        .badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #ff6b6b;
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 2px solid var(--bg-sidebar);
+        }
+
+        .notif-dropdown-menu {
+            position: absolute;
+            top: 50px;
+            right: 0;
+            width: 310px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            z-index: 2000;
+        }
+
+        .notification-wrapper.active .notif-dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .notif-dropdown-menu h4 {
+            padding: 15px;
+            font-size: 13px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-main);
+            background: var(--glass-bg);
+            border-radius: 10px 10px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .notif-item {
+            padding: 12px 15px;
+            display: block;
+            text-decoration: none;
+            color: var(--text-main);
+            font-size: 12.5px;
+            border-bottom: 1px solid var(--border-color);
+            transition: background 0.2s;
+            cursor: pointer;
+        }
+
+        .notif-item:hover { background: var(--hover-bg); color: #ffc107; }
+        .notif-item:last-child { border-bottom: none; border-radius: 0 0 10px 10px; }
+
+        /* ================= APPROVAL INTERCEPTOR MODAL ================= */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(6px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 3000;
+            padding: 20px;
+        }
+        .modal-overlay.active { display: flex; }
+
+        .modal-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-top: 4px solid #ffc107;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 650px;
+            padding: 25px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+            margin-bottom: 18px;
+        }
+        .modal-header h3 { font-size: 17px; color: #ffc107; display: flex; align-items: center; gap: 8px; }
+        .close-btn { background: none; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; }
+        .close-btn:hover { color: var(--danger); }
+
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; }
+        .form-control { width: 100%; padding: 10px 12px; background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-main); font-size: 13px; outline: none; }
+        .form-control:focus { border-color: #ffc107; }
+
+        .btn-submit-modal {
+            background: #ffc107;
+            color: #121212;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            width: 100%;
+            text-transform: uppercase;
+            transition: 0.3s;
+        }
+        .btn-submit-modal:hover { filter: brightness(1.1); }
+
+        .toast-msg {
+            position: fixed;
+            bottom: 25px; right: 25px;
+            background: #28a745; color: #fff;
+            padding: 14px 22px; border-radius: 8px;
+            font-size: 13px; font-weight: 700;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+            display: none; z-index: 4000;
+            border-left: 5px solid #ffc107;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ================= FIXED SIDEBAR ================= -->
+    <div class="sidebar">
+        
+        <!-- CREATIVE PROFILE SECTION (Synced with ../NewUserEntry.html) -->
+        <div class="creative-profile-container" id="profileContainer">
+            <div class="avatar-wrapper" onclick="toggleProfileMenu(event)">
+                <img src="https://ui-avatars.com/api/?name=Office+User&background=2b2b2b&color=ffc107" id="profileImage" class="profile-img" alt="Office User">
+                <div class="camera-overlay" onclick="document.getElementById('fileUpload').click(); event.stopPropagation();">
+                    📷
+                </div>
+            </div>
+            <div class="profile-user-summary">
+                <div class="u-name" id="sidebarUserName">Anuradha Dipali</div>
+                <div class="u-role" id="sidebarUserRole">ID: OFF-101 | Office Staff</div>
+            </div>
+            <input type="file" id="fileUpload" style="display:none;" accept="image/*" onchange="updateProfilePic(event)">
+            
+            <div class="profile-dropdown-menu" id="profileMenu">
+                <h4 id="dropdownUserName">Anuradha Dipali</h4>
+                <span id="dropdownUserRole">Office Staff</span>
+                <hr>
+                <a href="../ChangePassword.html" target="contentFrame" onclick="closeDropdowns()">🔑 Change Password</a>
+                <a href="../index.html" class="logout-btn" onclick="handleOfficeLogout()">🚪 Logout</a>
+            </div>
+        </div>
+
+        <!-- MAIN DASHBOARD HOME LINK (Loads office_dashboard_home.html) -->
+        <a href="office_dashboard_home.html" target="contentFrame" id="officeHomeLink" onclick="loadOfficeWorkspaceHome(event)" class="dashboard-home-link active">📊 Main Dashboard</a>
+
+        <!-- DYNAMIC TREE SECTIONS CONTAINER (All trees start closed by default) -->
+        <div id="dynamicSidebarTrees"></div>
+
+    </div>
+
+    <!-- ================= MAIN CONTENT ================= -->
+    <div class="main-content">
+        
+        <!-- FIXED TOP HEADER -->
+        <div class="header">
+            <div class="header-left">
+                <button class="icon-btn" onclick="toggleSidebar()" title="Toggle Sidebar">☰</button>
+                <h1>ATR Office Administration</h1>
+            </div>
+            
+            <div class="header-right">
+                <!-- Approval Mode Indicator -->
+                <div class="office-mode-pill" title="All changes made by Office Staff require approval in ApproveOffice.html">
+                    🔒 Approval Mode: ApproveOffice.html
+                </div>
+
+                <!-- Theme Toggle Button -->
+                <button class="icon-btn" onclick="toggleTheme()" title="Switch Light/Dark Mode" id="themeIcon">🌓</button>
+                
+                <!-- Notification Bell for Office User Requests -->
+                <div class="notification-wrapper" id="notifContainer">
+                    <button class="icon-btn" onclick="toggleNotification(event)" title="My Pending Approval Requests">
+                        🔔<span class="badge" id="pendingBadgeCount">0</span>
+                    </button>
+                    <div class="notif-dropdown-menu" id="notifMenu">
+                        <h4>
+                            <span>My Requests Status</span>
+                            <small style="color:#ffc107;">ApproveOffice.html</small>
+                        </h4>
+                        <div id="notifItemsList"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= MASTER IFRAME VIEWPORT (Auto-loads office_dashboard_home.html) ================= -->
+        <iframe name="contentFrame" id="contentFrame" class="iframe-container" src="office_dashboard_home.html"></iframe>
+
+    </div>
+
+    <!-- ================= ADMIN APPROVAL REQUEST MODAL (Sends to ../ApproveOffice.html) ================= -->
+    <div class="modal-overlay" id="approvalRequestModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>🏢 Send Request to ApproveOffice.html</h3>
+                <button class="close-btn" onclick="closeApprovalModal()">&times;</button>
+            </div>
+            <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.5;">
+                Office Portal থেকে যেকোনো পরিবর্তন (Create / Edit / Delete) করলে সেটি Admin Portal-এর <strong>ApproveOffice.html</strong>-এ যাবে। Admin অ্যাপ্রুভ করলে তবেই সেটি ডেটাবেসে সাকসেস হবে, না হলে <strong>Pending</strong> থাকবে।
+            </p>
+            <div class="form-group">
+                <label>Module & Action</label>
+                <input type="text" id="modalModuleAction" class="form-control" readonly style="font-weight: 700; color: #ffc107;">
+            </div>
+            <div class="form-group">
+                <label>Change Details / Record Summary</label>
+                <textarea id="modalChangeSummary" class="form-control" rows="3" readonly style="font-size: 12px; color: var(--text-muted);"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Reason / Remarks for Admin Approval <span style="color: #ff6b6b;">*</span></label>
+                <textarea id="modalApprovalReason" class="form-control" rows="3" placeholder="Write the reason for this entry, edit, or deletion..."></textarea>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button type="button" class="btn-submit-modal" onclick="submitRequestToApproveOffice()">
+                    📤 Submit Request for Approval
+                </button>
+                <button type="button" class="btn-submit-modal" style="background: #dc3545; color: #fff; width: auto; padding: 12px 25px;" onclick="closeApprovalModal()">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-msg" id="toastMsg"></div>
+
+    <script>
+        // =========================================================================================
+        // 1. EXACT 13 SECTIONS & 56 MENUS FROM ADMIN dashboard.html (Sequence & Filenames 100% Matched)
+        // =========================================================================================
+        const ADMIN_DASHBOARD_SCHEMA = [
+            {
+                treeId: "masterTree",
+                title: "🛠️ Master Section",
+                color: "#007bff",
+                items: [
+                    { file: "NewUserEntry.html", label: "👤 New User Entry" },
+                    { file: "MenuAlotment.html", label: "📋 Menu Allotment" },
+                    { file: "HeadAllotment.html", label: "🏷️ Head Entry" },
+                    { file: "BankEntry.html", label: "🏦 Bank Entry" },
+                    { file: "T&CEntry.html", label: "📜 Add T&C Entry" }
+                ]
+            },
+            {
+                treeId: "approvalTree",
+                title: "✅ Approval Section",
+                color: "#17a2b8",
+                items: [
+                    { file: "ApproveOffice.html", label: "🏢 Office User Requests" },
+                    { file: "ApproveSupervisor.html", label: "🛡 Supervisor Requests" },
+                    { file: "ApproveEmployee.html", label: "👥 Employee Requests" },
+                    { file: "ApprovalLogs.html", label: "📜 Approval History" }
+                ]
+            },
+            {
+                treeId: "employeeTree",
+                title: "👥 Employee Section",
+                color: "#28a745",
+                items: [
+                    { file: "EmployeeCategory.html", label: "👔 Position Category" },
+                    { file: "RegisteredEmployeeRecords.html", label: "📝 Employee Joining" },
+                    { file: "SiteTagging.html", label: "📍 Site Tagging" },
+                    { file: "EmployeeSubId.html", label: "🆔 Sub ID Create" },
+                    { file: "Paymentlist.html", label: "📄 Payment List" },
+                    { file: "EmployeeAttendance.html", label: "📅 Attendence" },
+                    { file: "SiteLeaveEntry.html", label: "🚪 Site Leave Entry" },
+                    { file: "EmployeeLedger.html", label: "📖 Employee Ledger" }
+                ]
+            },
+            {
+                treeId: "contractorTree",
+                title: "🏗️ Contractor Section",
+                color: "#fd7e14",
+                items: [
+                    { file: "AddContractor.html", label: "👷 Add Contractor" },
+                    { file: "SiteOrderEntry.html", label: "📦 Site Order Entry" },
+                    { file: "ProductEntry.html", label: "🧱 Product Entry" },
+                    { file: "ContractorLedger.html", label: "📖 Contractor Ledger" }
+                ]
+            },
+            {
+                treeId: "mobilizationTree",
+                title: "⚙️ Mobilization Section",
+                color: "#6f42c1",
+                items: [
+                    { file: "AddEquipment.html", label: "🚜 Add Equipment" },
+                    { file: "SiteOrderEquipment.html", label: "📋 Site Order Equipment" },
+                    { file: "EquipmentLeave.html", label: "⏱️ Equipment Leave" },
+                    { file: "SiteTaggingEquipment.html", label: "📍 Site Tagging Equipment" }
+                ]
+            },
+            {
+                treeId: "companyTree",
+                title: "🏢 Company Section",
+                color: "#20c997",
+                items: [
+                    { file: "AddCompany.html", label: "🏢 Add Company" },
+                    { file: "BalanceReceived.html", label: "💰 Balance Received" },
+                    { file: "CompanyLedger.html", label: "📊 Company Ledger" },
+                    { file: "IncomeExpenseEntry.html", label: "💸 Income Expense Entry" },
+                    { file: "bankstatement.html", label: "📜 Bank Statement" }
+                ]
+            },
+            {
+                treeId: "supervisorTree",
+                title: "🛡️ Supervisor Section",
+                color: "#3f51b5",
+                items: [
+                    { file: "AddSupervisor.html", label: "👤 Add Supervisor" },
+                    { file: "SiteTaggingSupervisor.html", label: "📍 Site Tagging Supervisor" },
+                    { file: "SupervisorLedger.html", label: "📖 Supervisor Ledger" }
+                ]
+            },
+            {
+                treeId: "salesTree",
+                title: "🛍️ Sales Section",
+                color: "#e91e63",
+                items: [
+                    { file: "PurchaseOrderEntry.html", label: "📄 Purchase Order Entry" },
+                    { file: "InvoiceEntry.html", label: "🧾 Invoice Entry" },
+                    { file: "ViewSite.html", label: "👁️ View Site" }
+                ]
+            },
+            {
+                treeId: "purchaseTree",
+                title: "🛒 Purchase Section",
+                color: "#00bcd4",
+                items: [
+                    { file: "AddRetailer.html", label: "🏪 Add Retailer" },
+                    { file: "RetailSiteInvoice.html", label: "🧾 Retail Site Invoice" },
+                    { file: "GstReport.html", label: "📈 GST Report" },
+                    { file: "NonGstReport.html", label: "📉 Non GST Report" },
+                    { file: "RetailLedger.html", label: "📖 Retail Ledger" }
+                ]
+            },
+            {
+                treeId: "paymentTree",
+                title: "💳 Payment Section",
+                color: "#dc3545",
+                items: [
+                    { file: "AllTypePayment.html", label: "💸 All Type Payment" }
+                ]
+            },
+            {
+                treeId: "reportTree",
+                title: "📊 Report Section",
+                color: "#ffc107",
+                items: [
+                    { file: "MobilizationReport.html", label: "🚜 Mobilization Report" },
+                    { file: "EmployeeReport.html", label: "👥 Employee Report" },
+                    { file: "ContractorReport.html", label: "👷 Contractor Report" },
+                    { file: "CompanyReport.html", label: "🏢 Company Report" },
+                    { file: "SupervisorReport.html", label: "🛡️ Supervisor Report" },
+                    { file: "SalesReport.html", label: "💰 Selles Report" },
+                    { file: "PurchaseReport.html", label: "🛍️ Purchase Report" },
+                    { file: "GstBillDownload.html", label: "📥 GST Bill Download" },
+                    { file: "NonGstBillDownload.html", label: "📥 Non GST Bill Download" }
+                ]
+            },
+            {
+                treeId: "stockTree",
+                title: "📦 Stock Management",
+                color: "#9c27b0",
+                items: [
+                    { file: "StockView.html", label: "🔍 Add/View Stock" },
+                    { file: "CurrentStock.html", label: "📊 Current Stock" },
+                    { file: "StockTransfer.html", label: "🔄 Stock Transfer" },
+                    { file: "StockReport.html", label: "📋 Stock Report" }
+                ]
+            },
+            {
+                treeId: "docTree",
+                title: "📜 Company Document",
+                color: "#457b9d",
+                items: [
+                    { file: "CreateDocList.html", label: "📁 Create Doc List" }
+                ]
+            }
+        ];
+
+        // =========================================================================================
+        // 2. DEFAULT USERS & MENU ALLOTMENTS (Synced with ../NewUserEntry.html & ../MenuAlotment.html)
+        // =========================================================================================
+        const DEFAULT_OFFICE_USERS = [
+            { userId: "OFF-101", name: "Anuradha Dipali", designation: "Accounts & Billing Executive", role: "Office Staff" },
+            { userId: "OFF-102", name: "Vikas Pandey", designation: "HR & Employee Coordinator", role: "Office Staff" },
+            { userId: "OFF-103", name: "Murshed Akhter", designation: "Purchase & Stock Executive", role: "Office Staff" }
+        ];
+
+        const DEFAULT_ALLOTMENTS = {
+            "OFF-101": [
+                "EmployeeAttendance.html", "EmployeeLedger.html",
+                "AddRetailer.html", "RetailSiteInvoice.html", "GstReport.html", "NonGstReport.html", "RetailLedger.html",
+                "AllTypePayment.html", "SupervisorLedger.html", "IncomeExpenseEntry.html", "bankstatement.html"
+            ],
+            "OFF-102": [
+                "EmployeeCategory.html", "RegisteredEmployeeRecords.html", "SiteTagging.html",
+                "EmployeeSubId.html", "Paymentlist.html", "EmployeeAttendance.html",
+                "SiteLeaveEntry.html", "EmployeeLedger.html", "EmployeeReport.html"
+            ],
+            "OFF-103": [
+                "AddRetailer.html", "RetailSiteInvoice.html", "RetailLedger.html",
+                "StockView.html", "CurrentStock.html", "StockTransfer.html", "StockReport.html",
+                "PurchaseOrderEntry.html", "InvoiceEntry.html", "PurchaseReport.html"
+            ]
+        };
+
+        let activeOfficeUser = null;
+        let activeUserAllottedMenus = [];
+        let pendingInterceptData = null;
+
+        // Smart relative path resolver: since OfficeDashboard.html is inside the office/ folder, root files are at ../
+        function getRootFilePath(fileName) {
+            return "../" + fileName;
+        }
+
+        // =========================================================================================
+        // 3. COLLECT DATA FROM ../NewUserEntry.html & ../MenuAlotment.html
+        // =========================================================================================
+        function getUsersFromNewUserEntry() {
+            const possibleKeys = [
+                'atr_office_users', 'atr_users', 'new_user_entry', 'NewUserEntry',
+                'users', 'user_entry', 'office_users', 'atr_user_list'
+            ];
+            let usersList = [];
+
+            possibleKeys.forEach(key => {
+                try {
+                    const raw = localStorage.getItem(key);
+                    if (raw) {
+                        const parsed = JSON.parse(raw);
+                        if (Array.isArray(parsed)) {
+                            parsed.forEach(u => {
+                                const uid = (u.userId || u.id || u.empId || u.username || u.user_id || "").toString().trim();
+                                const uname = (u.name || u.userName || u.fullName || u.user_name || "").toString().trim();
+                                if (uid && !usersList.some(ex => ex.userId.toUpperCase() === uid.toUpperCase())) {
+                                    usersList.push({
+                                        userId: uid,
+                                        name: uname || uid,
+                                        designation: u.designation || u.role || u.userType || "Office Staff",
+                                        allottedMenus: u.allottedMenus || u.menus || u.permissions || null
+                                    });
+                                }
+                            });
+                        }
+                    }
+                } catch (e) {}
+            });
+
+            if (usersList.length === 0) {
+                localStorage.setItem('atr_office_users', JSON.stringify(DEFAULT_OFFICE_USERS));
+                localStorage.setItem('atr_users', JSON.stringify(DEFAULT_OFFICE_USERS));
+                return DEFAULT_OFFICE_USERS;
+            }
+            return usersList;
+        }
+
+        function getAllottedMenusFromMenuAlotment(userId, userName) {
+            const possibleKeys = [
+                'atr_menu_allotments', 'atr_menu_alotment', 'MenuAlotment', 'MenuAllotment',
+                'menu_alotment', 'menu_allotment', 'user_menu_allotment', 'allotted_menus'
+            ];
+            const uidUpper = (userId || "").toUpperCase();
+            const nameUpper = (userName || "").toUpperCase();
+
+            for (let key of possibleKeys) {
+                try {
+                    const raw = localStorage.getItem(key);
+                    if (!raw) continue;
+                    const parsed = JSON.parse(raw);
+
+                    // Format 1: Object Map { "OFF-101": ["EmployeeAttendance.html", ...], ... }
+                    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                        for (let k in parsed) {
+                            if (k.toUpperCase() === uidUpper || (nameUpper && k.toUpperCase() === nameUpper)) {
+                                if (Array.isArray(parsed[k])) return parsed[k];
+                                if (parsed[k] && Array.isArray(parsed[k].menus)) return parsed[k].menus;
+                            }
+                        }
+                    }
+
+                    // Format 2: Array of Objects [ { userId: "OFF-101", menus: [...] } ]
+                    if (Array.isArray(parsed)) {
+                        const found = parsed.find(entry => {
+                            const eId = (entry.userId || entry.id || entry.user || "").toString().toUpperCase();
+                            const eName = (entry.userName || entry.name || "").toString().toUpperCase();
+                            return eId === uidUpper || (nameUpper && eName === nameUpper);
+                        });
+                        if (found) {
+                            const arr = found.menus || found.allottedMenus || found.permissions || [];
+                            if (Array.isArray(arr)) return arr;
+                        }
+                    }
+                } catch (e) {}
+            }
+
+            // Format 3: Check if saved directly inside user object
+            const users = getUsersFromNewUserEntry();
+            const uObj = users.find(u => u.userId.toUpperCase() === uidUpper);
+            if (uObj && Array.isArray(uObj.allottedMenus)) {
+                return uObj.allottedMenus;
+            }
+
+            // Seed defaults if nothing in localStorage yet
+            if (!localStorage.getItem('atr_menu_alotment') && !localStorage.getItem('atr_menu_allotments')) {
+                localStorage.setItem('atr_menu_alotment', JSON.stringify(DEFAULT_ALLOTMENTS));
+                localStorage.setItem('atr_menu_allotments', JSON.stringify(DEFAULT_ALLOTMENTS));
+                return DEFAULT_ALLOTMENTS[userId] || DEFAULT_ALLOTMENTS["OFF-101"] || [];
+            }
+
+            return [];
+        }
+
+        // Matches menu item by filename (e.g. "EmployeeAttendance.html") or label (e.g. "📅 Attendence" or "Attendence")
+        function isMenuPermitted(menuItem, allottedArray) {
+            if (!Array.isArray(allottedArray) || allottedArray.length === 0) return false;
+            const targetFile = menuItem.file.toLowerCase();
+            const targetFileNoExt = targetFile.replace('.html', '');
+            const targetLabel = menuItem.label.toLowerCase();
+            const cleanLabelText = menuItem.label.replace(/^[^\w\s]+/, '').trim().toLowerCase();
+
+            return allottedArray.some(token => {
+                const t = (token || "").toString().trim().toLowerCase().replace('../', '');
+                if (!t) return false;
+                return (
+                    t === targetFile ||
+                    t === targetFileNoExt ||
+                    t === targetLabel ||
+                    t === cleanLabelText ||
+                    (cleanLabelText.length > 3 && t.includes(cleanLabelText))
+                );
+            });
+        }
+
+        // =========================================================================================
+        // 4. INITIALIZE OFFICE DASHBOARD & RENDER DYNAMIC SIDEBAR + CHILD HOME
+        // =========================================================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            const themeIcon = document.getElementById('themeIcon');
+            if (themeIcon) {
+                themeIcon.innerText = (localStorage.getItem('atr_theme') || 'dark') === 'dark' ? '🌓' : '☀️';
+            }
+
+            initActiveOfficeUser();
+            renderDynamicSidebarTrees();
+            refreshNotificationsUI();
+            loadOfficeWorkspaceHome();
+
+            // Intercept child page actions inside iframe so edits/deletes route to ApproveOffice.html
+            const iframe = document.getElementById('contentFrame');
+            iframe.addEventListener('load', () => {
+                attachApproveOfficeInterceptor(iframe);
+            });
+        });
+
+        // Live sync if Admin changes MenuAlotment.html or NewUserEntry.html in another tab
+        window.addEventListener('storage', () => {
+            initActiveOfficeUser();
+            renderDynamicSidebarTrees();
+            refreshNotificationsUI();
+        });
+
+        function initActiveOfficeUser() {
+            const urlParams = new URLSearchParams(window.location.search);
+            let loginId = urlParams.get('userId') || urlParams.get('id') || urlParams.get('user') || sessionStorage.getItem('atr_logged_office_id') || localStorage.getItem('atr_logged_office_id') || "OFF-101";
+            loginId = loginId.trim();
+
+            sessionStorage.setItem('atr_logged_office_id', loginId);
+            localStorage.setItem('atr_logged_office_id', loginId);
+
+            const allUsers = getUsersFromNewUserEntry();
+            activeOfficeUser = allUsers.find(u =>
+                u.userId.toUpperCase() === loginId.toUpperCase() ||
+                u.name.toUpperCase() === loginId.toUpperCase()
+            ) || allUsers[0];
+
+            // Ensure session & local storage hold the resolved userId for office_dashboard_home.html
+            sessionStorage.setItem('atr_logged_office_id', activeOfficeUser.userId);
+            localStorage.setItem('atr_logged_office_id', activeOfficeUser.userId);
+
+            // Update Profile Section
+            document.getElementById('sidebarUserName').innerText = activeOfficeUser.name;
+            document.getElementById('sidebarUserRole').innerText = `ID: ${activeOfficeUser.userId} | ${activeOfficeUser.designation}`;
+            document.getElementById('dropdownUserName').innerText = activeOfficeUser.name;
+            document.getElementById('dropdownUserRole').innerText = `${activeOfficeUser.designation} (${activeOfficeUser.userId})`;
+
+            const savedAvatar = localStorage.getItem('atr_office_avatar_' + activeOfficeUser.userId);
+            document.getElementById('profileImage').src = savedAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(activeOfficeUser.name)}&background=2b2b2b&color=ffc107`;
+
+            activeUserAllottedMenus = getAllottedMenusFromMenuAlotment(activeOfficeUser.userId, activeOfficeUser.name);
+        }
+
+        function renderDynamicSidebarTrees() {
+            const container = document.getElementById('dynamicSidebarTrees');
+            container.innerHTML = '';
+            let allottedCount = 0;
+
+            ADMIN_DASHBOARD_SCHEMA.forEach(section => {
+                const permittedItems = section.items.filter(item => isMenuPermitted(item, activeUserAllottedMenus));
+
+                if (permittedItems.length > 0) {
+                    allottedCount += permittedItems.length;
+                    const treeDiv = document.createElement('div');
+                    // All tree sections remain CLOSED by default on page load
+                    treeDiv.className = 'tree-container';
+                    treeDiv.id = section.treeId;
+
+                    let linksHTML = '';
+                    permittedItems.forEach(item => {
+                        const targetHref = `${getRootFilePath(item.file)}?view=office&userId=${encodeURIComponent(activeOfficeUser.userId)}&userName=${encodeURIComponent(activeOfficeUser.name)}`;
+                        linksHTML += `
+                            <li>
+                                <a href="${targetHref}" target="contentFrame" onclick="setActiveSidebarLink(this)">
+                                    ${item.label}
+                                </a>
+                            </li>
+                        `;
+                    });
+
+                    treeDiv.innerHTML = `
+                        <div class="tree-toggle" onclick="toggleTreeMenu('${section.treeId}')">
+                            <span>${section.title}</span>
+                            <span class="arrow">▶</span>
+                        </div>
+                        <ul class="tree-menu">
+                            ${linksHTML}
+                        </ul>
+                    `;
+                    container.appendChild(treeDiv);
+                }
+            });
+
+            if (allottedCount === 0) {
+                container.innerHTML = `
+                    <div class="empty-allotment-alert">
+                        ⚠️ <strong>No Menus Allotted!</strong><br>
+                        Admin পোর্টালের <code>MenuAlotment.html</code> থেকে <strong>${activeOfficeUser.name} (${activeOfficeUser.userId})</strong>-কে মেনু অ্যালট করুন।
+                    </div>
+                `;
+            }
+        }
+
+        // =========================================================================================
+        // 5. LOAD office_dashboard_home.html INSIDE IFRAME BY DEFAULT
+        // =========================================================================================
+        function loadOfficeWorkspaceHome(event) {
+            if (event) event.preventDefault();
+
+            document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
+            const homeLink = document.getElementById('officeHomeLink');
+            if (homeLink) homeLink.classList.add('active');
+
+            const iframe = document.getElementById('contentFrame');
+            const uid = activeOfficeUser ? activeOfficeUser.userId : "OFF-101";
+            iframe.src = `office_dashboard_home.html?userId=${encodeURIComponent(uid)}`;
+        }
+
+        window.clearTreeActiveLinks = function() {
+            document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
+            const homeLink = document.getElementById('officeHomeLink');
+            if (homeLink) homeLink.classList.add('active');
+        };
+
+        window.openModuleFromHome = function(targetUrl, fileName) {
+            const iframe = document.getElementById('contentFrame');
+            iframe.src = targetUrl;
+
+            const allLinks = document.querySelectorAll('.tree-menu li a');
+            allLinks.forEach(link => {
+                if (link.getAttribute('href') && link.getAttribute('href').includes(fileName)) {
+                    const tree = link.closest('.tree-container');
+                    if (tree) tree.classList.add('open');
+                    setActiveSidebarLink(link);
+                }
+            });
+        };
+
+        // =========================================================================================
+        // 6. UNIVERSAL APPROVAL INTERCEPTOR FOR CHILD MODULES (Routes to ../ApproveOffice.html)
+        // =========================================================================================
+        function attachApproveOfficeInterceptor(iframe) {
+            try {
+                const iWin = iframe.contentWindow;
+                const iDoc = iframe.contentDocument || iWin.document;
+                if (!iWin || !iDoc || iWin.location.href === "about:blank") return;
+
+                const currentFile = iWin.location.pathname.split('/').pop() || iDoc.title;
+
+                // Do NOT intercept internal forms inside office_dashboard_home.html (Daily Work Log Form)
+                if (currentFile.toLowerCase().includes('office_dashboard_home.html')) {
+                    return;
+                }
+
+                // 1. Make "Back to Dashboard" buttons inside child modules return to office_dashboard_home.html
+                const backBtns = iDoc.querySelectorAll('.btn-back, .btn-back-dash, #btnBackDashboard, #viewReportBtn');
+                backBtns.forEach(btn => {
+                    if (btn.innerText.toLowerCase().includes('back')) {
+                        btn.onclick = function(e) {
+                            e.preventDefault();
+                            loadOfficeWorkspaceHome();
+                        };
+                    }
+                });
+
+                // 2. Inject Office Approval Banner ONLY if child module does not already have its own Role Mode Badge
+                const existingRoleBadge = iDoc.getElementById('roleModeBadge') || iDoc.getElementById('supSiteBadge') || iDoc.getElementById('portalUserInfoBadge');
+                const childHeader = iDoc.querySelector('.header, .card-header');
+                if (childHeader && !existingRoleBadge && !iDoc.getElementById('officeApprovalNoticeBadge')) {
+                    const badge = iDoc.createElement('div');
+                    badge.id = 'officeApprovalNoticeBadge';
+                    badge.style = 'background:rgba(255,193,7,0.15); color:#ffc107; border:1px solid rgba(255,193,7,0.4); padding:6px 12px; border-radius:6px; font-size:11.5px; font-weight:700;';
+                    badge.innerHTML = `🏢 Office Mode (${activeOfficeUser.name}): Changes require approval in ApproveOffice.html`;
+                    childHeader.appendChild(badge);
+                }
+
+                // If child page already has its own dedicated Office Approval Modal, skip generic prompt/form interception
+                const hasDedicatedOfficeModal = Boolean(
+                    iDoc.getElementById('officeApprovalModal') ||
+                    iDoc.getElementById('roleApprovalModal') ||
+                    iDoc.getElementById('supApprovalModal')
+                );
+                if (hasDedicatedOfficeModal) {
+                    return;
+                }
+
+                // 3. Intercept Admin Password prompts on legacy pages
+                const nativePrompt = iWin.prompt;
+                iWin.prompt = function(msg, def) {
+                    if (msg && (msg.toLowerCase().includes('password') || msg.toLowerCase().includes('admin123') || msg.toLowerCase().includes('authorization'))) {
+                        openApprovalRequestModal(
+                            currentFile,
+                            "EDIT / DELETE RECORD",
+                            `Office User ${activeOfficeUser.name} (${activeOfficeUser.userId}) requested an Edit or Delete operation in ${currentFile}.`
+                        );
+                        return null;
+                    }
+                    return nativePrompt.call(iWin, msg, def);
+                };
+
+                // 4. Intercept Form Submissions inside legacy child modules (excluding search/filter forms)
+                const forms = iDoc.querySelectorAll('form');
+                forms.forEach(form => {
+                    if (
+                        form.id === 'dailyWorkForm' ||
+                        form.id === 'filterForm' ||
+                        form.closest('.filter-panel') ||
+                        form.hasAttribute('data-office-hooked')
+                    ) {
+                        return;
+                    }
+                    form.setAttribute('data-office-hooked', 'true');
+
+                    form.addEventListener('submit', function(e) {
+                        const formInputs = Array.from(form.querySelectorAll('input, select, textarea'))
+                            .filter(el => el.type !== 'hidden' && el.type !== 'submit' && el.type !== 'button' && el.value.trim() !== '')
+                            .map(el => {
+                                const lbl = el.previousElementSibling ? el.previousElementSibling.innerText.replace('*', '').trim() : (el.id || el.name || 'Field');
+                                return `${lbl}: ${el.value.trim()}`;
+                            });
+
+                        if (formInputs.length > 0) {
+                            e.preventDefault();
+                            e.stopImmediatePropagation();
+                            openApprovalRequestModal(
+                                currentFile,
+                                "FORM ENTRY / UPDATE",
+                                formInputs.slice(0, 6).join(' | '),
+                                null,
+                                { formFields: formInputs }
+                            );
+                        }
+                    }, true);
+                });
+
+                // 5. Expose helper for custom child scripts
+                iWin.requestOfficeApproval = function(actionType, summaryText, oldData, newData) {
+                    openApprovalRequestModal(currentFile, actionType, summaryText, oldData, newData);
+                };
+
+            } catch (err) {
+                // Safe fallback if local file:// cross-origin policy restricts DOM inspection
+            }
+        }
+
+        function openApprovalRequestModal(moduleName, actionType, summaryText, oldData = null, newData = null) {
+            pendingInterceptData = {
+                module: moduleName,
+                action: actionType,
+                summary: summaryText,
+                oldData: oldData,
+                newData: newData
+            };
+            document.getElementById('modalModuleAction').value = `${moduleName} — [${actionType}]`;
+            document.getElementById('modalChangeSummary').value = summaryText;
+            document.getElementById('modalApprovalReason').value = '';
+            document.getElementById('approvalRequestModal').classList.add('active');
+        }
+
+        function closeApprovalModal() {
+            document.getElementById('approvalRequestModal').classList.remove('active');
+            pendingInterceptData = null;
+        }
+
+        function submitRequestToApproveOffice() {
+            const reason = document.getElementById('modalApprovalReason').value.trim();
+            if (!reason) {
+                alert("⚠️ Please enter a reason/remark for Admin Approval.");
+                return;
+            }
+
+            if (pendingInterceptData) {
+                const newReq = {
+                    reqId: "OFF-" + Date.now().toString().slice(-5),
+                    userId: activeOfficeUser.userId,
+                    userName: activeOfficeUser.name,
+                    designation: activeOfficeUser.designation,
+                    module: pendingInterceptData.module,
+                    action: pendingInterceptData.action,
+                    summary: pendingInterceptData.summary,
+                    oldData: pendingInterceptData.oldData,
+                    newData: pendingInterceptData.newData,
+                    reason: reason,
+                    timestamp: new Date().toLocaleString('en-IN'),
+                    status: "Pending"
+                };
+
+                // Save to all keys used by ApproveOffice.html / approve_office.html
+                const queue = JSON.parse(localStorage.getItem('atr_office_approvals')) || [];
+                queue.unshift(newReq);
+                localStorage.setItem('atr_office_approvals', JSON.stringify(queue));
+                localStorage.setItem('approve_office_requests', JSON.stringify(queue));
+                localStorage.setItem('ApproveOffice_requests', JSON.stringify(queue));
+
+                refreshNotificationsUI();
+                showToast("📤 Request sent to ApproveOffice.html! Status: Pending Admin Approval.");
+            }
+            closeApprovalModal();
+        }
+
+        function refreshNotificationsUI() {
+            const queue = JSON.parse(localStorage.getItem('atr_office_approvals')) || [];
+            const myRequests = queue.filter(r => r.userId === activeOfficeUser.userId);
+            const myPending = myRequests.filter(r => r.status === 'Pending');
+
+            document.getElementById('pendingBadgeCount').innerText = myPending.length;
+
+            const listEl = document.getElementById('notifItemsList');
+            if (myRequests.length === 0) {
+                listEl.innerHTML = `<div class="notif-item" style="color:var(--text-muted); text-align:center;">No approval requests yet.</div>`;
+                return;
+            }
+
+            listEl.innerHTML = myRequests.slice(0, 5).map(r => {
+                const stColor = r.status === 'Approved' ? '#28a745' : (r.status === 'Rejected' ? '#dc3545' : '#ffc107');
+                return `
+                    <div class="notif-item" onclick="loadOfficeWorkspaceHome(); closeDropdowns();">
+                        <div style="display:flex; justify-content:space-between; font-weight:700;">
+                            <span>${r.module}</span>
+                            <span style="color:${stColor}; font-size:11px;">${r.status}</span>
+                        </div>
+                        <div style="font-size:11px; color:var(--text-muted); margin-top:3px;">${r.action}: ${r.reason}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // =========================================================================================
+        // 7. SIDEBAR, THEME & PROFILE CONTROLS (Matches dashboard.html)
+        // =========================================================================================
+        function toggleTreeMenu(treeId) {
+            const el = document.getElementById(treeId);
+            if (el) el.classList.toggle('open');
+        }
+
+        function setActiveSidebarLink(clickedLink) {
+            document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
+            clickedLink.classList.add('active');
+        }
+
+        function toggleSidebar() {
+            document.body.classList.toggle('sidebar-hidden');
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            localStorage.setItem('atr_theme', newTheme);
+            document.documentElement.setAttribute('data-theme', newTheme);
+            document.getElementById('themeIcon').innerText = newTheme === 'dark' ? '🌓' : '☀️';
+
+            // Update child iframe theme live without reloading and losing form data
+            const iframe = document.getElementById('contentFrame');
+            if (iframe) {
+                try {
+                    const iDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    if (iDoc && iDoc.documentElement) {
+                        iDoc.documentElement.setAttribute('data-theme', newTheme);
+                    }
+                } catch (e) {}
+            }
+        }
+
+        function toggleProfileMenu(e) {
+            e.stopPropagation();
+            const container = document.getElementById('profileContainer');
+            document.getElementById('notifContainer').classList.remove('active');
+            container.classList.toggle('active');
+        }
+
+        function toggleNotification(e) {
+            e.stopPropagation();
+            const container = document.getElementById('notifContainer');
+            document.getElementById('profileContainer').classList.remove('active');
+            container.classList.toggle('active');
+        }
+
+        function closeDropdowns() {
+            document.getElementById('profileContainer').classList.remove('active');
+            document.getElementById('notifContainer').classList.remove('active');
+        }
+
+        document.addEventListener('click', function(event) {
+            const profile = document.getElementById('profileContainer');
+            const notif = document.getElementById('notifContainer');
+            if (profile && !profile.contains(event.target)) profile.classList.remove('active');
+            if (notif && !notif.contains(event.target)) notif.classList.remove('active');
+        });
+
+        function updateProfilePic(event) {
+            const reader = new FileReader();
+            reader.onload = function() {
+                const output = document.getElementById('profileImage');
+                output.src = reader.result;
+                if (activeOfficeUser) {
+                    localStorage.setItem('atr_office_avatar_' + activeOfficeUser.userId, reader.result);
+                }
+            };
+            if (event.target.files[0]) {
+                reader.readAsDataURL(event.target.files[0]);
+            }
+        }
+
+        function handleOfficeLogout() {
+            sessionStorage.removeItem('atr_logged_office_id');
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toastMsg');
+            toast.innerText = msg;
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 3500);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,135 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Site Tagging — Supervisor</h1>
+    @if (!role.isAdmin()) {
+      <span class="badge badge-warning">{{ role.getCurrentRole() | titlecase }} Mode</span>
+    }
+  </div>
+
+  <app-summary-cards [cards]="summaryCards()" />
+
+  <!-- Tag Form -->
+  <div class="card-container" style="margin-top: 16px;">
+    <h3 style="margin-bottom: 12px;">Assign Supervisor to Site</h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Supervisor *</label>
+        <app-searchable-dropdown
+          [items]="supervisorItems()"
+          [ngModel]="selectedSupervisorId()"
+          (ngModelChange)="selectedSupervisorId.set($event)"
+          placeholder="Select Supervisor"
+        />
+      </div>
+      <div class="form-group">
+        <label>Assign to Site *</label>
+        <app-searchable-dropdown
+          [items]="siteItems()"
+          [ngModel]="selectedSiteId()"
+          (ngModelChange)="selectedSiteId.set($event)"
+          placeholder="Select Site"
+        />
+      </div>
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" [ngModel]="tagDate()" (ngModelChange)="tagDate.set($event)" />
+      </div>
+    </div>
+
+    @if (currentSiteAssignment(); as curr) {
+      <div style="margin-top: 12px; padding: 8px 16px; background: var(--glass-bg); border-radius: 8px; font-size: 13px;">
+        <strong>Current Assignment:</strong>
+        {{ curr.to_site_name ?? siteName(curr.to_site_id) }}
+        <span style="color: var(--text-muted);">(since {{ curr.tagged_at ?? 'N/A' }})</span>
+      </div>
+    }
+
+    <div style="margin-top: 16px;">
+      <button class="btn-primary" (click)="addTag()" [disabled]="saving()">
+        @if (saving()) { Saving... }
+        @else if (approval.requiresApproval()) { Submit for Approval }
+        @else { Tag Supervisor }
+      </button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div style="display: flex; gap: 8px; margin: 16px 0;">
+    <button [class]="activeTab() === 'active' ? 'btn-primary' : 'btn-secondary'" (click)="activeTab.set('active')">
+      Current Assignments ({{ currentAssignments().length }})
+    </button>
+    <button [class]="activeTab() === 'history' ? 'btn-primary' : 'btn-secondary'" (click)="activeTab.set('history')">
+      All History ({{ tags().length }})
+    </button>
+  </div>
+
+  @if (loading()) {
+    <div class="skeleton" style="height: 200px;"></div>
+  }
+
+  <!-- Active Tab: Current Assignments -->
+  @if (activeTab() === 'active') {
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Supervisor</th>
+            <th>Current Site</th>
+            <th>Tagged Date</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (t of currentAssignments(); track t.id; let i = $index) {
+            <tr>
+              <td>{{ i + 1 }}</td>
+              <td style="font-weight: 600;">{{ t.supervisor_name ?? supervisorName(t.supervisor_id) }}</td>
+              <td>{{ t.to_site_name ?? siteName(t.to_site_id) }}</td>
+              <td>{{ t.tagged_at ?? '-' }}</td>
+              <td><span class="badge badge-success">Active</span></td>
+            </tr>
+          } @empty {
+            <tr><td colspan="5" class="empty-state">No active supervisor assignments.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- History Tab -->
+  @if (activeTab() === 'history') {
+    <div class="card-container" style="margin-bottom: 12px;">
+      <input type="text" [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" placeholder="Search by supervisor or site..." style="width: 100%;" />
+    </div>
+
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Supervisor</th>
+            <th>From Site</th>
+            <th></th>
+            <th>To Site</th>
+            <th>Tagged At</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (t of allHistory(); track t.id; let i = $index) {
+            <tr>
+              <td>{{ i + 1 }}</td>
+              <td style="font-weight: 600;">{{ t.supervisor_name ?? supervisorName(t.supervisor_id) }}</td>
+              <td>{{ t.from_site_name ?? siteName(t.from_site_id) }}</td>
+              <td style="text-align: center; font-weight: 600;">&rarr;</td>
+              <td>{{ t.to_site_name ?? siteName(t.to_site_id) }}</td>
+              <td>{{ t.tagged_at ?? '-' }}</td>
+            </tr>
+          } @empty {
+            <tr><td colspan="6" class="empty-state">No tagging records found.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

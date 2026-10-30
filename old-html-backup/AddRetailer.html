@@ -1,0 +1,1324 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Add Retailer</title>
+    
+    <!-- Sync theme with Master Dashboard -->
+    <script>
+        const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        window.addEventListener('storage', function(e) {
+            if(e.key === 'atr_theme') { document.documentElement.setAttribute('data-theme', e.newValue); }
+        });
+    </script>
+
+    <!-- SheetJS (XLSX) Library for Excel Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap');
+
+        :root {
+            --bg-body: transparent; 
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.1);
+            
+            /* Dynamic Glass & Input Variables */
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(0, 0, 0, 0.2);
+            --input-focus-bg: rgba(0, 0, 0, 0.4);
+            
+            --shadow: 0 4px 15px rgba(0,0,0,0.3);
+            
+            /* Primary Theme Color: #0888C9 */
+            --theme-color: #0888C9;
+            --theme-glow: rgba(8, 136, 201, 0.4);
+            --theme-transition: all 0.4s ease;
+        }
+
+        [data-theme="light"] {
+            --bg-body: transparent;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #555555;
+            --border-color: rgba(0, 0, 0, 0.1);
+            
+            --glass-bg: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --input-bg: rgba(255, 255, 255, 0.5);
+            --input-focus-bg: #ffffff;
+            
+            --shadow: 0 8px 25px rgba(0,0,0,0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Montserrat', sans-serif;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            display: flex;
+            min-height: 100vh;
+            transition: var(--theme-transition);
+        }
+
+        /* Select & Option Dark/Light Mode Readability Fix */
+        select,
+        select.form-control {
+            background-color: var(--bg-card) !important;
+            color: var(--text-main) !important;
+            color-scheme: dark;
+        }
+        [data-theme="light"] select,
+        [data-theme="light"] select.form-control {
+            background-color: var(--bg-card) !important;
+            color: var(--text-main) !important;
+            color-scheme: light;
+        }
+        select option {
+            background-color: var(--bg-card) !important;
+            color: var(--text-main) !important;
+            padding: 10px;
+        }
+
+        /* ================= MAIN CONTENT ================= */
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+            width: 100%;
+            max-width: 1500px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+            transition: var(--theme-transition);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .header h1 {
+            font-size: 26px;
+            color: var(--theme-color);
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+
+        .sup-site-badge {
+            display: none;
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-back-dash { 
+            background-color: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color); 
+            text-decoration: none; padding: 9px 16px; border-radius: 6px; font-weight: bold; font-size: 13px; 
+            transition: all 0.3s; display: flex; align-items: center; width: max-content; margin-bottom: 10px; cursor: pointer;
+        }
+        .btn-back-dash:hover { background-color: var(--theme-color); color: #ffffff; border-color: var(--theme-color); transform: translateY(-2px); box-shadow: 0 4px 10px var(--theme-glow); }
+
+        /* ================= ACTION BAR ================= */
+        .top-action-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-transform: uppercase;
+            transition: all 0.3s;
+        }
+
+        .btn-primary { background-color: var(--theme-color); color: #ffffff; box-shadow: 0 4px 10px var(--theme-glow); }
+        .btn-primary:hover { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 6px 15px var(--theme-glow); }
+
+        .btn-export { background: rgba(40, 167, 69, 0.15); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.4); }
+        .btn-export:hover { background-color: #28a745; color: white; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(40,167,69,0.3); }
+
+        /* ================= MULTI-FILTER SECTION ================= */
+        .filter-section {
+            background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            padding: 20px; border-radius: 12px; margin-bottom: 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            border: 1px solid var(--glass-border);
+            border-left: 4px solid var(--theme-color);
+            box-shadow: var(--shadow);
+            flex-wrap: wrap; gap: 15px;
+            transition: var(--theme-transition);
+        }
+
+        .filter-title {
+            font-size: 14px; font-weight: bold; color: var(--theme-color);
+            text-transform: uppercase; display: flex; align-items: center; gap: 8px;
+        }
+
+        .filter-controls {
+            display: flex; gap: 15px; flex-wrap: wrap; flex: 1; justify-content: flex-end;
+        }
+
+        .filter-controls select, .filter-controls input {
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 10px 15px; border-radius: 6px; font-size: 13px;
+            outline: none; width: 220px; transition: 0.3s;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .filter-controls select:focus, .filter-controls input:focus { 
+            border-color: var(--theme-color); box-shadow: 0 0 8px var(--theme-glow); 
+        }
+
+        /* ================= TABS FOR ACTIVE/DEACTIVE ================= */
+        .tab-menu { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+
+        .tab-btn {
+            padding: 10px 20px;
+            background: var(--input-bg);
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn:hover { background: var(--glass-bg); color: var(--text-main); border-color: var(--text-muted); }
+
+        .tab-btn.active { background: var(--theme-color); color: #ffffff; border-color: var(--theme-color); box-shadow: 0 4px 10px var(--theme-glow); }
+        .tab-btn.inactive-tab.active { background: #ff6b6b; color: #121212; border-color: #ff6b6b; box-shadow: 0 4px 10px rgba(255, 107, 107, 0.4); }
+
+        /* ================= TABLE DESIGN ================= */
+        .table-container {
+            background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            padding: 0; border-radius: 12px; box-shadow: var(--shadow);
+            overflow-x: auto; border: 1px solid var(--glass-border);
+            border-top: 4px solid var(--theme-color);
+            transition: var(--theme-transition);
+        }
+
+        /* Custom Table Scrollbar */
+        .table-container::-webkit-scrollbar { width: 8px; height: 8px; }
+        .table-container::-webkit-scrollbar-track { background: transparent; }
+        .table-container::-webkit-scrollbar-thumb { background: rgba(8, 136, 201, 0.3); border-radius: 4px; }
+        .table-container::-webkit-scrollbar-thumb:hover { background: var(--theme-color); }
+
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        thead { position: sticky; top: 0; background-color: var(--input-bg); z-index: 10; backdrop-filter: blur(10px); }
+        th, td { padding: 15px; border-bottom: 1px solid var(--border-color); font-size: 13px; color: var(--text-main); transition: var(--theme-transition); vertical-align: middle; }
+        th { color: var(--theme-color); font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: 0.8px; border-bottom: 2px solid var(--theme-color); white-space: nowrap; }
+        tbody tr:hover { background: var(--glass-bg); }
+
+        .tag-gst { background: rgba(40, 167, 69, 0.2); color: #28a745; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid rgba(40, 167, 69, 0.4); display: inline-block; }
+        .tag-nongst { background: rgba(220, 53, 69, 0.2); color: #dc3545; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid rgba(220, 53, 69, 0.4); display: inline-block; }
+
+        /* STATUS BADGES */
+        .badge-status { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid; display: inline-block; }
+        .status-active { background: rgba(40, 167, 69, 0.15); color: #28a745; border-color: rgba(40, 167, 69, 0.3); }
+        .status-inactive { background: rgba(108, 117, 125, 0.15); color: #6c757d; border-color: rgba(108, 117, 125, 0.3); }
+        .status-hold { background: rgba(255, 193, 7, 0.15); color: #ffc107; border-color: rgba(255, 193, 7, 0.4); margin-top: 4px; font-size: 9px; text-transform: uppercase; }
+
+        /* ACTION BUTTONS */
+        .action-cell { display: inline-flex; gap: 8px; flex-wrap: nowrap; align-items: center; white-space: nowrap; }
+        .btn-sm { padding: 6px 10px; font-size: 11px; border-radius: 4px; border: none; cursor: pointer; font-weight: bold; text-transform: uppercase; transition: 0.2s; white-space: nowrap; }
+        
+        .btn-edit { background: rgba(0, 123, 255, 0.15); color: #007bff; border: 1px solid rgba(0, 123, 255, 0.3); }
+        .btn-edit:hover { background: #007bff; color: white; }
+        
+        .btn-delete { background: rgba(220, 53, 69, 0.15); color: #dc3545; border: 1px solid rgba(220, 53, 69, 0.3); }
+        .btn-delete:hover { background: #dc3545; color: #fff; }
+        
+        .btn-toggle-deactive { background: rgba(108, 117, 125, 0.15); color: #6c757d; border: 1px solid rgba(108, 117, 125, 0.3); }
+        .btn-toggle-deactive:hover { background: #6c757d; color: #fff; }
+        
+        .btn-toggle-active { background: rgba(40, 167, 69, 0.15); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.3); }
+        .btn-toggle-active:hover { background: #28a745; color: #fff; }
+
+        /* ================= MODAL & BLUR BACKGROUND ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            display: none; justify-content: center; align-items: center; z-index: 1000;
+            opacity: 0; transition: opacity 0.3s ease; padding: 20px;
+        }
+        .modal-overlay.active { display: flex; opacity: 1; }
+
+        .modal-content {
+            background: var(--bg-card); border: 1px solid var(--border-color); border-top: 5px solid var(--theme-color);
+            border-radius: 12px; width: 550px; max-width: 95%; padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6); position: relative; max-height: 90vh; overflow-y: visible;
+            transform: translateY(-20px); transition: transform 0.3s ease, background 0.4s ease;
+        }
+        .modal-overlay.active .modal-content { transform: translateY(0); }
+
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
+        .modal-header h2 { font-size: 20px; color: var(--theme-color); }
+        .close-btn { background: none; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; transition: 0.3s;}
+        .close-btn:hover { color: #dc3545; }
+
+        /* ================= FORM CONTROLS ================= */
+        .form-group { margin-bottom: 18px; position: relative; }
+        .form-group label { display: block; font-size: 12px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; font-weight: 700; transition: 0.3s;}
+        .form-group:focus-within label { color: var(--theme-color); }
+        
+        .form-control { width: 100%; padding: 12px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-main); font-size: 13px; outline: none; transition: 0.3s; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);}
+        .form-control:focus { border-color: var(--theme-color); box-shadow: 0 0 8px var(--theme-glow); }
+        select.form-control { cursor: pointer; }
+        textarea.form-control { resize: none; }
+
+        /* ================= 3D MODERN SEARCHABLE DROPDOWN ENGINE ================= */
+        .custom-dropdown-wrapper { position: relative; perspective: 1200px; }
+        
+        .dropdown-menu-custom {
+            position: absolute; top: calc(100% + 8px); left: 0; width: 100%; 
+            background: rgba(30, 30, 30, 0.92);
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color); border-top: 3px solid var(--theme-color);
+            border-radius: 12px; max-height: 220px; overflow-y: auto; z-index: 2000; 
+            
+            /* Deep 3D Shadow */
+            box-shadow: 0 15px 35px rgba(0,0,0,0.6), 0 0 15px var(--theme-glow), inset 0 1px 0 rgba(255,255,255,0.1);
+            
+            /* 3D Transform Start State */
+            opacity: 0; visibility: hidden;
+            transform-origin: top center;
+            transform: rotateX(-30deg) translateY(-20px) scale(0.95);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        [data-theme="light"] .dropdown-menu-custom {
+            background: rgba(255, 255, 255, 0.96);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.12), 0 0 15px var(--theme-glow);
+        }
+        
+        .dropdown-menu-custom.show {
+            opacity: 1; visibility: visible;
+            transform: rotateX(0deg) translateY(0) scale(1);
+        }
+        
+        .dropdown-menu-custom::-webkit-scrollbar { width: 6px; }
+        .dropdown-menu-custom::-webkit-scrollbar-track { background: transparent; margin: 5px; }
+        .dropdown-menu-custom::-webkit-scrollbar-thumb { background: var(--theme-color); border-radius: 10px; }
+
+        .dropdown-item-custom { 
+            padding: 12px 16px; cursor: pointer; font-size: 13px; color: var(--text-main); 
+            transition: all 0.3s ease; 
+            margin: 6px 8px; border-radius: 8px; position: relative; overflow: hidden;
+            background: transparent;
+        }
+        
+        .dropdown-item-custom:hover { 
+            background: var(--input-focus-bg); color: var(--theme-color); font-weight: bold; 
+            transform: translateX(8px);
+            box-shadow: -4px 0 0 var(--theme-color);
+        }
+        
+        .add-new-btn-item { 
+            background: rgba(8, 136, 201, 0.15); color: var(--theme-color); font-weight: bold; 
+            border: 1px dashed var(--theme-color); text-align: center; justify-content: center; 
+            display: flex; align-items: center; gap: 6px;
+        }
+        .add-new-btn-item:hover { 
+            background-color: var(--theme-color); color: #ffffff; 
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 6px 15px var(--theme-glow); border-style: solid;
+        }
+
+        /* Toast Notification */
+        .toast-msg {
+            position: fixed; bottom: 25px; right: 25px; background: #28a745; color: #fff;
+            padding: 12px 20px; border-radius: 8px; font-size: 13px; font-weight: 700;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4); display: none; z-index: 3000;
+            border-left: 5px solid rgba(255,255,255,0.5);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-content">
+        <div class="header">
+            <div>
+                <a href="dashboard_home.html" id="btnBackDashboard" class="btn-back-dash" onclick="handleBackToDashboard(event)">← Back to Dashboard</a>
+                <h1>
+                    🏪 Retailer Management
+                    <span id="supSiteBadge" class="sup-site-badge">🔒 Site Locked</span>
+                </h1>
+            </div>
+            <div style="color: var(--theme-color); font-size: 14px; font-weight: 600; margin-top: 10px;">Purchase Section</div>
+        </div>
+
+        <div class="top-action-bar">
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="openRetailerModal()">➕ Add Retailer</button>
+            </div>
+            <button class="btn btn-export" onclick="exportToExcel()">📥 Export XLSX</button>
+        </div>
+
+        <!-- ADVANCED MULTI-FILTER SECTION -->
+        <div class="filter-section">
+            <div class="filter-title">🔎 Advanced Multi-Filter</div>
+            <div class="filter-controls">
+                <select id="filterCategory" onchange="filterTable()">
+                    <option value="">All Categories</option>
+                </select>
+                <select id="filterGst" onchange="filterTable()">
+                    <option value="">All GST Status</option>
+                    <option value="GST YES">GST Applicable (Yes)</option>
+                    <option value="GST NO">Non-GST (No)</option>
+                </select>
+                <input type="text" id="tableSearch" placeholder="🔍 Global Search..." onkeyup="filterTable()">
+            </div>
+        </div>
+
+        <!-- LIST TABS (Active / Deactive) -->
+        <div class="tab-menu">
+            <button class="tab-btn active" id="tabActive" onclick="switchTab('active')">🟢 Active Retailers</button>
+            <button class="tab-btn inactive-tab" id="tabInactive" onclick="switchTab('inactive')">🔴 Deactivated Retailers</button>
+        </div>
+
+        <!-- Data Table -->
+        <div class="table-container">
+            <table id="retailerTable">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Retailer Name</th>
+                        <th>Address</th>
+                        <th>Phone No</th>
+                        <th>GST Status</th>
+                        <th>GSTIN</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- Dynamically populated and synced with localStorage -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ADD/EDIT RETAILER MODAL -->
+    <div class="modal-overlay" id="retailerModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">🏬 Add New Retailer</h2>
+                <button class="close-btn" onclick="closeRetailerModal()">&times;</button>
+            </div>
+            <!-- data-office-hooked="true" prevents duplicate parent interception so this page handles Office Approval cleanly -->
+            <form id="retailerForm" data-office-hooked="true" onsubmit="handleFormSubmit(event)">
+                
+                <!-- Z-index descending setup to prevent custom dropdown overlaps inside modal -->
+                <div class="form-group custom-dropdown-wrapper" style="z-index: 50;">
+                    <label>Category *</label>
+                    <input type="text" id="categoryInput" class="form-control" placeholder="Search or type to select..." autocomplete="off" onfocus="filterDropdown('categoryInput', 'categoryMenu'); showDropdown('categoryMenu')" oninput="filterDropdown('categoryInput', 'categoryMenu')">
+                    <div class="dropdown-menu-custom" id="categoryMenu"></div>
+                </div>
+
+                <div class="form-group custom-dropdown-wrapper" style="z-index: 40;">
+                    <label>Retailer Name *</label>
+                    <input type="text" id="retailerInput" class="form-control" placeholder="Search or type to select..." autocomplete="off" onfocus="filterDropdown('retailerInput', 'retailerMenu'); showDropdown('retailerMenu')" oninput="filterDropdown('retailerInput', 'retailerMenu')">
+                    <div class="dropdown-menu-custom" id="retailerMenu"></div>
+                </div>
+
+                <div class="form-group" style="z-index: 30;">
+                    <label>Address *</label>
+                    <textarea id="addressInput" class="form-control" rows="2" placeholder="Full address..." required></textarea>
+                </div>
+
+                <div class="form-group" style="z-index: 20;">
+                    <label>Phone Number *</label>
+                    <input type="text" id="phoneInput" class="form-control" maxlength="10" placeholder="10 Digit Number" required oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                </div>
+
+                <div class="form-group" style="z-index: 10;">
+                    <label>GST Applicable Retailer? *</label>
+                    <select id="gstApplicable" class="form-control" onchange="toggleGstField()">
+                        <option value="NO">No</option>
+                        <option value="YES">Yes</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="gstNumGroup" style="display: none; z-index: 5;">
+                    <label>GST Number *</label>
+                    <input type="text" id="gstInput" class="form-control" style="text-transform: uppercase;" placeholder="Enter GSTIN">
+                </div>
+
+                <button type="submit" id="saveBtn" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 15px; padding: 12px;">💾 Save Retailer</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- OFFICE & SUPERVISOR APPROVAL MODAL (ROUTES TO ApproveOffice.html OR ApproveSupervisor.html) -->
+    <div class="modal-overlay" id="supApprovalModal" style="z-index: 2500;">
+        <div class="modal-content" style="width: 480px; border-top-color: #ffc107;">
+            <div class="modal-header">
+                <h2 id="supApprovalTitle" style="color: #ffc107;">🛡️ Request Admin Approval</h2>
+                <button class="close-btn" onclick="closeSupApprovalModal()">&times;</button>
+            </div>
+            <p id="supApprovalDesc" style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.5;">
+                Any modification or deletion of a retailer record requires Admin approval. The request will be sent to the Approval Center.
+            </p>
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label>Action Summary</label>
+                <input type="text" id="supApprovalSummary" class="form-control" readonly style="color: #ffc107; font-weight: 700;">
+            </div>
+            <div class="form-group">
+                <label>Reason for Request <span style="color:#dc3545;">*</span></label>
+                <textarea id="supApprovalReason" class="form-control" rows="3" placeholder="Explain why this retailer is being added, edited, deactivated, or deleted..."></textarea>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button type="button" class="btn" style="flex: 1; justify-content: center; background: #ffc107; color: #121212;" onclick="submitRoleApprovalRequest()">📤 Send Request</button>
+                <button type="button" class="btn" style="flex: 1; justify-content: center; background: #dc3545; color: #fff;" onclick="closeSupApprovalModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-msg" id="toastMsg"></div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // =========================================================================================
+        // 1. PORTAL ROLE DETECTION (ADMIN / OFFICE STAFF / SUPERVISOR) & LOCALSTORAGE ENGINE
+        // =========================================================================================
+        let currentPortalMode = "admin"; // 'admin', 'office', or 'supervisor'
+        let isSupervisorMode = false;
+        let loggedUserId = "ADMIN";
+        let loggedUserName = "Super Admin";
+        let assignedSite = "";
+
+        let pendingRolePayload = null;
+        let currentTab = 'active';
+        let editingRetailerId = null;
+        const ADMIN_PASS = "admin123";
+
+        const defaultCategories = ["Cement & Concrete", "Hardware", "Electrical"];
+        const defaultRetailerNames = ["BuildTech Supplies", "Maa Tara Hardware", "Bengal Electricals", "M/S Bengal Traders", "Roy Stores"];
+
+        const defaultRetailersDB = [
+            {
+                id: "RET-101",
+                category: "Cement & Concrete",
+                retailer: "BuildTech Supplies",
+                address: "Sector V, Salt Lake, Kolkata",
+                phone: "9830112233",
+                gstStatus: "GST YES",
+                gstNum: "19BUILD1234F1Z5",
+                status: "active",
+                site: "Salt Lake Sector V",
+                pendingHoldLabel: null
+            },
+            {
+                id: "RET-102",
+                category: "Hardware",
+                retailer: "Maa Tara Hardware",
+                address: "Chingrighata, Salt Lake",
+                phone: "9874556677",
+                gstStatus: "GST YES",
+                gstNum: "19XYZAB5678G1Z2",
+                status: "active",
+                site: "Salt Lake Sector V",
+                pendingHoldLabel: null
+            },
+            {
+                id: "RET-103",
+                category: "Electrical",
+                retailer: "Bengal Electricals",
+                address: "Karunamoyee, Salt Lake",
+                phone: "9007123456",
+                gstStatus: "GST NO",
+                gstNum: "N/A",
+                status: "inactive",
+                site: "Salt Lake Sector V",
+                pendingHoldLabel: null
+            },
+            {
+                id: "RET-104",
+                category: "Cement & Concrete",
+                retailer: "M/S Bengal Traders",
+                address: "Dum Dum, Kolkata",
+                phone: "9876543210",
+                gstStatus: "GST YES",
+                gstNum: "19ABCDE1234F1ZH",
+                status: "active",
+                site: "Dum Dum Project",
+                pendingHoldLabel: null
+            },
+            {
+                id: "RET-105",
+                category: "Hardware",
+                retailer: "Roy Stores",
+                address: "Barasat",
+                phone: "9123456789",
+                gstStatus: "GST NO",
+                gstNum: "N/A",
+                status: "inactive",
+                site: "Barasat Highway",
+                pendingHoldLabel: null
+            }
+        ];
+
+        let categories = [];
+        let retailerNames = [];
+        let retailersDB = [];
+
+        function loadAndSyncDatabases() {
+            const storedCats = JSON.parse(localStorage.getItem('atr_retailer_categories'));
+            if (Array.isArray(storedCats) && storedCats.length > 0) {
+                categories = storedCats;
+            } else {
+                categories = [...defaultCategories];
+                localStorage.setItem('atr_retailer_categories', JSON.stringify(categories));
+            }
+
+            const storedNames = JSON.parse(localStorage.getItem('atr_retailer_names'));
+            if (Array.isArray(storedNames) && storedNames.length > 0) {
+                retailerNames = storedNames;
+            } else {
+                retailerNames = [...defaultRetailerNames];
+                localStorage.setItem('atr_retailer_names', JSON.stringify(retailerNames));
+            }
+
+            const storedRetailers = JSON.parse(localStorage.getItem('atr_retailers_db'));
+            if (Array.isArray(storedRetailers) && storedRetailers.length > 0) {
+                retailersDB = storedRetailers;
+            } else {
+                retailersDB = JSON.parse(JSON.stringify(defaultRetailersDB));
+                localStorage.setItem('atr_retailers_db', JSON.stringify(retailersDB));
+            }
+        }
+
+        function saveRetailersDatabase() {
+            localStorage.setItem('atr_retailers_db', JSON.stringify(retailersDB));
+            localStorage.setItem('atr_retailer_categories', JSON.stringify(categories));
+            localStorage.setItem('atr_retailer_names', JSON.stringify(retailerNames));
+        }
+
+        // ================= CHECK ADMIN vs OFFICE vs SUPERVISOR PERMISSIONS =================
+        function checkUrlPermissions() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewParam = (urlParams.get('view') || '').toLowerCase();
+            const siteParam = urlParams.get('site');
+
+            let parentPath = "";
+            try {
+                if (window.parent && window.parent !== window) {
+                    parentPath = (window.parent.location.pathname || '').toLowerCase();
+                }
+            } catch (e) {}
+
+            const backBtn = document.getElementById('btnBackDashboard');
+            const badge = document.getElementById('supSiteBadge');
+            const saveBtn = document.getElementById('saveBtn');
+
+            if (viewParam === 'supervisor' || parentPath.includes('supervisordashboard')) {
+                currentPortalMode = 'supervisor';
+                isSupervisorMode = true;
+                assignedSite = (siteParam || sessionStorage.getItem('atr_supervisor_site') || "Salt Lake Sector V").trim();
+                loggedUserId = urlParams.get('supId') || "SUP-003";
+                loggedUserName = urlParams.get('supName') || "Supervisor";
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🔒 Site Locked: ${assignedSite}`;
+                }
+                if (backBtn) {
+                    backBtn.href = "supervisor/supervisor_dashboard_home.html";
+                }
+            } else if (viewParam === 'office' || parentPath.includes('officedashboard')) {
+                currentPortalMode = 'office';
+                isSupervisorMode = false;
+                assignedSite = "";
+                loggedUserId = urlParams.get('userId') || sessionStorage.getItem('atr_logged_office_id') || localStorage.getItem('atr_logged_office_id') || "OFF-101";
+                loggedUserName = urlParams.get('userName') || "Office Staff";
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🏢 Office Mode (${loggedUserName}) — Synced with ApproveOffice.html`;
+                }
+                if (backBtn) {
+                    backBtn.href = "office/office_dashboard_home.html";
+                }
+                if (saveBtn) {
+                    saveBtn.innerText = "📤 Submit Retailer for Approval";
+                }
+            } else {
+                currentPortalMode = 'admin';
+                isSupervisorMode = false;
+                assignedSite = "";
+                if (backBtn) {
+                    backBtn.href = "dashboard_home.html";
+                }
+            }
+        }
+
+        // ================= SMART BACK TO DASHBOARD NAVIGATION =================
+        function handleBackToDashboard(event) {
+            if (currentPortalMode === 'office') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.loadOfficeWorkspaceHome === 'function') {
+                        window.parent.loadOfficeWorkspaceHome();
+                        return;
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "office_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "office/office_dashboard_home.html";
+            } else if (currentPortalMode === 'supervisor') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window) {
+                        const parentHomeLink = window.parent.document.querySelector('.dashboard-home-link');
+                        if (parentHomeLink) {
+                            if (typeof window.parent.clearTreeActiveLinks === 'function') {
+                                window.parent.clearTreeActiveLinks();
+                            }
+                            window.location.href = parentHomeLink.href;
+                            return;
+                        }
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "supervisor_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "supervisor/supervisor_dashboard_home.html";
+            }
+        }
+
+        window.onload = function() {
+            checkUrlPermissions();
+            loadAndSyncDatabases();
+            updateCategoryFilterDropdown();
+            renderRetailerTableRows();
+        };
+
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'atr_retailers_db' || e.key === 'atr_retailer_categories' || e.key === 'atr_retailer_names') {
+                loadAndSyncDatabases();
+                updateCategoryFilterDropdown();
+                renderRetailerTableRows();
+            }
+        });
+
+        function updateCategoryFilterDropdown() {
+            const filterDropdown = document.getElementById('filterCategory');
+            const currentVal = filterDropdown.value;
+            filterDropdown.innerHTML = '<option value="">All Categories</option>';
+            categories.forEach(cat => { filterDropdown.innerHTML += `<option value="${cat}">${cat}</option>`; });
+            if (categories.includes(currentVal)) filterDropdown.value = currentVal;
+        }
+
+        // ================= RENDER TABLE FROM DATABASE =================
+        function renderRetailerTableRows() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            retailersDB.forEach(ret => {
+                const tr = document.createElement('tr');
+                tr.setAttribute('data-id', ret.id);
+                tr.setAttribute('data-status', ret.status);
+                tr.setAttribute('data-site', ret.site || 'All Sites');
+
+                const isGstYes = ret.gstStatus === 'GST YES';
+                const gstTagHtml = isGstYes
+                    ? `<span class="tag-gst">GST YES</span>`
+                    : `<span class="tag-nongst">GST NO</span>`;
+
+                const statusBadgeHtml = ret.status === 'active'
+                    ? `<span class="badge-status status-active">Active</span>`
+                    : `<span class="badge-status status-inactive">Inactive</span>`;
+
+                const holdBadgeHtml = ret.pendingHoldLabel
+                    ? `<br><span class="badge-status status-hold">⏳ ${ret.pendingHoldLabel}</span>`
+                    : '';
+
+                const toggleBtnHtml = ret.status === 'active'
+                    ? `<button class="btn-sm btn-toggle-deactive" onclick="toggleStatus('${ret.id}')">Deactivate</button>`
+                    : `<button class="btn-sm btn-toggle-active" onclick="toggleStatus('${ret.id}')">Activate</button>`;
+
+                tr.innerHTML = `
+                    <td style="font-weight: 600;">${ret.category}</td>
+                    <td style="color: var(--theme-color); font-weight: bold;">${ret.retailer}</td>
+                    <td>${ret.address}</td>
+                    <td>${ret.phone}</td>
+                    <td>${gstTagHtml}</td>
+                    <td>${ret.gstNum}</td>
+                    <td>${statusBadgeHtml}${holdBadgeHtml}</td>
+                    <td>
+                        <div class="action-cell">
+                            <button class="btn-sm btn-edit" onclick="editRetailer('${ret.id}')">Edit</button>
+                            <button class="btn-sm btn-delete" onclick="deleteRetailer('${ret.id}')">Delete</button>
+                            ${toggleBtnHtml}
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            filterTable();
+        }
+
+        // ================= TAB SWITCHING LOGIC =================
+        function switchTab(tab) {
+            currentTab = tab;
+            document.getElementById('tabActive').classList.toggle('active', tab === 'active');
+            document.getElementById('tabInactive').classList.toggle('active', tab === 'inactive');
+            filterTable();
+        }
+
+        // ================= ADMIN AUTHENTICATION =================
+        function verifyAdmin() {
+            const pass = prompt("🔒 Admin Authentication Required.\nPlease enter admin password (admin123):");
+            if (pass === ADMIN_PASS || pass === "admin") return true;
+            if (pass !== null) alert("❌ Incorrect Password! Access Denied.");
+            return false;
+        }
+
+        // ================= ACTION BUTTONS (EDIT, DELETE, TOGGLE) =================
+        function toggleStatus(retId) {
+            const ret = retailersDB.find(r => String(r.id) === String(retId));
+            if (!ret) return;
+
+            let newStatus = ret.status === 'active' ? 'inactive' : 'active';
+
+            // If Office or Supervisor Mode: Route status change to Approval Queue
+            if (currentPortalMode !== 'admin') {
+                openRoleApprovalModal({
+                    type: 'STATUS_CHANGE',
+                    targetId: ret.id,
+                    newStatus: newStatus,
+                    actionLabel: `${newStatus === 'active' ? 'ACTIVATE' : 'DEACTIVATE'} RETAILER`,
+                    summary: `${ret.retailer} (${ret.category}) — Status: ${ret.status} → ${newStatus}`,
+                    oldData: { ...ret },
+                    newData: { ...ret, status: newStatus }
+                });
+                return;
+            }
+            
+            ret.status = newStatus;
+            ret.pendingHoldLabel = null;
+            saveRetailersDatabase();
+            renderRetailerTableRows();
+            showToast(`✅ Retailer marked as ${newStatus === 'active' ? 'Active' : 'Inactive'}!`);
+        }
+
+        function deleteRetailer(retId) {
+            const ret = retailersDB.find(r => String(r.id) === String(retId));
+            if (!ret) return;
+
+            // If Office or Supervisor Mode: Route deletion to Approval Queue without Admin password
+            if (currentPortalMode !== 'admin') {
+                openRoleApprovalModal({
+                    type: 'DELETE',
+                    targetId: ret.id,
+                    actionLabel: "DELETE RETAILER RECORD",
+                    summary: `Delete Retailer: ${ret.retailer} (${ret.category} | Phone: ${ret.phone})`,
+                    oldData: { ...ret },
+                    newData: null
+                });
+                return;
+            }
+
+            if (verifyAdmin()) {
+                if (confirm("⚠️ Are you sure you want to permanently delete this retailer?")) {
+                    retailersDB = retailersDB.filter(r => String(r.id) !== String(retId));
+                    saveRetailersDatabase();
+                    renderRetailerTableRows();
+                    showToast("🗑️ Retailer Deleted Successfully!");
+                }
+            }
+        }
+
+        function editRetailer(retId) {
+            const ret = retailersDB.find(r => String(r.id) === String(retId));
+            if (!ret) return;
+
+            // Only ask for Admin password if in Admin Mode; Office & Supervisor edits go to Approval Queue
+            if (currentPortalMode === 'admin') {
+                if (!verifyAdmin()) return;
+            }
+            
+            editingRetailerId = ret.id;
+            
+            document.getElementById('categoryInput').value = ret.category;
+            document.getElementById('retailerInput').value = ret.retailer;
+            document.getElementById('addressInput').value = ret.address;
+            document.getElementById('phoneInput').value = ret.phone;
+            
+            document.getElementById('gstApplicable').value = ret.gstStatus.includes('YES') ? 'YES' : 'NO';
+            document.getElementById('gstInput').value = ret.gstNum === 'N/A' ? '' : ret.gstNum;
+            
+            toggleGstField();
+            
+            document.getElementById('modalTitle').innerText = currentPortalMode !== 'admin'
+                ? "📝 Edit Retailer (Requires Approval)"
+                : "📝 Edit Retailer";
+            document.getElementById('saveBtn').innerText = currentPortalMode !== 'admin'
+                ? "📤 Request Edit Approval"
+                : "💾 Update Retailer";
+            
+            document.getElementById('saveBtn').style.backgroundColor = "#ffc107";
+            document.getElementById('saveBtn').style.boxShadow = "0 4px 10px rgba(255, 193, 7, 0.3)";
+            document.getElementById('saveBtn').style.color = "#121212";
+            
+            renderDropdown('categoryInput', 'categoryMenu', categories, 'Category');
+            renderDropdown('retailerInput', 'retailerMenu', retailerNames, 'Retailer Name');
+
+            const overlay = document.getElementById('retailerModal');
+            overlay.style.display = 'flex';
+            setTimeout(() => { overlay.classList.add('active'); }, 10);
+        }
+
+
+        // ================= MODAL & DROPDOWN LOGIC =================
+        function openRetailerModal() {
+            editingRetailerId = null;
+            document.getElementById('retailerForm').reset();
+            toggleGstField();
+            
+            document.getElementById('modalTitle').innerText = "🏬 Add New Retailer";
+            document.getElementById('saveBtn').innerText = currentPortalMode === 'office'
+                ? "📤 Submit Retailer for Approval"
+                : "💾 Save Retailer";
+            document.getElementById('saveBtn').className = "btn btn-primary";
+            document.getElementById('saveBtn').style.backgroundColor = "";
+            document.getElementById('saveBtn').style.boxShadow = "";
+            document.getElementById('saveBtn').style.color = "";
+            
+            const overlay = document.getElementById('retailerModal');
+            overlay.style.display = 'flex';
+            setTimeout(() => { overlay.classList.add('active'); }, 10);
+            
+            renderDropdown('categoryInput', 'categoryMenu', categories, 'Category');
+            renderDropdown('retailerInput', 'retailerMenu', retailerNames, 'Retailer Name');
+        }
+
+        function closeRetailerModal() { 
+            const overlay = document.getElementById('retailerModal');
+            overlay.classList.remove('active');
+            setTimeout(() => { overlay.style.display = 'none'; }, 300);
+        }
+
+        function toggleGstField() {
+            const gstVal = document.getElementById('gstApplicable').value;
+            const gstGroup = document.getElementById('gstNumGroup');
+            const gstInput = document.getElementById('gstInput');
+            if (gstVal === 'YES') {
+                gstGroup.style.display = 'block';
+                gstInput.required = true;
+            } else {
+                gstGroup.style.display = 'none';
+                gstInput.required = false;
+                gstInput.value = '';
+            }
+        }
+
+        function showDropdown(menuId) {
+            document.querySelectorAll('.dropdown-menu-custom').forEach(m => m.classList.remove('show'));
+            document.getElementById(menuId).classList.add('show');
+        }
+
+        function renderDropdown(inputId, menuId, listArray, typeName) {
+            const menu = document.getElementById(menuId);
+            const currentSearch = document.getElementById(inputId).value.toLowerCase();
+            menu.innerHTML = '';
+            const filtered = listArray.filter(item => item.toLowerCase().includes(currentSearch));
+
+            filtered.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'dropdown-item-custom';
+                div.innerText = item;
+                div.onclick = function() {
+                    document.getElementById(inputId).value = item;
+                    menu.classList.remove('show');
+                };
+                menu.appendChild(div);
+            });
+
+            const addDiv = document.createElement('div');
+            addDiv.className = 'dropdown-item-custom add-new-btn-item';
+            addDiv.innerHTML = `➕ Add New ${typeName}`;
+            addDiv.onclick = function() {
+                addNewOption(inputId, listArray, typeName);
+                menu.classList.remove('show');
+            };
+            menu.appendChild(addDiv);
+        }
+
+        function filterDropdown(inputId, menuId) {
+            const list = inputId === 'categoryInput' ? categories : retailerNames;
+            const typeName = inputId === 'categoryInput' ? 'Category' : 'Retailer Name';
+            renderDropdown(inputId, menuId, list, typeName);
+        }
+
+        function addNewOption(inputId, listArray, typeName) {
+            const newValue = prompt(`Enter New ${typeName}:`);
+            if (newValue && newValue.trim() !== "") {
+                const formattedValue = newValue.trim();
+                const exists = listArray.some(item => item.toLowerCase() === formattedValue.toLowerCase());
+                if (exists) {
+                    alert(`⚠️ Error: "${formattedValue}" already exists in the list!`);
+                } else {
+                    listArray.push(formattedValue);
+                    saveRetailersDatabase();
+                    document.getElementById(inputId).value = formattedValue;
+                    if(typeName === 'Category') updateCategoryFilterDropdown();
+                    showToast(`✅ New ${typeName} added successfully!`);
+                }
+            }
+        }
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.custom-dropdown-wrapper')) {
+                document.querySelectorAll('.dropdown-menu-custom').forEach(m => m.classList.remove('show'));
+            }
+        });
+
+        // ================= FORM SUBMIT (CREATE & UPDATE) =================
+        function handleFormSubmit(e) {
+            e.preventDefault();
+
+            const category = document.getElementById('categoryInput').value.trim();
+            const retailer = document.getElementById('retailerInput').value.trim();
+            const address = document.getElementById('addressInput').value.trim();
+            const phone = document.getElementById('phoneInput').value.trim();
+            const gstApplicable = document.getElementById('gstApplicable').value;
+            const gstNum = document.getElementById('gstInput').value.trim();
+
+            if(!category || !retailer) { alert("Please select or add Category and Retailer Name."); return; }
+            if (phone.length !== 10) { alert("⚠️ Please enter exactly 10 digits for the Phone Number."); return; }
+            if (gstApplicable === 'YES' && !gstNum) { alert("⚠️ Please enter the GST Number."); return; }
+
+            const gstStatusStr = gstApplicable === 'YES' ? 'GST YES' : 'GST NO';
+            const gstNumFinal = gstApplicable === 'YES' ? gstNum.toUpperCase() : 'N/A';
+
+            // Sync Dropdown Lists
+            let updatedCategoryList = false;
+            if (!categories.some(c => c.toLowerCase() === category.toLowerCase())) { categories.push(category); updatedCategoryList = true; }
+            if (!retailerNames.some(r => r.toLowerCase() === retailer.toLowerCase())) { retailerNames.push(retailer); }
+            if(updatedCategoryList) updateCategoryFilterDropdown();
+
+            if (editingRetailerId) {
+                const idx = retailersDB.findIndex(r => String(r.id) === String(editingRetailerId));
+                if (idx === -1) return;
+
+                const oldRec = { ...retailersDB[idx] };
+                const updatedRec = {
+                    ...oldRec,
+                    category: category,
+                    retailer: retailer,
+                    address: address,
+                    phone: phone,
+                    gstStatus: gstStatusStr,
+                    gstNum: gstNumFinal,
+                    pendingHoldLabel: null
+                };
+
+                // IF OFFICE OR SUPERVISOR IS EDITING: Route to Approval Modal
+                if (currentPortalMode !== 'admin') {
+                    closeRetailerModal();
+                    openRoleApprovalModal({
+                        type: 'EDIT',
+                        targetId: oldRec.id,
+                        actionLabel: "EDIT RETAILER DETAILS",
+                        summary: `${retailer} (${category} | Phone: ${phone} | ${gstStatusStr})`,
+                        oldData: oldRec,
+                        newData: updatedRec
+                    });
+                    return;
+                }
+
+                // ADMIN DIRECT UPDATE
+                retailersDB[idx] = updatedRec;
+                editingRetailerId = null;
+                saveRetailersDatabase();
+                renderRetailerTableRows();
+                closeRetailerModal();
+                showToast("✅ Retailer Updated Successfully!");
+            } else {
+                const newRec = {
+                    id: "RET-" + Date.now().toString().slice(-5),
+                    category: category,
+                    retailer: retailer,
+                    address: address,
+                    phone: phone,
+                    gstStatus: gstStatusStr,
+                    gstNum: gstNumFinal,
+                    status: "active",
+                    site: (isSupervisorMode && assignedSite) ? assignedSite : "All Sites",
+                    pendingHoldLabel: null
+                };
+
+                // IF OFFICE PORTAL IS CREATING: Route New Retailer to ApproveOffice.html
+                if (currentPortalMode === 'office') {
+                    closeRetailerModal();
+                    openRoleApprovalModal({
+                        type: 'CREATE',
+                        targetId: newRec.id,
+                        actionLabel: "ADD NEW RETAILER",
+                        summary: `New Retailer: ${retailer} (${category} | Phone: ${phone} | ${gstStatusStr})`,
+                        oldData: null,
+                        newData: newRec
+                    });
+                    return;
+                }
+
+                // ADMIN (OR SUPERVISOR DIRECT ADD) SAVE
+                retailersDB.push(newRec);
+                saveRetailersDatabase();
+                renderRetailerTableRows();
+                document.getElementById('retailerForm').reset();
+                closeRetailerModal();
+                showToast("✅ Retailer Added Successfully!");
+            }
+        }
+
+        // ================= OFFICE & SUPERVISOR APPROVAL MODAL LOGIC =================
+        function openRoleApprovalModal(payload) {
+            pendingRolePayload = payload;
+            document.getElementById('supApprovalReason').value = '';
+            document.getElementById('supApprovalSummary').value = `${payload.actionLabel}: ${payload.summary}`;
+            const titleEl = document.getElementById('supApprovalTitle');
+            const descEl = document.getElementById('supApprovalDesc');
+
+            if (currentPortalMode === 'office') {
+                titleEl.innerText = "🏢 Send Request to ApproveOffice.html";
+                descEl.innerHTML = "অফিস পোর্টাল থেকে নতুন রিটেইলার অ্যাড, এডিট, স্ট্যাটাস পরিবর্তন বা ডিলিট করলে তা অ্যাডমিনের <strong>ApproveOffice.html</strong>-এ পাঠানো হবে। অ্যাডমিন অ্যাপ্রুভ করলেই এটি চূড়ান্ত হবে।";
+            } else {
+                if (payload.type === 'EDIT') {
+                    titleEl.innerText = "🛡️ Request Retailer Edit Approval";
+                    descEl.innerText = "Your edited retailer details (Previous Version vs Edited Version) will be sent to ApproveSupervisor.html. Once Admin approves, the database will be updated.";
+                } else if (payload.type === 'STATUS_CHANGE') {
+                    titleEl.innerText = "🛡️ Request Status Change Approval";
+                    descEl.innerText = "Activating or deactivating a retailer requires Admin approval. Your request will be sent to ApproveSupervisor.html.";
+                } else {
+                    titleEl.innerText = "🗑️ Request Retailer Delete Approval";
+                    descEl.innerText = "This retailer will not be deleted immediately. A deletion request will be sent to ApproveSupervisor.html for Admin approval.";
+                }
+            }
+
+            const overlay = document.getElementById('supApprovalModal');
+            overlay.style.display = 'flex';
+            setTimeout(() => {
+                overlay.classList.add('active');
+                document.getElementById('supApprovalReason').focus();
+            }, 10);
+        }
+
+        function closeSupApprovalModal() {
+            const overlay = document.getElementById('supApprovalModal');
+            overlay.classList.remove('active');
+            setTimeout(() => { overlay.style.display = 'none'; }, 300);
+            pendingRolePayload = null;
+        }
+
+        function submitRoleApprovalRequest() {
+            const reason = document.getElementById('supApprovalReason').value.trim();
+            if (!reason) {
+                alert("⚠️ Please enter a valid reason for this request.");
+                return;
+            }
+            if (!pendingRolePayload) return;
+
+            const targetApprovalPage = currentPortalMode === 'supervisor' ? 'ApproveSupervisor.html' : 'ApproveOffice.html';
+
+            if (pendingRolePayload.type === 'CREATE') {
+                retailersDB.push({
+                    ...pendingRolePayload.newData,
+                    pendingHoldLabel: `Pending in ${targetApprovalPage}`
+                });
+            } else {
+                const idx = retailersDB.findIndex(r => String(r.id) === String(pendingRolePayload.targetId));
+                if (idx > -1) {
+                    if (pendingRolePayload.type === 'EDIT') retailersDB[idx].pendingHoldLabel = "Edit Pending";
+                    else if (pendingRolePayload.type === 'STATUS_CHANGE') retailersDB[idx].pendingHoldLabel = "Status Pending";
+                    else if (pendingRolePayload.type === 'DELETE') retailersDB[idx].pendingHoldLabel = "Del Pending";
+                }
+            }
+            saveRetailersDatabase();
+            renderRetailerTableRows();
+
+            if (currentPortalMode === 'supervisor') {
+                const approvalQueue = JSON.parse(localStorage.getItem('atr_supervisor_approvals')) || [];
+                approvalQueue.unshift({
+                    id: "REQ-" + Date.now(),
+                    module: "AddRetailer",
+                    action: pendingRolePayload.type,
+                    site: assignedSite,
+                    reason: reason,
+                    summary: pendingRolePayload.summary,
+                    requestedAt: new Date().toISOString(),
+                    status: "Pending",
+                    oldData: pendingRolePayload.oldData,
+                    newData: pendingRolePayload.newData
+                });
+                localStorage.setItem('atr_supervisor_approvals', JSON.stringify(approvalQueue));
+            } else {
+                const newReq = {
+                    reqId: "OFF-RET-" + Date.now().toString().slice(-5),
+                    userId: loggedUserId,
+                    userName: loggedUserName,
+                    designation: "Office Staff",
+                    module: "AddRetailer.html",
+                    action: pendingRolePayload.actionLabel,
+                    summary: pendingRolePayload.summary,
+                    oldData: pendingRolePayload.oldData,
+                    newData: pendingRolePayload.newData,
+                    reason: reason,
+                    timestamp: new Date().toLocaleString('en-IN'),
+                    status: "Pending"
+                };
+
+                const officeQueue = JSON.parse(localStorage.getItem('atr_office_approvals')) || [];
+                officeQueue.unshift(newReq);
+                localStorage.setItem('atr_office_approvals', JSON.stringify(officeQueue));
+                localStorage.setItem('approve_office_requests', JSON.stringify(officeQueue));
+                localStorage.setItem('ApproveOffice_requests', JSON.stringify(officeQueue));
+
+                // Log in Office Daily Work Report (office_dashboard_home.html)
+                const workLogs = JSON.parse(localStorage.getItem('atr_office_daily_work')) || [];
+                const todayStr = new Date().toISOString().split('T')[0];
+                const nowTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+                workLogs.unshift({
+                    id: "WRK-" + Date.now().toString().slice(-5),
+                    userId: loggedUserId,
+                    userName: loggedUserName,
+                    date: todayStr,
+                    time: nowTime,
+                    module: "Retailer Master (AddRetailer.html)",
+                    refNo: newReq.reqId,
+                    desc: `${pendingRolePayload.actionLabel}: ${pendingRolePayload.summary}`,
+                    status: "Sent for Approval"
+                });
+                localStorage.setItem('atr_office_daily_work', JSON.stringify(workLogs));
+
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.refreshNotificationsUI === 'function') {
+                        window.parent.refreshNotificationsUI();
+                    }
+                } catch (e) {}
+            }
+
+            editingRetailerId = null;
+            closeSupApprovalModal();
+            showToast(`📤 Request sent to ${targetApprovalPage} for Admin Approval!`);
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toastMsg');
+            toast.innerText = msg;
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 3500);
+        }
+
+        // ================= ADVANCED MULTI-FILTER LOGIC =================
+        function filterTable() {
+            const searchInput = document.getElementById("tableSearch").value.toUpperCase();
+            const categoryFilter = document.getElementById("filterCategory").value.toUpperCase();
+            const gstFilter = document.getElementById("filterGst").value.toUpperCase();
+            const tr = document.getElementById("tableBody").getElementsByTagName("tr");
+
+            for (let i = 0; i < tr.length; i++) {
+                let rowText = tr[i].innerText.toUpperCase();
+                let catText = tr[i].cells[0].innerText.toUpperCase(); 
+                let gstText = tr[i].cells[4].innerText.toUpperCase(); 
+                let rowStatus = tr[i].getAttribute('data-status');
+                let rowSite = tr[i].getAttribute('data-site') || 'All Sites';
+
+                let matchSearch = rowText.indexOf(searchInput) > -1;
+                let matchCategory = categoryFilter === "" || catText === categoryFilter;
+                let matchGst = gstFilter === "" || gstText.indexOf(gstFilter) > -1;
+                let matchTab = (rowStatus === currentTab);
+                let matchSite = !isSupervisorMode || !assignedSite || rowSite === assignedSite || rowSite === 'All Sites';
+
+                if (matchSearch && matchCategory && matchGst && matchTab && matchSite) {
+                    tr[i].style.display = "";
+                } else {
+                    tr[i].style.display = "none";
+                }
+            }
+        }
+
+        // ================= SMART EXCEL EXPORT (IGNORING ACTION COLUMN) =================
+        function exportToExcel() {
+            let tableData = [];
+            const rows = document.querySelectorAll("#retailerTable tr");
+            
+            for (let i = 0; i < rows.length; i++) {
+                if(rows[i].style.display === "none") continue;
+
+                let rowArray = [];
+                let cols = rows[i].querySelectorAll("td, th");
+                
+                for (let j = 0; j < cols.length - 1; j++) {
+                    let cellText = cols[j].innerText.replace(/[\n\r]+/g, ' ').trim();
+                    rowArray.push(cellText);
+                }
+                
+                if(rowArray.length > 0) tableData.push(rowArray);
+            }
+
+            let ws = XLSX.utils.aoa_to_sheet(tableData);
+            for(let key in ws) {
+                if(key[0] === '!') continue; 
+                ws[key].t = 's'; 
+                ws[key].z = '@'; 
+            }
+
+            let wb = XLSX.utils.book_new();
+            let sheetName = currentTab === 'active' ? "Active Retailers" : "Inactive Retailers";
+            XLSX.utils.book_append_sheet(wb, ws, sheetName);
+            XLSX.writeFile(wb, sheetName + ".xlsx");
+        }
+    </script>
+</body>
+</html>

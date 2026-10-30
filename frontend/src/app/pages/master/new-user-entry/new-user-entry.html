@@ -1,0 +1,76 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1><i class="ri-user-add-line"></i> User Directory & Entry</h1>
+    @if (roleBadge()) {
+      <span class="role-badge">{{ roleBadge() }}</span>
+    }
+  </div>
+
+  <app-data-table
+    [columns]="columns"
+    [data]="allUsers()"
+    [loading]="usersLoading()"
+    [actions]="actions"
+    fileName="User_Directory"
+    (actionClick)="onAction($event)"
+  >
+    <div class="table-toolbar">
+      @if (canModify()) {
+        <button class="btn-primary" (click)="openAddModal()">
+          <i class="ri-add-line"></i> Add New User
+        </button>
+      }
+    </div>
+  </app-data-table>
+</div>
+
+<!-- Entry/Edit Modal -->
+<app-modal-dialog
+  [isOpen]="showModal()"
+  [title]="editingUser() ? 'Edit User' : 'Register New User'"
+  size="lg"
+  (closed)="closeModal()"
+>
+  <form (ngSubmit)="onSubmit()" class="form-grid">
+    <div class="form-group">
+      <app-searchable-dropdown
+        [items]="employees()"
+        [label]="'Full Name (Select Employee)'"
+        [placeholder]="'Search employee name...'"
+        [ngModel]="selectedEmpId()"
+        (ngModelChange)="selectedEmpId.set($event); onEmpSelected($event)"
+        name="empId"
+      ></app-searchable-dropdown>
+    </div>
+    <div class="form-group">
+      <label>Full Name</label>
+      <input type="text" [ngModel]="name()" (ngModelChange)="name.set($event)" name="name" placeholder="Employee full name" required />
+    </div>
+    <div class="form-group">
+      <label>Role / Designation</label>
+      <input type="text" [ngModel]="designation()" (ngModelChange)="designation.set($event)" name="designation" placeholder="e.g., Office Staff, Manager" />
+    </div>
+    <div class="form-group">
+      <label>User ID / Username</label>
+      <input type="text" [ngModel]="username()" (ngModelChange)="username.set($event)" name="username" placeholder="e.g., rahul_atr" required />
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" [ngModel]="password()" (ngModelChange)="password.set($event)" name="password" [placeholder]="editingUser() ? 'Leave blank to keep' : 'Enter password'" [required]="!editingUser()" />
+    </div>
+    <div class="form-group">
+      <label>Contact Number</label>
+      <input type="tel" [ngModel]="contact()" (ngModelChange)="contact.set($event)" name="contact" placeholder="e.g., +91 9876543210" required />
+    </div>
+  </form>
+  <div modal-footer>
+    <button class="btn-secondary" (click)="closeModal()">Cancel</button>
+    <button class="btn-primary" (click)="onSubmit()" [disabled]="loading()">
+      @if (approval.requiresApproval()) {
+        {{ loading() ? 'Submitting...' : 'Submit for Approval' }}
+      } @else {
+        {{ loading() ? 'Saving...' : (editingUser() ? 'Update User' : 'Save & Register') }}
+      }
+    </button>
+  </div>
+</app-modal-dialog>

@@ -1,0 +1,141 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1><i class="ri-door-open-line"></i> Site Leave Entry</h1>
+    <div class="header-actions">
+      <button class="btn-outline" (click)="exportData()" [disabled]="!records().length"><i class="ri-file-excel-line"></i> Export</button>
+    </div>
+  </div>
+
+  <app-summary-cards [cards]="summaryCards()"></app-summary-cards>
+
+  <div class="card-container">
+    <form (ngSubmit)="addLeave()" class="form-grid">
+      <div class="form-group">
+        <app-searchable-dropdown
+          [items]="siteDropdownItems()"
+          [placeholder]="'Select Site'"
+          [label]="'Site'"
+          [required]="true"
+          [disabled]="role.isSiteLocked()"
+          [ngModel]="selectedSite()"
+          (ngModelChange)="onSiteChange($event)"
+        ></app-searchable-dropdown>
+      </div>
+      <div class="form-group">
+        <label>Leave Date</label>
+        <input type="date" [ngModel]="leaveDate()" (ngModelChange)="leaveDate.set($event)" name="leaveDate" required />
+      </div>
+      <div class="form-group">
+        <label>Leave Type</label>
+        <select [ngModel]="leaveType()" (ngModelChange)="leaveType.set($event)" name="leaveType">
+          <option value="CL">CL - Casual Leave</option>
+          <option value="SL">SL - Sick Leave</option>
+          <option value="UL">UL - Unpaid Leave</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Reason</label>
+        <input type="text" [ngModel]="reason()" (ngModelChange)="reason.set($event)" name="reason" placeholder="Reason for leave" />
+      </div>
+    </form>
+
+    @if (selectedSite()) {
+      <div class="employee-select-section">
+        <div class="employee-select-header">
+          <h4><i class="ri-team-line"></i> Select Employees ({{ selectedCount() }} selected)</h4>
+          <input type="text" class="search-input" placeholder="Search employees..."
+            [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" style="max-width: 250px;" />
+        </div>
+        <div class="checkbox-row select-all">
+          <label>
+            <input type="checkbox" [checked]="allSelected()" (change)="toggleAll()" />
+            <strong>Select All</strong>
+          </label>
+        </div>
+        <div class="employee-checkbox-list">
+          @for (emp of filteredEmployeeList(); track emp.id) {
+            <div class="checkbox-row">
+              <label>
+                <input type="checkbox" [checked]="isSelected(emp.id)" (change)="toggleEmployee(emp.id)" />
+                <span class="emp-name">{{ emp.name }}</span>
+                <span class="emp-id">{{ emp.displayId }}</span>
+              </label>
+            </div>
+          } @empty {
+            <p class="empty-state" style="padding: 0.75rem;">No employees found at this site.</p>
+          }
+        </div>
+      </div>
+    }
+
+    <div class="form-actions" style="margin-top: 1rem;">
+      <button class="btn-primary" (click)="addLeave()" [disabled]="selectedCount() === 0 || !leaveDate()">
+        <i class="ri-add-line"></i> {{ editingId() !== null ? 'Update Leave' : 'Submit Leave (' + selectedCount() + ')' }}
+      </button>
+      @if (editingId() !== null) {
+        <button type="button" class="btn-secondary" (click)="cancelEdit()">Cancel</button>
+      }
+    </div>
+  </div>
+
+  <div class="section-header">
+    <h3><i class="ri-history-line"></i> Leave History</h3>
+    <input type="text" class="search-input" placeholder="Search history..."
+      [ngModel]="historySearch()" (ngModelChange)="historySearch.set($event)" style="max-width: 250px;" />
+  </div>
+
+  @if (loading()) {
+    <p class="loading-text">Loading leave records...</p>
+  }
+
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Employee</th>
+          <th>Site</th>
+          <th>Date</th>
+          <th>Leave Type</th>
+          <th>Reason</th>
+          <th>Status</th>
+          <th style="text-align: center;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (rec of filteredRecords(); track rec.id; let i = $index) {
+          <tr>
+            <td>{{ i + 1 }}</td>
+            <td style="font-weight: 600;">{{ rec.employee }}</td>
+            <td>{{ rec.site }}</td>
+            <td>{{ rec.leaveDate }}</td>
+            <td>
+              <span class="badge"
+                [class.badge-info]="rec.leaveType === 'CL'"
+                [class.badge-warning]="rec.leaveType === 'SL'"
+                [class.badge-danger]="rec.leaveType === 'UL'">
+                {{ rec.leaveType }}
+              </span>
+            </td>
+            <td>{{ rec.reason }}</td>
+            <td>
+              <span class="badge"
+                [class.badge-success]="rec.status === 'approved'"
+                [class.badge-warning]="rec.status === 'pending'"
+                [class.badge-danger]="rec.status === 'rejected'">
+                {{ rec.status }}
+              </span>
+            </td>
+            <td style="text-align: center;">
+              <button class="btn-secondary btn-sm" (click)="editLeave(rec)" style="margin-right: 0.25rem;"><i class="ri-edit-line"></i></button>
+              <button class="btn-danger btn-sm" (click)="deleteLeave(rec.id)"><i class="ri-delete-bin-line"></i></button>
+            </td>
+          </tr>
+        } @empty {
+          <tr><td colspan="8" class="empty-state">No leave records found.</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

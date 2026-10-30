@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Tally Style Mobilization Ledger</title>
+    
+    <!-- Sync theme with Master Dashboard -->
+    <script>
+        function applyDashboardTheme() {
+            const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        }
+        applyDashboardTheme();
+        window.addEventListener('storage', applyDashboardTheme);
+    </script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- SheetJS (XLSX) Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- jsPDF Library for A4 Portrait Tally PDF Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-body: transparent; 
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.1);
+            
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(0, 0, 0, 0.25);
+            --input-focus-bg: rgba(0, 0, 0, 0.45);
+            
+            --shadow: 0 4px 15px rgba(0,0,0,0.3);
+            
+            --theme-color: #E30B5C;
+            --theme-glow: rgba(227, 11, 92, 0.4);
+            --theme-transition: all 0.3s ease;
+            --calendar-filter: invert(1);
+        }
+
+        [data-theme="light"] {
+            --bg-body: #f4f6f9;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #555555;
+            --border-color: rgba(0, 0, 0, 0.12);
+            
+            --glass-bg: rgba(255, 255, 255, 0.9);
+            --glass-border: rgba(0, 0, 0, 0.1);
+            --input-bg: #f1f3f5;
+            --input-focus-bg: #ffffff;
+            
+            --shadow: 0 8px 25px rgba(0,0,0,0.05);
+            --calendar-filter: invert(0);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; scroll-behavior: smooth; }
+        body { background-color: var(--bg-body); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; transition: var(--theme-transition); }
+
+        /* Dropdown Dark/Light Mode Readability Fix */
+        select,
+        select.form-control {
+            background-color: var(--bg-card) !important;
+            color: var(--text-main) !important;
+            color-scheme: dark;
+            cursor: pointer;
+        }
+        [data-theme="light"] select,
+        [data-theme="light"] select.form-control {
+            background-color: var(--bg-card) !important;
+            color: var(--text-main) !important;
+            color-scheme: light;
+        }
+        select option {
+            background-color: var(--bg-card) !important;
+            color: var(--text-main) !important;
+            padding: 10px;
+        }
+        select:disabled {
+            opacity: 0.85;
+            cursor: not-allowed;
+            border-color: rgba(255, 193, 7, 0.45) !important;
+            color: #ffc107 !important;
+            font-weight: 700;
+        }
+
+        /* ================= MAIN LAYOUT ================= */
+        .main-content { flex: 1; display: flex; flex-direction: column; padding: 22px 30px; height: 100vh; overflow: hidden; width: 100%; max-width: 1650px; margin: 0 auto; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; flex-shrink: 0; flex-wrap: wrap; gap: 15px; }
+        .header h1 { font-size: 23px; color: var(--text-main); display: flex; align-items: center; gap: 10px; margin-top: 5px; flex-wrap: wrap; }
+        
+        .role-mode-badge {
+            display: none;
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 700;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-back-dash { 
+            background-color: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color); 
+            text-decoration: none; padding: 7px 14px; border-radius: 6px; font-weight: 700; font-size: 12px; 
+            transition: all 0.3s; display: inline-flex; align-items: center; width: max-content; cursor: pointer;
+        }
+        .btn-back-dash:hover { background-color: var(--theme-color); color: #fff; border-color: var(--theme-color); transform: translateY(-2px); box-shadow: 0 4px 10px var(--theme-glow); }
+
+        .header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+        .btn-export-pdf { background: var(--theme-color); color: #ffffff; border: none; padding: 10px 16px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; text-transform: uppercase; transition: all 0.3s; box-shadow: 0 4px 12px var(--theme-glow); display: flex; align-items: center; gap: 6px; }
+        .btn-export-pdf:hover { filter: brightness(1.1); transform: translateY(-2px); }
+
+        .btn-export-excel { background: rgba(40, 167, 69, 0.15); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.4); padding: 10px 15px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; text-transform: uppercase; transition: all 0.3s; display: flex; align-items: center; gap: 6px; }
+        .btn-export-excel:hover { background-color: #28a745; color: white; transform: translateY(-2px); }
+
+        /* ================= KPI SUMMARY CARDS ================= */
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 14px; flex-shrink: 0; }
+        @media (max-width: 1100px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        .stat-card { 
+            background: var(--glass-bg); backdrop-filter: blur(12px); border: 1px solid var(--border-color);
+            padding: 14px 18px; border-radius: 10px; position: relative; overflow: hidden; box-shadow: var(--shadow);
+        }
+        .stat-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; }
+        .stat-card.blue::before { background: #007bff; }
+        .stat-card.green::before { background: #28a745; }
+        .stat-card.orange::before { background: #fd7e14; }
+        .stat-card.red::before { background: #dc3545; }
+        
+        .stat-card h4 { font-size: 10.5px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 5px; letter-spacing: 0.5px; }
+        .stat-card h2 { font-size: 20px; font-weight: 800; color: var(--text-main); }
+        .stat-card .sub-text { font-size: 11px; margin-top: 4px; display: block; color: var(--text-muted); }
+
+        /* ================= FILTER CONTROLS BAR ================= */
+        .controls-bar { 
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; align-items: end; margin-bottom: 14px; 
+            background: var(--glass-bg); backdrop-filter: blur(12px);
+            padding: 13px 18px; border-radius: 12px; border: 1px solid var(--glass-border); flex-shrink: 0;
+        }
+        .filter-item { display: flex; flex-direction: column; gap: 5px; }
+        .filter-item label { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-control { background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 9px 12px; border-radius: 6px; font-size: 12px; outline: none; transition: 0.3s; width: 100%; color-scheme: dark; }
+        [data-theme="light"] .form-control { color-scheme: light; }
+        .form-control:focus { border-color: var(--theme-color); box-shadow: 0 0 6px var(--theme-glow); background: var(--input-focus-bg); }
+        .form-control option { background: var(--bg-card); color: var(--text-main); }
+        ::-webkit-calendar-picker-indicator { filter: var(--calendar-filter); cursor: pointer; }
+
+        /* ================= TALLY STYLE LEDGER TABLE ================= */
+        .table-container-box { 
+            background: var(--glass-bg); backdrop-filter: blur(12px);
+            border-radius: 12px 12px 0 0; box-shadow: var(--shadow); flex: 1; min-height: 0; 
+            border: 1px solid var(--glass-border); border-top: 4px solid var(--theme-color); border-bottom: none; overflow: auto; 
+        }
+        .table-container-box::-webkit-scrollbar { width: 8px; height: 8px; }
+        .table-container-box::-webkit-scrollbar-thumb { background: rgba(227, 11, 92, 0.35); border-radius: 4px; }
+        
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        thead { position: sticky; top: 0; background-color: var(--bg-card); z-index: 10; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        th { padding: 12px 14px; color: var(--theme-color); font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; border-bottom: 2px solid var(--theme-color); border-right: 1px solid var(--border-color); white-space: nowrap; }
+        th:last-child { border-right: none; }
+        td { padding: 11px 14px; border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color); font-size: 12.5px; color: var(--text-main); vertical-align: top; }
+        td:last-child { border-right: none; }
+        tbody tr:hover { background: rgba(227, 11, 92, 0.05); }
+
+        /* Tally Particulars Styling */
+        .tally-main-line { font-weight: 700; font-size: 13px; color: var(--text-main); display: flex; align-items: center; gap: 6px; }
+        .tally-prefix { color: var(--theme-color); font-weight: 800; font-family: monospace; font-size: 13px; }
+        .tally-narration { font-size: 11px; color: var(--text-muted); margin-top: 3px; padding-left: 22px; line-height: 1.4; }
+        .tally-tds-pill { display: inline-block; background: rgba(253, 126, 20, 0.15); color: #fd7e14; border: 1px solid rgba(253, 126, 20, 0.35); padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; margin-top: 3px; }
+        .tally-bank-pill { display: inline-block; background: rgba(40, 167, 69, 0.15); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.35); padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; margin-top: 3px; margin-right: 5px; }
+
+        /* Status Badges */
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; display: inline-block; text-transform: uppercase; white-space: nowrap; }
+        .badge-paid { background: rgba(40, 167, 69, 0.15); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.35); }
+        .badge-due { background: rgba(220, 53, 69, 0.15); color: #dc3545; border: 1px solid rgba(220, 53, 69, 0.35); }
+
+        /* Tally Closing Rows inside Table */
+        .tally-total-row td { background: rgba(255, 255, 255, 0.04); font-weight: 800; border-top: 2px solid var(--border-color); font-size: 13px; }
+        .tally-closing-row td { background: rgba(227, 11, 92, 0.08); font-weight: 800; border-top: 1px dashed var(--theme-color); border-bottom: 2px solid var(--theme-color); font-size: 13px; }
+
+        /* STICKY FOOTER BAR */
+        .summary-footer-bar { 
+            background: var(--input-bg); padding: 12px 25px; border-radius: 0 0 12px 12px; 
+            display: flex; justify-content: space-between; align-items: center; 
+            border: 1px solid var(--border-color); border-top: 2px solid var(--theme-color); 
+            flex-shrink: 0; box-shadow: 0 -4px 15px rgba(0,0,0,0.2); z-index: 20; flex-wrap: wrap; gap: 15px;
+        }
+        .summary-footer-box { text-align: center; }
+        .summary-footer-box span { display: block; font-size: 10px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 2px; }
+        .summary-footer-box h3 { font-size: 16px; margin: 0; font-weight: 800; }
+
+        /* Print Media Query for Direct Browser Print (A4 Portrait Fixed) */
+        @media print {
+            @page { size: A4 portrait; margin: 10mm; }
+            html, body { height: auto !important; overflow: visible !important; background: #fff !important; color: #000 !important; display: block !important; }
+            .btn-back-dash, .header-actions, .controls-bar, .stats-grid { display: none !important; }
+            .main-content { padding: 0 !important; height: auto !important; overflow: visible !important; max-width: 100% !important; }
+            .table-container-box { overflow: visible !important; border: 1px solid #000 !important; border-radius: 0 !important; box-shadow: none !important; }
+            thead { position: static !important; }
+            table, th, td { border: 1px solid #000 !important; color: #000 !important; font-size: 10px !important; }
+            .tally-narration { color: #333 !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-content">
+        <!-- HEADER -->
+        <div class="header">
+            <div>
+                <a href="dashboard_home.html" id="btnBackDashboard" class="btn-back-dash" onclick="handleBackToDashboard(event)">← Back to Dashboard</a>
+                <h1>
+                    📒 Mobilization Ledger Account (Tally Format)
+                    <span id="roleModeBadge" class="role-mode-badge">🏢 Office Mode</span>
+                </h1>
+            </div>
+            <div class="header-actions">
+                <button class="btn-export-excel" onclick="exportToExcel()">📊 Export Excel (.xlsx)</button>
+                <button class="btn-export-pdf" onclick="exportToPDF()">📑 Download Tally PDF (A4 Portrait)</button>
+            </div>
+        </div>
+
+        <!-- KPI CARDS -->
+        <div class="stats-grid">
+            <div class="stat-card blue">
+                <h4>Total Bill Value (Credit - Cr)</h4>
+                <h2 id="kpiTotalBilled">₹0.00</h2>
+                <span class="sub-text">Total monthly bills submitted</span>
+            </div>
+            <div class="stat-card green">
+                <h4>Net Bank Paid (Debit - Dr)</h4>
+                <h2 id="kpiBankPaid">₹0.00</h2>
+                <span class="sub-text">Actual amount transferred to party</span>
+            </div>
+            <div class="stat-card orange">
+                <h4>Total TDS Deducted (Dr)</h4>
+                <h2 id="kpiTdsCut">₹0.00</h2>
+                <span class="sub-text">TDS deducted against bills</span>
+            </div>
+            <div class="stat-card red">
+                <h4>Closing Balance (Net Due)</h4>
+                <h2 id="kpiNetDue">₹0.00</h2>
+                <span class="sub-text" id="kpiBillStatus">0 Paid Bills / 0 Due Bills</span>
+            </div>
+        </div>
+
+        <!-- FILTERS BAR -->
+        <div class="controls-bar">
+            <div class="filter-item">
+                <label id="filterSiteLabel">🏗️ Project / Site</label>
+                <select class="form-control" id="filterSite" onchange="onSiteChange()">
+                    <option value="All">All Sites</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label>👤 Select Specific Person / Party</label>
+                <select class="form-control" id="filterParty" onchange="renderTallyLedger()">
+                    <option value="All">All Parties (Everyone)</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label>📅 From Date</label>
+                <input type="date" class="form-control" id="filterFrom" onchange="renderTallyLedger()">
+            </div>
+            <div class="filter-item">
+                <label>📅 To Date</label>
+                <input type="date" class="form-control" id="filterTo" onchange="renderTallyLedger()">
+            </div>
+            <div class="filter-item">
+                <label>🔍 Quick Search</label>
+                <input type="text" class="form-control" id="searchBox" placeholder="Party, Bill No, Voucher, Site..." onkeyup="renderTallyLedger()">
+            </div>
+        </div>
+
+        <!-- TALLY LEDGER MAIN TABLE -->
+        <div class="table-container-box">
+            <table id="mobilizationTable">
+                <thead>
+                    <tr>
+                        <th style="width: 95px;">Date</th>
+                        <th>Particulars (Tally Dr / Cr Account & Narration)</th>
+                        <th>Project / Site</th>
+                        <th>Vch Type</th>
+                        <th>Vch / Bill No.</th>
+                        <th style="text-align:right;">TDS Cut (₹)</th>
+                        <th style="text-align:right;">Debit (Dr ₹)<br><span style="font-size:9px; color:var(--text-muted); font-weight:500;">(Paid + TDS)</span></th>
+                        <th style="text-align:right;">Credit (Cr ₹)<br><span style="font-size:9px; color:var(--text-muted); font-weight:500;">(Bill Amount)</span></th>
+                        <th style="text-align:right;">Balance (₹)</th>
+                        <th style="text-align:center;">Bill Status</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+
+        <!-- STICKY SUMMARY FOOTER -->
+        <div class="summary-footer-bar">
+            <div class="summary-footer-box">
+                <span>Vouchers Displayed</span>
+                <h3 id="footCount" style="color: var(--theme-color);">0</h3>
+            </div>
+            <div class="summary-footer-box">
+                <span>Total Billed (Credit)</span>
+                <h3 id="footBilled" style="color: #007bff;">₹ 0.00 Cr</h3>
+            </div>
+            <div class="summary-footer-box">
+                <span>Bank Paid + TDS (Debit)</span>
+                <h3 id="footPaid" style="color: #28a745;">₹ 0.00 Dr</h3>
+            </div>
+            <div class="summary-footer-box">
+                <span>Closing Balance (Due)</span>
+                <h3 id="footDue" style="color: #dc3545;">₹ 0.00 Cr</h3>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================================================
+        // 1. PORTAL ROLE DETECTION (ADMIN / OFFICE STAFF / SUPERVISOR)
+        // =========================================================================================
+        let currentPortalMode = "admin"; // 'admin', 'office', or 'supervisor'
+        let isSupervisorMode = false;
+        let assignedSite = "";
+
+        function checkPortalPermissions() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewParam = (urlParams.get('view') || '').toLowerCase();
+            const siteParam = urlParams.get('site');
+
+            let parentPath = "";
+            try {
+                if (window.parent && window.parent !== window) {
+                    parentPath = (window.parent.location.pathname || '').toLowerCase();
+                }
+            } catch (e) {}
+
+            const badge = document.getElementById('roleModeBadge');
+            const backBtn = document.getElementById('btnBackDashboard');
+            const siteLabel = document.getElementById('filterSiteLabel');
+
+            if (viewParam === 'supervisor' || parentPath.includes('supervisordashboard')) {
+                currentPortalMode = 'supervisor';
+                isSupervisorMode = true;
+                assignedSite = (siteParam || sessionStorage.getItem('atr_supervisor_site') || "Salt Lake Sector V").trim();
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🔒 Site Locked: ${assignedSite}`;
+                }
+                if (siteLabel) {
+                    siteLabel.innerText = `🏗️ Project / Site (Locked)`;
+                }
+                if (backBtn) {
+                    backBtn.href = "supervisor/supervisor_dashboard_home.html";
+                }
+            } else if (viewParam === 'office' || parentPath.includes('officedashboard')) {
+                currentPortalMode = 'office';
+                isSupervisorMode = false;
+                assignedSite = "";
+                const userName = urlParams.get('userName') || "Office Staff";
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🏢 Office Mode (${userName})`;
+                }
+                if (backBtn) {
+                    backBtn.href = "office/office_dashboard_home.html";
+                }
+            } else {
+                currentPortalMode = 'admin';
+                isSupervisorMode = false;
+                assignedSite = "";
+                if (backBtn) {
+                    backBtn.href = "dashboard_home.html";
+                }
+            }
+        }
+
+        function handleBackToDashboard(event) {
+            if (currentPortalMode === 'office') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.loadOfficeWorkspaceHome === 'function') {
+                        window.parent.loadOfficeWorkspaceHome();
+                        return;
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "office_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "office/office_dashboard_home.html";
+            } else if (currentPortalMode === 'supervisor') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window) {
+                        const parentHomeLink = window.parent.document.querySelector('.dashboard-home-link');
+                        if (parentHomeLink) {
+                            if (typeof window.parent.clearTreeActiveLinks === 'function') {
+                                window.parent.clearTreeActiveLinks();
+                            }
+                            window.location.href = parentHomeLink.href;
+                            return;
+                        }
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "supervisor_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "supervisor/supervisor_dashboard_home.html";
+            }
+        }
+
+        // ================= TALLY-STYLE MOBILIZATION LEDGER DATABASE =================
+        const mobilizationTxns = [
+            // 1. Maa Tara Civil Contractors (3 Bills: INV-MOB-101 Paid, INV-MOB-102 Part Due, INV-MOB-103 Due)
+            { id: 1, date: "2026-07-05", vchType: "Bill", voucher: "BILL/26/001", billNo: "INV-MOB-101", partyId: "CON-101", partyName: "Maa Tara Civil Contractors", site: "Dum Dum Complex", ledgerHead: "Mobilization Bill A/c", narration: "July Month Mobilization Bill #01 submitted", credit: 250000, bankPaid: 0, tdsCut: 0, tdsRate: 0, debit: 0 },
+            { id: 2, date: "2026-07-12", vchType: "Payment", voucher: "PAY/26/014", billNo: "INV-MOB-101", partyId: "CON-101", partyName: "Maa Tara Civil Contractors", site: "Dum Dum Complex", ledgerHead: "HDFC Bank & TDS A/c", narration: "Full settlement against INV-MOB-101 via NEFT", credit: 0, bankPaid: 245000, tdsCut: 5000, tdsRate: 2, debit: 250000 },
+            
+            { id: 3, date: "2026-08-05", vchType: "Bill", voucher: "BILL/26/022", billNo: "INV-MOB-102", partyId: "CON-101", partyName: "Maa Tara Civil Contractors", site: "Dum Dum Complex", ledgerHead: "Mobilization Bill A/c", narration: "August Month Mobilization Bill #02 submitted", credit: 150000, bankPaid: 0, tdsCut: 0, tdsRate: 0, debit: 0 },
+            { id: 4, date: "2026-08-14", vchType: "Payment", voucher: "PAY/26/031", billNo: "INV-MOB-102", partyId: "CON-101", partyName: "Maa Tara Civil Contractors", site: "Dum Dum Complex", ledgerHead: "HDFC Bank & TDS A/c", narration: "Part payment against INV-MOB-102 after 2% TDS", credit: 0, bankPaid: 58800, tdsCut: 1200, tdsRate: 2, debit: 60000 },
+            
+            { id: 5, date: "2026-09-02", vchType: "Bill", voucher: "BILL/26/045", billNo: "INV-MOB-103", partyId: "CON-101", partyName: "Maa Tara Civil Contractors", site: "Dum Dum Complex", ledgerHead: "Mobilization Bill A/c", narration: "September Month Mobilization Bill #03 submitted", credit: 100000, bankPaid: 0, tdsCut: 0, tdsRate: 0, debit: 0 },
+
+            // 2. Subrata Roy (2 Bills: INV-MOB-201 Paid, INV-MOB-202 Part Due)
+            { id: 6, date: "2026-07-10", vchType: "Bill", voucher: "BILL/26/004", billNo: "INV-MOB-201", partyId: "SUP-003", partyName: "Subrata Roy", site: "Salt Lake Sector V", ledgerHead: "Mobilization Bill A/c", narration: "July Site Setup & Mobilization Bill", credit: 60000, bankPaid: 0, tdsCut: 0, tdsRate: 0, debit: 0 },
+            { id: 7, date: "2026-07-18", vchType: "Payment", voucher: "PAY/26/019", billNo: "INV-MOB-201", partyId: "SUP-003", partyName: "Subrata Roy", site: "Salt Lake Sector V", ledgerHead: "SBI Bank & TDS A/c", narration: "Full payment cleared against INV-MOB-201 (1% TDS)", credit: 0, bankPaid: 59400, tdsCut: 600, tdsRate: 1, debit: 60000 },
+            
+            { id: 8, date: "2026-08-10", vchType: "Bill", voucher: "BILL/26/029", billNo: "INV-MOB-202", partyId: "SUP-003", partyName: "Subrata Roy", site: "Salt Lake Sector V", ledgerHead: "Mobilization Bill A/c", narration: "August Site Mobilization Bill", credit: 45000, bankPaid: 0, tdsCut: 0, tdsRate: 0, debit: 0 },
+            { id: 9, date: "2026-08-20", vchType: "Payment", voucher: "PAY/26/039", billNo: "INV-MOB-202", partyId: "SUP-003", partyName: "Subrata Roy", site: "Salt Lake Sector V", ledgerHead: "SBI Bank & TDS A/c", narration: "Part payment against INV-MOB-202 (1% TDS)", credit: 0, bankPaid: 24750, tdsCut: 250, tdsRate: 1, debit: 25000 },
+
+            // 3. Murshidabad Mason Gang (1 Bill: Part Due)
+            { id: 10, date: "2026-08-01", vchType: "Bill", voucher: "BILL/26/015", billNo: "INV-MOB-301", partyId: "EMP-G09", partyName: "Murshidabad Mason Gang", site: "Barasat Highway", ledgerHead: "Mobilization Bill A/c", narration: "August Labour Gang Mobilization Bill", credit: 45000, bankPaid: 0, tdsCut: 0, tdsRate: 0, debit: 0 },
+            { id: 11, date: "2026-08-18", vchType: "Payment", voucher: "PAY/26/035", billNo: "INV-MOB-301", partyId: "EMP-G09", partyName: "Murshidabad Mason Gang", site: "Barasat Highway", ledgerHead: "Cash / Bank & TDS A/c", narration: "Part payment against INV-MOB-301 (1% TDS)", credit: 0, bankPaid: 24750, tdsCut: 250, tdsRate: 1, debit: 25000 },
+
+            // 4. Bengal Steel Fabricators (2 Bills: Both Paid)
+            { id: 12, date: "2026-07-15", vchType: "Bill", voucher: "BILL/26/008", billNo: "INV-MOB-401", partyId: "CON-104", partyName: "Bengal Steel Fabricators", site: "Salt Lake Sector V", ledgerHead: "Mobilization Bill A/c", narration: "July Crane & Machinery Mobilization Bill", credit: 120000, bankPaid: 0, tdsCut: 0, tdsRate: 0, debit: 0 },
+            { id: 13, date: "2026-07-25", vchType: "Payment", voucher: "PAY/26/021", billNo: "INV-MOB-401", partyId: "CON-104", partyName: "Bengal Steel Fabricators", site: "Salt Lake Sector V", ledgerHead: "HDFC Bank & TDS A/c", narration: "Full payment cleared for INV-MOB-401 (2% TDS)", credit: 0, bankPaid: 117600, tdsCut: 2400, tdsRate: 2, debit: 120000 },
+            
+            { id: 14, date: "2026-08-05", vchType: "Bill", voucher: "BILL/26/025", billNo: "INV-MOB-402", partyId: "CON-104", partyName: "Bengal Steel Fabricators", site: "Salt Lake Sector V", ledgerHead: "Mobilization Bill A/c", narration: "August Heavy Rigging Mobilization Bill", credit: 180000, bankPaid: 0, tdsCut: 0, tdsRate: 0, debit: 0 },
+            { id: 15, date: "2026-08-25", vchType: "Payment", voucher: "PAY/26/042", billNo: "INV-MOB-402", partyId: "CON-104", partyName: "Bengal Steel Fabricators", site: "Salt Lake Sector V", ledgerHead: "HDFC Bank & TDS A/c", narration: "Full payment cleared for INV-MOB-402 (2% TDS)", credit: 0, bankPaid: 176400, tdsCut: 3600, tdsRate: 2, debit: 180000 }
+        ];
+
+        window.onload = function() {
+            checkPortalPermissions();
+            populateFilterDropdowns();
+            renderTallyLedger();
+        };
+
+        // Timezone-safe Date Formatter like Tally (e.g. 05-Jul-2026)
+        function formatTallyDate(dateStr) {
+            if (!dateStr) return "-";
+            const parts = String(dateStr).split('-');
+            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            if (parts.length === 3) {
+                const yr = parts[0];
+                const mo = parseInt(parts[1], 10) - 1;
+                const dy = parts[2].padStart(2, '0');
+                if (months[mo]) return `${dy}-${months[mo]}-${yr}`;
+            }
+            const d = new Date(dateStr);
+            if (isNaN(d)) return dateStr;
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${day}-${months[d.getMonth()]}-${d.getFullYear()}`;
+        }
+
+        // Calculate Paid/Due Status per Bill No across all transactions
+        function getBillStatusMap(txnsList) {
+            const billMap = {};
+            txnsList.forEach(t => {
+                if (!billMap[t.billNo]) {
+                    billMap[t.billNo] = { billNo: t.billNo, billed: 0, settled: 0 };
+                }
+                billMap[t.billNo].billed += t.credit;
+                billMap[t.billNo].settled += t.debit;
+            });
+            Object.values(billMap).forEach(b => {
+                b.due = Math.max(0, b.billed - b.settled);
+                b.status = b.due <= 0 ? 'PAID' : 'DUE';
+            });
+            return billMap;
+        }
+
+        // Populate Sites & Parties Dynamically (With Supervisor Site Lock Support)
+        function populateFilterDropdowns() {
+            const siteSelect = document.getElementById('filterSite');
+            const uniqueSites = [...new Set(mobilizationTxns.map(t => t.site))];
+
+            if (isSupervisorMode && assignedSite) {
+                if (!uniqueSites.includes(assignedSite)) uniqueSites.unshift(assignedSite);
+                siteSelect.innerHTML = `<option value="${assignedSite}">📍 ${assignedSite}</option>`;
+                siteSelect.value = assignedSite;
+                siteSelect.disabled = true;
+            } else {
+                siteSelect.innerHTML = `<option value="All">All Sites</option>`;
+                uniqueSites.forEach(s => siteSelect.innerHTML += `<option value="${s}">${s}</option>`);
+                siteSelect.disabled = false;
+            }
+            updatePartyDropdown();
+        }
+
+        function onSiteChange() {
+            updatePartyDropdown();
+            renderTallyLedger();
+        }
+
+        function updatePartyDropdown() {
+            const site = (isSupervisorMode && assignedSite) ? assignedSite : document.getElementById('filterSite').value;
+            const partySelect = document.getElementById('filterParty');
+            const filtered = mobilizationTxns.filter(t => site === 'All' || t.site === site);
+
+            const uniqueParties = [];
+            const map = new Map();
+            for (const item of filtered) {
+                if (!map.has(item.partyId)) {
+                    map.set(item.partyId, true);
+                    uniqueParties.push({ id: item.partyId, name: item.partyName });
+                }
+            }
+
+            partySelect.innerHTML = `<option value="All">All Parties (${uniqueParties.length})</option>`;
+            uniqueParties.forEach(p => {
+                partySelect.innerHTML += `<option value="${p.id}">${p.name} (${p.id})</option>`;
+            });
+        }
+
+        // Returns both Opening Balance (prior to fromDate) and Filtered Transactions
+        function getLedgerCalculationData() {
+            const site = (isSupervisorMode && assignedSite) ? assignedSite : document.getElementById('filterSite').value;
+            const party = document.getElementById('filterParty').value;
+            const fromDate = document.getElementById('filterFrom').value;
+            const toDate = document.getElementById('filterTo').value;
+            const query = document.getElementById('searchBox').value.toLowerCase().trim();
+
+            const baseMatching = mobilizationTxns.filter(t => {
+                if (site !== 'All' && t.site !== site) return false;
+                if (party !== 'All' && t.partyId !== party) return false;
+                const searchStr = `${t.partyId} ${t.partyName} ${t.voucher} ${t.billNo} ${t.narration} ${t.site}`.toLowerCase();
+                if (query && !searchStr.includes(query)) return false;
+                return true;
+            }).sort((a, b) => new Date(a.date) - new Date(b.date) || a.id - b.id);
+
+            let openingBalance = 0;
+            const filteredTxns = [];
+
+            baseMatching.forEach(t => {
+                if (fromDate && t.date < fromDate) {
+                    openingBalance += (t.credit - t.debit);
+                } else {
+                    if (!toDate || t.date <= toDate) {
+                        filteredTxns.push(t);
+                    }
+                }
+            });
+
+            return { openingBalance, fromDate, txns: filteredTxns };
+        }
+
+        function renderTallyLedger() {
+            const { openingBalance, fromDate, txns } = getLedgerCalculationData();
+            const billStatusMap = getBillStatusMap(mobilizationTxns);
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            let totalBilledCr = 0;
+            let totalBankPaid = 0;
+            let totalTdsCut = 0;
+            let totalDebitDr = 0;
+            let runningBalance = openingBalance;
+
+            // Count Paid & Due Bills in current filtered view
+            const visibleBills = new Set(txns.map(t => t.billNo));
+            let paidBillsCount = 0, dueBillsCount = 0;
+            visibleBills.forEach(bNo => {
+                const b = billStatusMap[bNo];
+                if (b && b.billed > 0) {
+                    if (b.due <= 0) paidBillsCount++;
+                    else dueBillsCount++;
+                }
+            });
+
+            if (txns.length === 0 && openingBalance === 0) {
+                tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:35px; color:var(--text-muted);">No ledger entries found for the selected criteria.</td></tr>`;
+            } else {
+                // Show Opening Balance (B/F) row if From Date is selected
+                if (fromDate && openingBalance !== 0) {
+                    const isCrOpen = openingBalance >= 0;
+                    const openPrefix = isCrOpen ? "By" : "To";
+                    const openSuffix = isCrOpen ? "Cr" : "Dr";
+
+                    tbody.innerHTML += `
+                        <tr style="background: rgba(23, 162, 184, 0.08);">
+                            <td style="white-space:nowrap; font-weight:700;">${formatTallyDate(fromDate)}</td>
+                            <td>
+                                <div class="tally-main-line">
+                                    <span class="tally-prefix">${openPrefix}</span>
+                                    <span style="color:#17a2b8;">OPENING BALANCE (Brought Forward before ${formatTallyDate(fromDate)})</span>
+                                </div>
+                            </td>
+                            <td style="white-space:nowrap;">-</td>
+                            <td style="white-space:nowrap; font-weight:700; color:#17a2b8;">Opening</td>
+                            <td style="white-space:nowrap; font-weight:700;">B/F</td>
+                            <td style="text-align:right;">-</td>
+                            <td style="text-align:right; color:#28a745; font-weight:700;">${!isCrOpen ? '₹' + Math.abs(openingBalance).toLocaleString('en-IN', {minimumFractionDigits: 2}) : '-'}</td>
+                            <td style="text-align:right; color:#007bff; font-weight:700;">${isCrOpen ? '₹' + Math.abs(openingBalance).toLocaleString('en-IN', {minimumFractionDigits: 2}) : '-'}</td>
+                            <td style="text-align:right; font-weight:800; color:${isCrOpen ? '#dc3545' : '#28a745'}; white-space:nowrap;">
+                                ₹${Math.abs(openingBalance).toLocaleString('en-IN', {minimumFractionDigits: 2})} ${openSuffix}
+                            </td>
+                            <td style="text-align:center;">-</td>
+                        </tr>
+                    `;
+                }
+
+                txns.forEach(t => {
+                    totalBilledCr += t.credit;
+                    totalBankPaid += t.bankPaid;
+                    totalTdsCut += t.tdsCut;
+                    totalDebitDr += t.debit;
+                    runningBalance += (t.credit - t.debit);
+
+                    const isBill = t.credit > 0;
+                    const tallyPrefix = isBill ? "By" : "To";
+                    const bInfo = billStatusMap[t.billNo];
+
+                    const statusBadge = (bInfo && bInfo.due <= 0)
+                        ? `<span class="badge badge-paid">✔️ PAID</span>`
+                        : `<span class="badge badge-due">⚠️ DUE (₹${bInfo ? bInfo.due.toLocaleString('en-IN') : 0})</span>`;
+
+                    const paymentBreakdownHtml = !isBill
+                        ? `<div>
+                               <span class="tally-bank-pill">Bank Paid: ₹${t.bankPaid.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                               <span class="tally-tds-pill">TDS Cut (${t.tdsRate}%): ₹${t.tdsCut.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                           </div>`
+                        : '';
+
+                    const balSuffix = runningBalance > 0 ? 'Cr' : (runningBalance < 0 ? 'Dr' : '');
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td style="white-space:nowrap; font-weight:600;">${formatTallyDate(t.date)}</td>
+                            <td>
+                                <div class="tally-main-line">
+                                    <span class="tally-prefix">${tallyPrefix}</span>
+                                    <span>${t.ledgerHead} — <strong style="color:var(--theme-color);">${t.partyName}</strong> <span style="font-size:11px; color:var(--text-muted);">(${t.partyId})</span></span>
+                                </div>
+                                <div class="tally-narration">
+                                    (${t.narration} | Agst Bill Ref: <strong>${t.billNo}</strong>)
+                                    ${paymentBreakdownHtml}
+                                </div>
+                            </td>
+                            <td style="white-space:nowrap;">${t.site}</td>
+                            <td style="white-space:nowrap; font-weight:700; color:${isBill ? '#007bff' : '#28a745'};">${t.vchType}</td>
+                            <td style="white-space:nowrap; font-weight:700;">
+                                ${t.voucher}
+                                <div style="font-size:10px; color:var(--text-muted);">Ref: ${t.billNo}</div>
+                            </td>
+                            <td style="text-align:right; color:#fd7e14; font-weight:700; white-space:nowrap;">
+                                ${t.tdsCut > 0 ? '₹' + t.tdsCut.toLocaleString('en-IN', {minimumFractionDigits: 2}) : '-'}
+                            </td>
+                            <td style="text-align:right; color:#28a745; font-weight:700; white-space:nowrap;">
+                                ${t.debit > 0 ? '₹' + t.debit.toLocaleString('en-IN', {minimumFractionDigits: 2}) : '-'}
+                            </td>
+                            <td style="text-align:right; color:#007bff; font-weight:700; white-space:nowrap;">
+                                ${t.credit > 0 ? '₹' + t.credit.toLocaleString('en-IN', {minimumFractionDigits: 2}) : '-'}
+                            </td>
+                            <td style="text-align:right; font-weight:800; color:${runningBalance > 0 ? '#dc3545' : '#28a745'}; white-space:nowrap;">
+                                ₹${Math.abs(runningBalance).toLocaleString('en-IN', {minimumFractionDigits: 2})} ${balSuffix}
+                            </td>
+                            <td style="text-align:center; white-space:nowrap;">${statusBadge}</td>
+                        </tr>
+                    `;
+                });
+
+                // Append Tally Style Current Total & Closing Balance Rows
+                const netDue = openingBalance + totalBilledCr - totalDebitDr;
+                const grandBalancedCr = (openingBalance > 0 ? openingBalance : 0) + totalBilledCr;
+
+                tbody.innerHTML += `
+                    <tr class="tally-total-row">
+                        <td colspan="5" style="text-align:right; text-transform:uppercase;">Current Period Total (Bank Paid: ₹${totalBankPaid.toLocaleString('en-IN')} + TDS: ₹${totalTdsCut.toLocaleString('en-IN')}):</td>
+                        <td style="text-align:right; color:#fd7e14;">₹${totalTdsCut.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                        <td style="text-align:right; color:#28a745;">₹${totalDebitDr.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                        <td style="text-align:right; color:#007bff;">₹${totalBilledCr.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                        <td colspan="2"></td>
+                    </tr>
+                    <tr class="tally-closing-row">
+                        <td colspan="6" style="text-align:right; text-transform:uppercase; color:var(--theme-color);">To Closing Balance (Net Pending Due):</td>
+                        <td style="text-align:right; color:#dc3545;">₹${netDue.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                        <td style="text-align:right; color:#007bff;">₹${grandBalancedCr.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                        <td style="text-align:right; color:${netDue > 0 ? '#dc3545' : '#28a745'};">₹${netDue.toLocaleString('en-IN', {minimumFractionDigits: 2})} Cr</td>
+                        <td style="text-align:center;">${netDue <= 0 ? '<span class="badge badge-paid">ALL CLEARED</span>' : '<span class="badge badge-due">DUE</span>'}</td>
+                    </tr>
+                `;
+            }
+
+            const netDue = openingBalance + totalBilledCr - totalDebitDr;
+
+            // Update KPI Cards
+            document.getElementById('kpiTotalBilled').innerText = `₹${totalBilledCr.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+            document.getElementById('kpiBankPaid').innerText = `₹${totalBankPaid.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+            document.getElementById('kpiTdsCut').innerText = `₹${totalTdsCut.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+            document.getElementById('kpiNetDue').innerText = `₹${netDue.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+            document.getElementById('kpiBillStatus').innerText = `${paidBillsCount} Paid Bills / ${dueBillsCount} Due Bills`;
+
+            // Update Footer
+            document.getElementById('footCount').innerText = `${txns.length} Entries`;
+            document.getElementById('footBilled').innerText = `₹ ${totalBilledCr.toLocaleString('en-IN', {minimumFractionDigits: 2})} Cr`;
+            document.getElementById('footPaid').innerText = `₹ ${totalDebitDr.toLocaleString('en-IN', {minimumFractionDigits: 2})} Dr`;
+            document.getElementById('footDue').innerText = `₹ ${netDue.toLocaleString('en-IN', {minimumFractionDigits: 2})} Cr`;
+        }
+
+        // ================= EXPORT TO EXCEL (.XLSX) =================
+        function exportToExcel() {
+            const { openingBalance, fromDate, txns } = getLedgerCalculationData();
+            if (txns.length === 0 && openingBalance === 0) { alert("No data to export!"); return; }
+            const billStatusMap = getBillStatusMap(mobilizationTxns);
+
+            const partySelect = document.getElementById('filterParty');
+            const selectedPartyText = partySelect.options[partySelect.selectedIndex].text;
+            const siteFilter = (isSupervisorMode && assignedSite) ? assignedSite : document.getElementById('filterSite').value;
+
+            const exportData = [
+                ["ATR CONSTRUCTION"],
+                ["MOBILIZATION LEDGER ACCOUNT (TALLY FORMAT)"],
+                ["Account:", selectedPartyText, "Site:", siteFilter],
+                [],
+                ["Date", "Particulars (Dr/Cr)", "Party Name", "Project / Site", "Vch Type", "Voucher No", "Bill Ref", "Bank Paid (Rs.)", "TDS Cut (Rs.)", "Debit [Paid+TDS] (Rs.)", "Credit [Bill Amt] (Rs.)", "Running Balance (Rs.)", "Bill Status"]
+            ];
+
+            let runBal = openingBalance, sumBilled = 0, sumBank = 0, sumTds = 0, sumDr = 0;
+
+            if (fromDate && openingBalance !== 0) {
+                const isCrOpen = openingBalance >= 0;
+                exportData.push([
+                    formatTallyDate(fromDate),
+                    `${isCrOpen ? 'By' : 'To'} Opening Balance (B/F)`,
+                    "-",
+                    siteFilter,
+                    "Opening",
+                    "B/F",
+                    "-",
+                    0,
+                    0,
+                    !isCrOpen ? Math.abs(openingBalance) : 0,
+                    isCrOpen ? Math.abs(openingBalance) : 0,
+                    `${Math.abs(openingBalance)} ${isCrOpen ? 'Cr' : 'Dr'}`,
+                    "-"
+                ]);
+            }
+
+            txns.forEach(t => {
+                runBal += (t.credit - t.debit);
+                sumBilled += t.credit;
+                sumBank += t.bankPaid;
+                sumTds += t.tdsCut;
+                sumDr += t.debit;
+
+                const isBill = t.credit > 0;
+                const prefix = isBill ? "By " : "To ";
+                const bInfo = billStatusMap[t.billNo];
+                const statusStr = (bInfo && bInfo.due <= 0) ? "PAID" : `DUE (Rs.${bInfo.due})`;
+
+                exportData.push([
+                    formatTallyDate(t.date),
+                    `${prefix}${t.ledgerHead} - ${t.narration}`,
+                    `${t.partyName} (${t.partyId})`,
+                    t.site,
+                    t.vchType,
+                    t.voucher,
+                    t.billNo,
+                    t.bankPaid,
+                    t.tdsCut,
+                    t.debit,
+                    t.credit,
+                    `${runBal} Cr`,
+                    statusStr
+                ]);
+            });
+
+            const netDue = openingBalance + sumBilled - sumDr;
+            exportData.push([]);
+            exportData.push(["", "CURRENT TOTAL", "", "", "", "", "", sumBank, sumTds, sumDr, sumBilled, "", ""]);
+            exportData.push(["", "TO CLOSING BALANCE (NET DUE)", "", "", "", "", "", "", "", netDue, (openingBalance > 0 ? openingBalance : 0) + sumBilled, `${netDue} Cr`, netDue <= 0 ? "PAID" : "DUE"]);
+
+            const ws = XLSX.utils.aoa_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Tally_Mobilization_Ledger");
+            XLSX.writeFile(wb, `ATR_Tally_Mobilization_Ledger_${new Date().toISOString().slice(0,10)}.xlsx`);
+        }
+
+        // ================= EXPORT TO A4 PORTRAIT TALLY-STYLE PDF =================
+        function exportToPDF() {
+            const { openingBalance, fromDate, txns } = getLedgerCalculationData();
+            if (txns.length === 0 && openingBalance === 0) { alert("No data available to export!"); return; }
+            const billStatusMap = getBillStatusMap(mobilizationTxns);
+
+            const { jsPDF } = window.jspdf;
+            // Strict A4 Portrait ('p', 'mm', 'a4' -> 210mm width x 297mm height)
+            const doc = new jsPDF('p', 'mm', 'a4');
+
+            const partySelect = document.getElementById('filterParty');
+            const selectedPartyText = partySelect.options[partySelect.selectedIndex].text;
+            const siteFilter = (isSupervisorMode && assignedSite) ? assignedSite : document.getElementById('filterSite').value;
+            const fromDateLabel = fromDate || "Start";
+            const toDateLabel = document.getElementById('filterTo').value || "Current";
+
+            // Tally Style Centered Header
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(15);
+            doc.text("ATR CONSTRUCTION", 105, 13, { align: "center" });
+
+            doc.setFontSize(11);
+            doc.text("MOBILIZATION LEDGER ACCOUNT STATEMENT", 105, 19, { align: "center" });
+
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(9);
+            doc.text(`Ledger Account: ${selectedPartyText}   |   Project/Site: ${siteFilter}`, 105, 25, { align: "center" });
+            doc.text(`Period: ${fromDateLabel} to ${toDateLabel}   |   Report Date: ${formatTallyDate(new Date().toISOString().slice(0,10))}`, 105, 30, { align: "center" });
+
+            // Horizontal Divider Line
+            doc.setLineWidth(0.4);
+            doc.line(10, 33, 200, 33);
+
+            const bodyRows = [];
+            let runBal = openingBalance, sumBilled = 0, sumBank = 0, sumTds = 0, sumDr = 0;
+
+            if (fromDate && openingBalance !== 0) {
+                const isCrOpen = openingBalance >= 0;
+                bodyRows.push([
+                    formatTallyDate(fromDate),
+                    `${isCrOpen ? 'By' : 'To'} Opening Balance (B/F before ${formatTallyDate(fromDate)})`,
+                    'Opening',
+                    'B/F',
+                    !isCrOpen ? Math.abs(openingBalance).toLocaleString('en-IN', {minimumFractionDigits: 2}) : '',
+                    isCrOpen ? Math.abs(openingBalance).toLocaleString('en-IN', {minimumFractionDigits: 2}) : '',
+                    `${Math.abs(openingBalance).toLocaleString('en-IN', {minimumFractionDigits: 2})} ${isCrOpen ? 'Cr' : 'Dr'}`,
+                    '-'
+                ]);
+            }
+
+            txns.forEach(t => {
+                runBal += (t.credit - t.debit);
+                sumBilled += t.credit;
+                sumBank += t.bankPaid;
+                sumTds += t.tdsCut;
+                sumDr += t.debit;
+
+                const isBill = t.credit > 0;
+                const prefix = isBill ? "By " : "To ";
+                const bInfo = billStatusMap[t.billNo];
+                const statusStr = (bInfo && bInfo.due <= 0) ? "PAID" : `DUE\n(${bInfo.due.toLocaleString('en-IN')})`;
+
+                let particularsText = `${prefix}${t.ledgerHead} - ${t.partyName}\n(${t.narration} | Site: ${t.site})`;
+                if (!isBill) {
+                    particularsText += `\n[Bank Paid: Rs.${t.bankPaid.toLocaleString('en-IN')} + TDS (${t.tdsRate}%): Rs.${t.tdsCut.toLocaleString('en-IN')}]`;
+                }
+
+                bodyRows.push([
+                    formatTallyDate(t.date),
+                    particularsText,
+                    `${t.vchType}\n(${t.billNo})`,
+                    t.voucher,
+                    t.debit > 0 ? t.debit.toLocaleString('en-IN', {minimumFractionDigits: 2}) : '',
+                    t.credit > 0 ? t.credit.toLocaleString('en-IN', {minimumFractionDigits: 2}) : '',
+                    `${runBal.toLocaleString('en-IN', {minimumFractionDigits: 2})} Cr`,
+                    statusStr
+                ]);
+            });
+
+            const netDue = openingBalance + sumBilled - sumDr;
+            const grandTotalBalanced = (openingBalance > 0 ? openingBalance : 0) + sumBilled;
+
+            // Tally Style Summary & Closing Balance Rows at Bottom
+            bodyRows.push([
+                { content: '', styles: { fontStyle: 'bold' } },
+                { content: `Current Total\n(Bank Paid: Rs.${sumBank.toLocaleString('en-IN')} + TDS Deducted: Rs.${sumTds.toLocaleString('en-IN')})`, styles: { fontStyle: 'bold', halign: 'right' } },
+                { content: '', styles: { fontStyle: 'bold' } },
+                { content: '', styles: { fontStyle: 'bold' } },
+                { content: sumDr.toLocaleString('en-IN', {minimumFractionDigits: 2}), styles: { fontStyle: 'bold', halign: 'right', fillColor: [240, 240, 240] } },
+                { content: sumBilled.toLocaleString('en-IN', {minimumFractionDigits: 2}), styles: { fontStyle: 'bold', halign: 'right', fillColor: [240, 240, 240] } },
+                { content: '', styles: { fontStyle: 'bold' } },
+                { content: '', styles: { fontStyle: 'bold' } }
+            ]);
+
+            bodyRows.push([
+                { content: '', styles: { fontStyle: 'bold' } },
+                { content: 'To Closing Balance (Net Pending Due)', styles: { fontStyle: 'bold', halign: 'right', textColor: [220, 53, 69] } },
+                { content: '', styles: { fontStyle: 'bold' } },
+                { content: '', styles: { fontStyle: 'bold' } },
+                { content: netDue.toLocaleString('en-IN', {minimumFractionDigits: 2}), styles: { fontStyle: 'bold', halign: 'right', textColor: [220, 53, 69] } },
+                { content: '', styles: { fontStyle: 'bold' } },
+                { content: `${netDue.toLocaleString('en-IN', {minimumFractionDigits: 2})} Cr`, styles: { fontStyle: 'bold', halign: 'right', textColor: [220, 53, 69] } },
+                { content: netDue <= 0 ? 'CLEARED' : 'DUE', styles: { fontStyle: 'bold', halign: 'center', textColor: netDue <= 0 ? [40, 167, 69] : [220, 53, 69] } }
+            ]);
+
+            bodyRows.push([
+                { content: '', styles: { fontStyle: 'bold' } },
+                { content: 'Grand Total (Tally Balanced)', styles: { fontStyle: 'bold', halign: 'right' } },
+                { content: '', styles: { fontStyle: 'bold' } },
+                { content: '', styles: { fontStyle: 'bold' } },
+                { content: grandTotalBalanced.toLocaleString('en-IN', {minimumFractionDigits: 2}), styles: { fontStyle: 'bold', halign: 'right', fillColor: [230, 230, 230] } },
+                { content: grandTotalBalanced.toLocaleString('en-IN', {minimumFractionDigits: 2}), styles: { fontStyle: 'bold', halign: 'right', fillColor: [230, 230, 230] } },
+                { content: '', styles: { fontStyle: 'bold' } },
+                { content: '', styles: { fontStyle: 'bold' } }
+            ]);
+
+            // Exact 190mm column allocation for A4 Portrait (210mm - 20mm margins = 190mm)
+            doc.autoTable({
+                startY: 36,
+                margin: { left: 10, right: 10, top: 12, bottom: 14 },
+                tableWidth: 190,
+                head: [['Date', 'Particulars (Dr / Cr Details)', 'Type / Bill', 'Vch No.', 'Debit (Rs.)', 'Credit (Rs.)', 'Balance', 'Status']],
+                body: bodyRows,
+                theme: 'grid',
+                headStyles: {
+                    fillColor: [35, 35, 35],
+                    textColor: [255, 255, 255],
+                    fontSize: 7.5,
+                    fontStyle: 'bold',
+                    halign: 'center'
+                },
+                styles: {
+                    fontSize: 7.2,
+                    cellPadding: 2,
+                    overflow: 'linebreak',
+                    lineColor: [180, 180, 180],
+                    lineWidth: 0.2,
+                    textColor: [20, 20, 20],
+                    valign: 'middle'
+                },
+                columnStyles: {
+                    0: { cellWidth: 18, halign: 'center' },
+                    1: { cellWidth: 64, halign: 'left' },
+                    2: { cellWidth: 21, halign: 'center' },
+                    3: { cellWidth: 20, halign: 'center' },
+                    4: { cellWidth: 20, halign: 'right' },
+                    5: { cellWidth: 20, halign: 'right' },
+                    6: { cellWidth: 15, halign: 'right' },
+                    7: { cellWidth: 12, halign: 'center', fontStyle: 'bold' }
+                },
+                didDrawPage: function (data) {
+                    const pageCount = doc.internal.getNumberOfPages();
+                    doc.setFontSize(8);
+                    doc.setTextColor(100);
+                    doc.text(
+                        `ATR Construction - Tally Mobilization Statement | Page ${data.pageNumber} of ${pageCount}`,
+                        105,
+                        290,
+                        { align: 'center' }
+                    );
+                }
+            });
+
+            doc.save(`ATR_Tally_Mobilization_Ledger_${new Date().toISOString().slice(0,10)}.pdf`);
+        }
+    </script>
+</body>
+</html>

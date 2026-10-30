@@ -1,0 +1,99 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1><i class="ri-price-tag-3-line"></i> Head Entry Allotment</h1>
+    @if (roleBadge()) {
+      <span class="role-badge">{{ roleBadge() }}</span>
+    }
+  </div>
+
+  <!-- Add Form -->
+  @if (canModify()) {
+    <div class="card-container">
+      <form (ngSubmit)="onSubmit()" class="form-grid">
+        <div class="form-group">
+          <label>Head Name</label>
+          <input type="text" [ngModel]="headName()" (ngModelChange)="headName.set($event)" name="headName" placeholder="e.g., Cement Supply / Labor Cost" required />
+        </div>
+        <div class="form-group">
+          <label>Opening Balance (&#8377;)</label>
+          <input type="number" [ngModel]="openingBalance()" (ngModelChange)="openingBalance.set($event)" name="openingBalance" placeholder="e.g., 50000" min="0" step="any" required />
+        </div>
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" [ngModel]="headDate()" (ngModelChange)="headDate.set($event)" name="headDate" required />
+        </div>
+        <div class="form-group" style="align-self: end;">
+          <button type="submit" class="btn-primary" [disabled]="loading()">
+            @if (approval.requiresApproval()) {
+              {{ loading() ? 'Submitting...' : 'Request New Head Approval' }}
+            } @else {
+              {{ loading() ? 'Adding...' : 'Allot & Register Head' }}
+            }
+          </button>
+        </div>
+      </form>
+    </div>
+  }
+
+  <!-- Heads Table -->
+  <div class="card-container" style="margin-top: 16px;">
+    <h3 style="margin: 0 0 12px; color: var(--accent);"><i class="ri-price-tag-3-line"></i> Registered Account Heads</h3>
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>Head Name</th>
+            <th>Opening Balance</th>
+            <th>Allotment Date</th>
+            <th>Status</th>
+            @if (canModify()) {
+              <th>Actions</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (head of heads(); track head.id) {
+            @if (head.editing) {
+              <tr>
+                <td><input type="text" class="edit-input" [(ngModel)]="head.editName" /></td>
+                <td><input type="number" class="edit-input" [(ngModel)]="head.editBalance" step="any" /></td>
+                <td><input type="date" class="edit-input" [(ngModel)]="head.editDate" /></td>
+                <td><span class="badge badge-info">Editing...</span></td>
+                <td>
+                  <button class="btn-icon btn-success" (click)="saveEdit(head)">Save</button>
+                  <button class="btn-icon" (click)="cancelEdit()">Cancel</button>
+                </td>
+              </tr>
+            } @else {
+              <tr [class.row-disabled]="head.status !== 'Active'">
+                <td style="font-weight: 700; color: var(--accent);">{{ head.name }}</td>
+                <td style="font-weight: 600;">{{ formatInr(head.opening_balance) }}</td>
+                <td>{{ head.date }}</td>
+                <td>
+                  <span class="badge" [class.badge-success]="head.status === 'Active'" [class.badge-danger]="head.status !== 'Active'">
+                    {{ head.status }}
+                  </span>
+                  @if (head.pending_status) {
+                    <br><span class="badge badge-warning" style="font-size: 10px; margin-top: 4px;">{{ head.pending_status }}</span>
+                  }
+                </td>
+                @if (canModify()) {
+                  <td style="white-space: nowrap;">
+                    <button class="btn-icon" (click)="toggleStatus(head)">
+                      {{ head.status === 'Active' ? 'Disable' : 'Enable' }}
+                    </button>
+                    <button class="btn-icon" (click)="startEdit(head)">Edit</button>
+                  </td>
+                }
+              </tr>
+            }
+          } @empty {
+            <tr>
+              <td [attr.colspan]="canModify() ? 5 : 4" class="empty-state">No heads registered.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

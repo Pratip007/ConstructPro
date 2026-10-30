@@ -1,0 +1,93 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1><i class="ri-book-open-line"></i> Employee Full Ledger</h1>
+  </div>
+
+  <div class="filter-section">
+    <app-searchable-dropdown
+      [items]="employeeDropdownItems()"
+      [placeholder]="'Select Employee'"
+      [label]="'Employee'"
+      [ngModel]="selectedEmployee()"
+      (ngModelChange)="onEmployeeChange($event)"
+      style="min-width: 250px;"
+    ></app-searchable-dropdown>
+    <app-searchable-dropdown
+      [items]="siteDropdownItems()"
+      [placeholder]="'All Sites'"
+      [label]="'Site Filter'"
+      [ngModel]="siteFilter()"
+      (ngModelChange)="siteFilter.set($event)"
+      style="min-width: 200px;"
+    ></app-searchable-dropdown>
+    <div class="form-group">
+      <label class="filter-label">From Date</label>
+      <input type="date" [ngModel]="dateFrom()" (ngModelChange)="dateFrom.set($event)" class="filter-input" />
+    </div>
+    <div class="form-group">
+      <label class="filter-label">To Date</label>
+      <input type="date" [ngModel]="dateTo()" (ngModelChange)="dateTo.set($event)" class="filter-input" />
+    </div>
+    <div class="filter-actions">
+      <button class="btn-secondary" (click)="loadLedger()" [disabled]="!selectedEmployee() || loading()"><i class="ri-search-line"></i> Filter</button>
+      <button class="btn-outline" (click)="exportExcel()" [disabled]="!entries().length"><i class="ri-file-excel-line"></i> Excel</button>
+      <button class="btn-outline" (click)="exportPDF()" [disabled]="!entries().length"><i class="ri-file-pdf-line"></i> PDF</button>
+      <button class="btn-outline" (click)="printLedger()" [disabled]="!entries().length"><i class="ri-printer-line"></i> Print</button>
+    </div>
+  </div>
+
+  @if (selectedEmployee()) {
+    <app-summary-cards [cards]="summaryCards()"></app-summary-cards>
+  }
+
+  @if (loading()) {
+    <p class="loading-text">Loading ledger...</p>
+  }
+
+  <div class="table-responsive" id="ledger-table">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Particulars</th>
+          <th style="text-align: right;">Gross Amount (Rs.)</th>
+          <th style="text-align: right;">TDS Deduction (Rs.)</th>
+          <th style="text-align: right;">Net Amount (Rs.)</th>
+          <th style="text-align: right;">Payment (Rs.)</th>
+          <th style="text-align: right;">Due Balance (Rs.)</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (entry of entries(); track entry.date + entry.particulars) {
+          <tr>
+            <td>{{ entry.date }}</td>
+            <td style="font-weight: 600;">{{ entry.particulars }}</td>
+            <td style="font-weight: 700; text-align: right;">{{ entry.grossAmount | number }}</td>
+            <td style="color: var(--danger); text-align: right;">{{ entry.tdsDeduction | number }}</td>
+            <td style="font-weight: 700; text-align: right;">{{ entry.netAmount | number }}</td>
+            <td style="color: var(--success); font-weight: 700; text-align: right;">{{ entry.payment | number }}</td>
+            <td style="font-weight: 700; color: var(--accent); text-align: right;">{{ entry.dueBalance | number }}</td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="7" class="empty-state">
+              {{ selectedEmployee() ? 'No ledger entries found.' : 'Select an employee to view ledger.' }}
+            </td>
+          </tr>
+        }
+      </tbody>
+      @if (entries().length) {
+        <tfoot>
+          <tr class="summary-footer">
+            <td colspan="2" style="font-weight: 700;">Totals</td>
+            <td style="font-weight: 700; text-align: right;">{{ totalGross() | number }}</td>
+            <td style="font-weight: 700; color: var(--danger); text-align: right;">{{ totalTds() | number }}</td>
+            <td style="font-weight: 700; text-align: right;">{{ totalNet() | number }}</td>
+            <td style="font-weight: 700; color: var(--success); text-align: right;">{{ totalPayment() | number }}</td>
+            <td style="font-weight: 700; color: var(--accent); text-align: right;">{{ netBalance() | number }}</td>
+          </tr>
+        </tfoot>
+      }
+    </table>
+  </div>
+</div>

@@ -1,0 +1,150 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1><i class="ri-history-line"></i> Approval History</h1>
+    <div class="header-actions">
+      <button class="btn-export" (click)="exportExcel()" [disabled]="!filteredLogs.length">
+        <i class="ri-file-excel-2-line"></i> Export Excel
+      </button>
+      <button class="btn-secondary" (click)="printReport()" [disabled]="!filteredLogs.length">
+        <i class="ri-printer-line"></i> Print
+      </button>
+    </div>
+  </div>
+
+  <app-summary-cards [cards]="summaryCards" />
+
+  <div class="card-container">
+    <div class="table-toolbar">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;">
+        <div class="form-group" style="margin-bottom:0;">
+          <label>Source</label>
+          <select [ngModel]="sourceFilter()" (ngModelChange)="sourceFilter.set($event)">
+            <option value="ALL">All Sources</option>
+            <option value="Office Portal">Office Portal</option>
+            <option value="Supervisor Portal">Supervisor Portal</option>
+            <option value="Employee Portal">Employee Portal</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label>Status</label>
+          <select [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)">
+            <option value="ALL">All Statuses</option>
+            <option value="Pending">Pending</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label>Module</label>
+          <select [ngModel]="moduleFilter()" (ngModelChange)="moduleFilter.set($event)">
+            <option value="">All Modules</option>
+            @for (mod of modules; track mod) {
+              <option [value]="mod">{{ mod }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label>From</label>
+          <input type="date" [ngModel]="dateFrom()" (ngModelChange)="dateFrom.set($event)" />
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label>To</label>
+          <input type="date" [ngModel]="dateTo()" (ngModelChange)="dateTo.set($event)" />
+        </div>
+        <div class="form-group" style="margin-bottom:0;flex:1;min-width:150px;">
+          <label>Search</label>
+          <input type="text" placeholder="Search logs..." [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" />
+        </div>
+      </div>
+    </div>
+
+    @if (loading()) {
+      <div class="skeleton" style="height:200px;"></div>
+    } @else {
+      <div class="table-responsive" id="approval-logs-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Log ID</th>
+              <th>Date &amp; Time</th>
+              <th>Source</th>
+              <th>Module</th>
+              <th>Requested By</th>
+              <th>Action</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (log of filteredLogs; track log.logId) {
+              <tr>
+                <td style="font-weight:700;color:var(--accent);">{{ log.logId }}</td>
+                <td style="white-space:nowrap;font-size:12.5px;color:var(--text-muted);">{{ log.timestamp }}</td>
+                <td><span class="badge badge-info">{{ log.source }}</span></td>
+                <td>{{ log.module }}</td>
+                <td style="font-weight:600;">{{ log.requestedBy }}</td>
+                <td>{{ log.action }}</td>
+                <td><span class="badge" [class]="statusBadgeClass(log.status)">{{ log.status }}</span></td>
+                <td>
+                  @if (log.newData || log.oldData || log.remarks) {
+                    <button class="btn-secondary" style="padding:4px 10px;font-size:12px;" (click)="viewDetail(log)">
+                      <i class="ri-eye-line"></i>
+                    </button>
+                  }
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="8" class="empty-state">No approval logs found.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<app-modal-dialog [isOpen]="showDetailModal()" (closed)="showDetailModal.set(false)" title="Log Details" size="lg">
+  @if (selectedLog(); as log) {
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">
+      <div><strong>ID:</strong> {{ log.logId }}</div>
+      <div><strong>Source:</strong> <span class="badge badge-info">{{ log.source }}</span></div>
+      <div><strong>Date:</strong> {{ log.timestamp }}</div>
+      <div><strong>Status:</strong> <span class="badge" [class]="statusBadgeClass(log.status)">{{ log.status }}</span></div>
+      <div><strong>By:</strong> {{ log.requestedBy }}</div>
+    </div>
+    @if (log.remarks) {
+      <div style="padding:8px 12px;background:var(--bg-secondary);border-radius:6px;margin-bottom:12px;">
+        <strong>Remarks:</strong> {{ log.remarks }}
+      </div>
+    }
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      @if (log.oldData) {
+        <div>
+          <h4 style="margin-bottom:8px;color:var(--danger);"><i class="ri-subtract-line"></i> Previous Data</h4>
+          <div style="background:var(--bg-secondary);border-radius:8px;padding:12px;">
+            @for (key of objectKeys(log.oldData); track key) {
+              <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border-color);">
+                <span style="font-weight:600;color:var(--text-muted);text-transform:capitalize;">{{ key }}</span>
+                <span>{{ log.oldData[key] }}</span>
+              </div>
+            }
+          </div>
+        </div>
+      }
+      @if (log.newData) {
+        <div>
+          <h4 style="margin-bottom:8px;color:var(--success);"><i class="ri-add-line"></i> New Data</h4>
+          <div style="background:var(--bg-secondary);border-radius:8px;padding:12px;">
+            @for (key of objectKeys(log.newData); track key) {
+              <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border-color);">
+                <span style="font-weight:600;color:var(--text-muted);text-transform:capitalize;">{{ key }}</span>
+                <span>{{ log.newData[key] }}</span>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+</app-modal-dialog>

@@ -1,0 +1,1481 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Balance & TDS Received</title>
+    
+    <!-- Sync theme with Master Dashboard -->
+    <script>
+        const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        window.addEventListener('storage', function(e) {
+            if(e.key === 'atr_theme') { document.documentElement.setAttribute('data-theme', e.newValue); }
+        });
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
+
+        :root {
+            --bg-body: transparent; 
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.1);
+            
+            /* Dynamic Glass & Input Variables */
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(0, 0, 0, 0.2);
+            --input-focus-bg: rgba(0, 0, 0, 0.4);
+            
+            --shadow: 0 4px 15px rgba(0,0,0,0.3);
+            
+            /* Original Theme Color (Green for Balance Received) */
+            --theme-color: #28a745;
+            --theme-glow: rgba(40, 167, 69, 0.4);
+            --tds-color: #fd7e14;
+            --tds-glow: rgba(253, 126, 20, 0.4);
+            --theme-transition: all 0.4s ease;
+        }
+
+        [data-theme="light"] {
+            --bg-body: transparent;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #555555;
+            --border-color: rgba(0, 0, 0, 0.1);
+            
+            --glass-bg: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --input-bg: rgba(255, 255, 255, 0.5);
+            --input-focus-bg: #ffffff;
+            
+            --shadow: 0 8px 25px rgba(0,0,0,0.05);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; scroll-behavior: smooth; }
+        body { background-color: var(--bg-body); color: var(--text-main); display: flex; min-height: 100vh; overflow-x: hidden; transition: var(--theme-transition); }
+           
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(136, 136, 136, 0.3); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(136, 136, 136, 0.6); }
+
+        .main-content { flex: 1; padding: 40px; overflow-y: auto; position: relative; max-width: 1450px; margin: 0 auto; width: 100%; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; border-bottom: 1px solid var(--border-color); padding-bottom: 20px; flex-wrap: wrap; gap: 15px; transition: var(--theme-transition); }
+        .header h1 { font-size: 24px; color: var(--text-main); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        
+        .role-mode-badge {
+            display: none;
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 700;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .header-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+
+        /* Buttons */
+        .btn-primary { background-color: var(--theme-color); color: #ffffff; border: none; padding: 10px 18px; border-radius: 6px; font-weight: 700; font-size: 13.5px; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 10px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 8px; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 15px var(--theme-glow); filter: brightness(1.1); }
+
+        .btn-tds { background-color: var(--tds-color); color: #ffffff; border: none; padding: 10px 18px; border-radius: 6px; font-weight: 700; font-size: 13.5px; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 10px rgba(253, 126, 20, 0.25); display: flex; align-items: center; gap: 8px; }
+        .btn-tds:hover { transform: translateY(-2px); box-shadow: 0 6px 15px var(--tds-glow); filter: brightness(1.1); }
+        
+        .btn-secondary { background-color: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color); padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.3s; }
+        .btn-secondary:hover { background-color: var(--input-focus-bg); }
+        
+        .btn-icon { background: #ffc107; color: #121212; border: none; border-radius: 4px; padding: 10px 15px; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 5px rgba(255, 193, 7, 0.3); }
+        .btn-icon:hover { background: #e0a800; transform: translateY(-2px); }
+
+        .btn-back-dash { background-color: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color); text-decoration: none; padding: 9px 16px; border-radius: 6px; font-weight: bold; font-size: 13px; transition: all 0.3s; display: flex; align-items: center; cursor: pointer; }
+        .btn-back-dash:hover { background-color: var(--theme-color); color: #fff; border-color: var(--theme-color); transform: translateY(-2px); box-shadow: 0 4px 10px var(--theme-glow); }
+
+        /* Summary Strip */
+        .summary-strip {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .summary-pill-box {
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-left: 4px solid var(--theme-color);
+            padding: 14px 18px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .summary-pill-box.tds-box { border-left-color: var(--tds-color); }
+        .summary-pill-box.total-box { border-left-color: #0dcaf0; }
+        .summary-pill-box span { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .summary-pill-box strong { font-size: 20px; font-weight: 700; color: var(--text-main); }
+
+        /* Container & Table */
+        .card-container { background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--glass-border); border-radius: 12px; padding: 30px; box-shadow: var(--shadow); border-top: 4px solid var(--theme-color); transition: var(--theme-transition); }
+        
+        .table-responsive { overflow-x: auto; width: 100%; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); margin-top: 10px;}
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 15px; border-bottom: 1px solid var(--border-color); font-size: 14px; color: var(--text-main); transition: var(--theme-transition); vertical-align: middle; }
+        th { color: var(--theme-color); font-weight: 600; text-transform: uppercase; font-size: 12px; background: var(--input-bg); }
+        tbody tr:hover { background: var(--glass-bg); }
+
+        .pending-status-pill {
+            display: inline-block;
+            background: rgba(255, 193, 7, 0.16);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.45);
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            margin-top: 4px;
+            text-transform: uppercase;
+        }
+
+        .tds-ledger-badge {
+            display: inline-block;
+            background: rgba(253, 126, 20, 0.15);
+            color: #fd7e14;
+            border: 1px solid rgba(253, 126, 20, 0.4);
+            padding: 3px 9px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        
+        .action-btns { white-space: nowrap; }
+        .action-btns button { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; margin-right: 5px; font-size: 12px; font-weight: 600; transition: 0.2s;}
+        .btn-edit { background-color: rgba(255, 193, 7, 0.1); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.3); }
+        .btn-edit:hover { background-color: #ffc107; color: #121212; }
+        .btn-delete { background-color: rgba(220, 53, 69, 0.1); color: #dc3545; border: 1px solid rgba(220, 53, 69, 0.3); }
+        .btn-delete:hover { background-color: #dc3545; color: white; }
+
+        /* Blurred Overlay Form */
+        .overlay-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); z-index: 1000; justify-content: center; align-items: center; overflow-y: auto; padding: 20px; }
+        .overlay-content { background: var(--bg-card); padding: 30px; border-radius: 12px; width: 100%; max-width: 800px; box-shadow: var(--shadow); border-top: 4px solid var(--theme-color); border-left: 1px solid var(--border-color); border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); animation: slideDown 0.3s ease; position: relative; transition: var(--theme-transition);}
+        .overlay-content.tds-modal-content { border-top-color: var(--tds-color); max-width: 720px; }
+        @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        
+        .close-btn { position: absolute; top: 20px; right: 25px; font-size: 24px; color: var(--text-muted); cursor: pointer; transition: 0.3s; }
+        .close-btn:hover { color: #dc3545; }
+
+        /* Form Design */
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px; }
+        @media (max-width: 650px) { .form-grid { grid-template-columns: 1fr; } }
+        .form-group { display: flex; flex-direction: column; position: relative; }
+        .form-group label { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; font-weight: 600; transition: color 0.3s;}
+        .form-group input, .form-group textarea { background: var(--input-bg); border: 1px solid var(--border-color); padding: 12px 15px; border-radius: 6px; color: var(--text-main); font-size: 14px; outline: none; transition: 0.3s; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); color-scheme: dark; }
+        [data-theme="light"] input[type="date"] { color-scheme: light; }
+        .form-group input:focus, .form-group textarea:focus { border-color: var(--theme-color); background: var(--input-focus-bg); box-shadow: 0 0 10px var(--theme-glow); }
+        .form-group:focus-within label { color: var(--theme-color); }
+        .full-width { grid-column: 1 / -1; }
+        .due-badge { position: absolute; right: 10px; top: 38px; background: rgba(220, 53, 69, 0.1); color: #dc3545; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid rgba(220, 53, 69, 0.4); display: none;}
+
+        .tds-quick-pct-bar {
+            display: flex;
+            gap: 8px;
+            margin-top: 6px;
+            flex-wrap: wrap;
+        }
+        .btn-tds-pct {
+            background: rgba(253, 126, 20, 0.14);
+            color: #fd7e14;
+            border: 1px solid rgba(253, 126, 20, 0.35);
+            padding: 4px 9px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-tds-pct:hover { background: #fd7e14; color: #fff; }
+
+        /* Custom Dropdown System */
+        .dropdown-container { position: relative; width: 100%; }
+        .dropdown-search { width: 100%; background: var(--input-bg); border: 1px solid var(--border-color); padding: 12px 15px; border-radius: 6px; color: var(--text-main); font-size: 14px; outline: none; cursor: text; transition: 0.3s;}
+        .dropdown-list { display: none; position: absolute; top: 100%; left: 0; width: 100%; max-height: 200px; overflow-y: auto; background: var(--bg-card); border: 1px solid var(--theme-color); border-top: none; border-radius: 0 0 6px 6px; z-index: 1001; box-shadow: var(--shadow);}
+        .dropdown-list div { padding: 12px 15px; font-size: 13px; color: var(--text-main); cursor: pointer; border-bottom: 1px solid var(--border-color); transition: 0.2s;}
+        .dropdown-list div:hover { background-color: var(--theme-color); color: #ffffff; font-weight: 600;}
+
+        /* Combo Input (Input + Button) */
+        .combo-input { display: flex; gap: 10px; }
+        .combo-input .dropdown-container { flex: 1; }
+
+        /* Toast & Mini Modals */
+        #toast { visibility: hidden; min-width: 250px; background-color: var(--theme-color); color: #ffffff; text-align: center; border-radius: 6px; padding: 15px; position: fixed; z-index: 3000; left: 50%; top: 30px; transform: translateX(-50%); font-weight: 600; box-shadow: 0 5px 15px rgba(0,0,0,0.5); opacity: 0; transition: opacity 0.4s, top 0.4s; }
+        #toast.show { visibility: visible; opacity: 1; top: 50px; }
+
+        .auth-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(5px); padding: 20px; }
+        .auth-content { background: var(--bg-card); padding: 30px; border-radius: 12px; width: 100%; max-width: 380px; text-align: center; border-top: 4px solid #ffc107; box-shadow: var(--shadow); border-left: 1px solid var(--border-color); border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);}
+        .auth-content.danger { border-top: 4px solid #dc3545; }
+        .auth-content h3 { color: var(--text-main); margin-bottom: 15px; font-size: 18px; }
+        .auth-content input, .auth-content textarea { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-main); outline: none; transition: 0.3s; }
+        .auth-content input:focus, .auth-content textarea:focus { border-color: var(--theme-color); box-shadow: 0 0 8px var(--theme-glow); }
+        .auth-actions { display: flex; justify-content: space-between; gap: 10px; }
+
+    </style>
+</head>
+<body>
+
+    <div id="toast">Message</div>
+
+    <div class="main-content">
+        <!-- ================= LIST VIEW (BACKGROUND) ================= -->
+        <div class="card-container">
+            <div class="header">
+                <h1>
+                    💰 Balance &amp; TDS Received Ledger
+                    <span id="roleModeBadge" class="role-mode-badge">🏢 Office Mode</span>
+                </h1>
+                <div class="header-actions">
+                    <button class="btn-tds" onclick="openTdsModal()">🧾 Add TDS Received</button>
+                    <button class="btn-primary" onclick="openEntryModal()">➕ Add New Payment</button>
+                    <a href="dashboard_home.html" id="btnBackDashboard" class="btn-back-dash" onclick="handleBackToDashboard(event)">← Back to Dashboard</a>
+                </div>
+            </div>
+
+            <!-- Live Summary Strip -->
+            <div class="summary-strip">
+                <div class="summary-pill-box">
+                    <span>🏦 Total Bank / Cash Received</span>
+                    <strong id="sumBankReceived" style="color: var(--theme-color);">₹0</strong>
+                </div>
+                <div class="summary-pill-box tds-box">
+                    <span>🧾 Total TDS Received (Direct Ledger)</span>
+                    <strong id="sumTdsReceived" style="color: var(--tds-color);">₹0</strong>
+                </div>
+                <div class="summary-pill-box total-box">
+                    <span>📊 Total Settled (Bank + TDS)</span>
+                    <strong id="sumTotalSettled" style="color: #0dcaf0;">₹0</strong>
+                </div>
+            </div>
+            
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Company / Client &amp; Site</th>
+                            <th>Invoice Ref</th>
+                            <th>Received Amount (₹)</th>
+                            <th style="color: var(--tds-color);">TDS Received (₹)</th>
+                            <th>Bank / Mode / Ledger</th>
+                            <th style="text-align: right;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="receiptTableBody">
+                        <!-- Data injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 1. REGULAR BANK PAYMENT ENTRY FORM (BLURRED OVERLAY) ================= -->
+    <div class="overlay-modal" id="entryModal">
+        <div class="overlay-content">
+            <span class="close-btn" onclick="closeEntryModal()">✖</span>
+            <h2 style="color: var(--theme-color); margin-bottom: 5px;" id="modalTitle">Add Balance Received</h2>
+            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 25px;">Enter bank/cash payment details below. Form will remain open after submit for multiple entries.</p>
+            
+            <!-- data-office-hooked="true" prevents duplicate parent interception so this page handles Office Approval cleanly -->
+            <form id="receiptForm" data-office-hooked="true" onsubmit="saveReceipt(event)">
+                <div class="form-grid">
+                    
+                    <div class="form-group">
+                        <label>Select Company *</label>
+                        <div class="dropdown-container">
+                            <input type="text" id="compSearch" class="dropdown-search" placeholder="Search Company..." onkeyup="filterDropdown('compSearch', 'compList')" onclick="toggleDropdown('compList')" required autocomplete="off">
+                            <div id="compList" class="dropdown-list"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Select Site *</label>
+                        <div class="dropdown-container">
+                            <input type="text" id="siteSearch" class="dropdown-search" placeholder="Search Site..." onkeyup="filterDropdown('siteSearch', 'siteList')" onclick="toggleDropdown('siteList')" required autocomplete="off">
+                            <div id="siteList" class="dropdown-list"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Select Invoice *</label>
+                        <div class="dropdown-container">
+                            <input type="text" id="invSearch" class="dropdown-search" placeholder="Search Pending Invoice..." onkeyup="filterDropdown('invSearch', 'invList')" onclick="toggleDropdown('invList')" required autocomplete="off">
+                            <div id="invList" class="dropdown-list"></div>
+                            <!-- Due Amount Badge -->
+                            <div id="dueBadge" class="due-badge">Due: ₹0</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Received Amount (₹) *</label>
+                        <input type="number" id="rcvAmount" step="any" min="1" placeholder="Enter amount..." required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Received In Bank *</label>
+                        <div class="dropdown-container">
+                            <input type="text" id="bankSearch" class="dropdown-search" placeholder="Search Bank..." onkeyup="filterDropdown('bankSearch', 'bankList')" onclick="toggleDropdown('bankList')" required autocomplete="off">
+                            <div id="bankList" class="dropdown-list"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Payment Method *</label>
+                        <div class="combo-input">
+                            <div class="dropdown-container">
+                                <input type="text" id="paySearch" class="dropdown-search" placeholder="Search Mode..." onkeyup="filterDropdown('paySearch', 'payList')" onclick="toggleDropdown('payList')" required autocomplete="off">
+                                <div id="payList" class="dropdown-list"></div>
+                            </div>
+                            <button type="button" class="btn-icon" onclick="openMethodModal()" title="Add New Payment Method">➕</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Payment Date *</label>
+                        <input type="date" id="rcvDate" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Remarks / Notes</label>
+                        <input type="text" id="rcvRemarks" placeholder="Reference number, checks, etc.">
+                    </div>
+                </div>
+
+                <div style="margin-top: 30px; display: flex; justify-content: flex-end; gap: 15px;">
+                    <button type="button" class="btn-secondary" onclick="closeEntryModal()">Cancel / Close</button>
+                    <button type="submit" id="btnSubmitPayment" class="btn-primary" style="padding: 12px 40px; letter-spacing: 1px;">💾 Submit Payment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= 2. DEDICATED TDS RECEIVED MODAL (DIRECT TO LEDGER, NO BANK FIELD) ================= -->
+    <div class="overlay-modal" id="tdsModal">
+        <div class="overlay-content tds-modal-content">
+            <span class="close-btn" onclick="closeTdsModal()">✖</span>
+            <h2 style="color: var(--tds-color); margin-bottom: 5px;" id="tdsModalTitle">🧾 Add TDS Received (Direct to Ledger)</h2>
+            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 22px;">
+                TDS সরাসরি কোম্পানি ও সাইটের লেজারে (`ViewSite.html` ও `InvoiceEntry.html`) যোগ হবে। যেহেতু TDS ব্যাংক অ্যাকাউন্টে ঢোকে না, তাই এখানে কোনো ব্যাংক সিলেক্ট করার প্রয়োজন নেই।
+            </p>
+
+            <form id="tdsForm" data-office-hooked="true" onsubmit="saveTdsReceipt(event)">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Select Company (From Whom TDS Received) *</label>
+                        <div class="dropdown-container">
+                            <input type="text" id="tdsCompSearch" class="dropdown-search" placeholder="Search Company..." onkeyup="filterDropdown('tdsCompSearch', 'tdsCompList')" onclick="toggleDropdown('tdsCompList')" required autocomplete="off">
+                            <div id="tdsCompList" class="dropdown-list"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Select Site *</label>
+                        <div class="dropdown-container">
+                            <input type="text" id="tdsSiteSearch" class="dropdown-search" placeholder="Search Site..." onkeyup="filterDropdown('tdsSiteSearch', 'tdsSiteList')" onclick="toggleDropdown('tdsSiteList')" required autocomplete="off">
+                            <div id="tdsSiteList" class="dropdown-list"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Select Invoice Ref *</label>
+                        <div class="dropdown-container">
+                            <input type="text" id="tdsInvSearch" class="dropdown-search" placeholder="Search Invoice..." onkeyup="filterDropdown('tdsInvSearch', 'tdsInvList')" onclick="toggleDropdown('tdsInvList')" required autocomplete="off">
+                            <div id="tdsInvList" class="dropdown-list"></div>
+                            <div id="tdsDueBadge" class="due-badge">Due: ₹0</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="color: var(--tds-color);">TDS Received Amount (₹) *</label>
+                        <input type="number" id="tdsAmount" step="any" min="1" placeholder="Enter TDS amount..." required style="border-color: rgba(253, 126, 20, 0.5); font-weight: 700;">
+                        <div class="tds-quick-pct-bar" id="tdsQuickPctBar" style="display:none;">
+                            <button type="button" class="btn-tds-pct" onclick="applyQuickTdsPct(1)">Auto 1% of Base</button>
+                            <button type="button" class="btn-tds-pct" onclick="applyQuickTdsPct(2)">Auto 2% of Base</button>
+                            <button type="button" class="btn-tds-pct" onclick="applyQuickTdsPct(10)">Auto 10% of Base</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>TDS Received Date *</label>
+                        <input type="date" id="tdsDate" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Remarks / Form 16A / 26AS Ref</label>
+                        <input type="text" id="tdsRemarks" placeholder="e.g. TDS 2% u/s 194C, Form 16A...">
+                    </div>
+                </div>
+
+                <div style="margin-top: 28px; display: flex; justify-content: flex-end; gap: 15px;">
+                    <button type="button" class="btn-secondary" onclick="closeTdsModal()">Cancel / Close</button>
+                    <button type="submit" id="btnSubmitTds" class="btn-tds" style="padding: 12px 35px; letter-spacing: 0.8px;">💾 Save TDS to Ledger</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= ADD DYNAMIC PAYMENT METHOD MODAL ================= -->
+    <div class="auth-modal" id="addMethodModal">
+        <div class="auth-content">
+            <h3 style="color: #ffc107;">➕ Add Payment Method</h3>
+            <p id="methodModalDesc" style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px;">Admin password required to add dynamic lists.</p>
+            <input type="password" id="authPassMethod" placeholder="Admin Password (hint: admin123)">
+            <input type="text" id="newMethodName" placeholder="New Payment Method Name" style="display: none;">
+            
+            <div class="auth-actions" id="methodActions1">
+                <button type="button" class="btn-secondary" style="flex: 1;" onclick="closeMethodModal()">Cancel</button>
+                <button type="button" class="btn-primary" style="flex: 1; justify-content: center; background-color: #ffc107; color: #121212;" onclick="verifyMethodAdmin()">Verify</button>
+            </div>
+            <div class="auth-actions" id="methodActions2" style="display: none;">
+                <button type="button" class="btn-secondary" style="flex: 1;" onclick="closeMethodModal()">Cancel</button>
+                <button type="button" class="btn-primary" style="flex: 1; justify-content: center;" onclick="saveNewMethod()">Add Method</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= DELETE AUTH MODAL (ADMIN MODE) ================= -->
+    <div class="auth-modal" id="deleteModal">
+        <div class="auth-content danger">
+            <h3 style="color: #dc3545;">⚠️ Delete Entry</h3>
+            <input type="password" id="authPassDelete" placeholder="Admin Password (hint: admin123)">
+            <div class="auth-actions">
+                <button type="button" class="btn-secondary" style="flex: 1;" onclick="closeDeleteModal()">Cancel</button>
+                <button type="button" class="btn-primary" style="flex: 1; background: #dc3545; justify-content: center; box-shadow: 0 4px 10px rgba(220,53,69,0.3);" onclick="confirmDelete()">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= OFFICE PORTAL APPROVAL MODAL (ROUTES TO ApproveOffice.html) ================= -->
+    <div class="auth-modal" id="officeApprovalModal">
+        <div class="auth-content" style="max-width: 460px; text-align: left;">
+            <h3 id="officeApprovalTitle" style="color: #ffc107; margin-bottom: 8px;">🏢 Send Request to ApproveOffice.html</h3>
+            <p id="officeApprovalDesc" style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.5;">
+                অফিস পোর্টাল থেকে পেমেন্ট বা TDS রিসিপ্ট এন্ট্রি, এডিট, ডিলিট বা নতুন পেমেন্ট মেথড যোগ করলে তা অ্যাডমিনের <strong>ApproveOffice.html</strong>-এ পাঠানো হবে। অ্যাডমিন অ্যাপ্রুভ করলেই এটি চূড়ান্ত হবে।
+            </p>
+            <label style="font-size: 11.5px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; display: block; margin-bottom: 6px;">Action &amp; Summary</label>
+            <input type="text" id="officeApprovalSummary" readonly style="color: #ffc107; font-weight: 700; margin-bottom: 14px;">
+            
+            <label style="font-size: 11.5px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; display: block; margin-bottom: 6px;">Reason / Remarks for Admin Approval <span style="color: #ff4d4d;">*</span></label>
+            <textarea id="officeApprovalReason" rows="3" placeholder="Write a short note or reason for this action..." style="resize: none;"></textarea>
+            
+            <div class="auth-actions">
+                <button type="button" class="btn-secondary" style="flex: 1;" onclick="closeOfficeApprovalModal()">Cancel</button>
+                <button type="button" class="btn-primary" style="flex: 1; justify-content: center; background-color: #ffc107; color: #121212;" onclick="confirmOfficeApprovalRequest()">📤 Send for Approval</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================================================
+        // 1. PORTAL ROLE DETECTION & LOCALSTORAGE PERSISTENCE ENGINE (SYNCED WITH ViewSite & InvoiceEntry)
+        // =========================================================================================
+        let currentPortalMode = "admin"; // 'admin', 'office', or 'supervisor'
+        let loggedUserId = "ADMIN";
+        let loggedUserName = "Super Admin";
+        let assignedSite = "";
+        let pendingOfficePayload = null;
+
+        const COMPANY_ID_NAME_MAP = {
+            1: "ATR Construction Main",
+            2: "ATR Infra Sub"
+        };
+
+        const defaultDb = {
+            companies: ["ATR Construction Main", "ATR Infra Sub", "Rajat Dutta Associates", "BuildTech India", "Skyline Constructs"],
+            sites: ["Dum Dum Complex", "Salt Lake Sector V", "Barasat Highway", "Dum Dum Project", "Salt Lake Sector 5", "New Town Phase 2", "Howrah Bridge Site"],
+            invoices: [
+                { invNo: "INV-2026-001", base: 14000, total: 17920, due: 0, comp: "ATR Construction Main", site: "Dum Dum Complex", poId: "PO-2026-001" },
+                { invNo: "INV-2026-002", base: 8000, total: 8400, due: 8400, comp: "ATR Construction Main", site: "Salt Lake Sector V", poId: "PO-2026-002" },
+                { invNo: "INV-2026-003", base: 50000, total: 52500, due: 52500, comp: "ATR Infra Sub", site: "Barasat Highway", poId: "PO-2026-003" },
+                { invNo: "INV-2026-01", base: 127118, total: 150000, due: 150000, comp: "Rajat Dutta Associates", site: "Dum Dum Project", poId: "PO-2026-001" },
+                { invNo: "INV-2026-02", base: 67796, total: 80000, due: 28000, comp: "BuildTech India", site: "Dum Dum Project", poId: "PO-2026-001" },
+                { invNo: "INV-2026-03", base: 42372, total: 50000, due: 0, comp: "Skyline Constructs", site: "Salt Lake Sector 5", poId: "PO-2026-002" }, 
+                { invNo: "INV-2026-04", base: 169491, total: 200000, due: 200000, comp: "BuildTech India", site: "New Town Phase 2", poId: "PO-2026-002" }
+            ],
+            banks: ["HDFC Bank A/c 1234", "SBI A/c 9876", "ICICI Current", "Cash in Hand"],
+            paymentMethods: ["NEFT / RTGS", "Cheque", "UPI", "Cash"],
+            receipts: [
+                { id: 1, entryType: "PAYMENT", date: "2026-08-01", comp: "BuildTech India", site: "Dum Dum Project", inv: "INV-2026-02", amt: 50000, tdsAmt: 0, bank: "SBI A/c 9876", method: "NEFT / RTGS", remark: "Advance", pendingStatus: null },
+                { id: 2, entryType: "TDS", date: "2026-08-02", comp: "BuildTech India", site: "Dum Dum Project", inv: "INV-2026-02", amt: 0, tdsAmt: 2000, bank: "Direct TDS Ledger", method: "TDS Deducted", remark: "TDS 2% u/s 194C", pendingStatus: null }
+            ]
+        };
+
+        let db = {};
+        let editingReceiptId = null; 
+        let editingTdsId = null;
+        let selectedInvoiceDue = 0;
+        let selectedTdsInvoiceBase = 0;
+
+        function loadBalanceDatabase() {
+            const stored = JSON.parse(localStorage.getItem('atr_balance_received_db'));
+            if (stored && Array.isArray(stored.receipts)) {
+                db = stored;
+            } else {
+                db = JSON.parse(JSON.stringify(defaultDb));
+            }
+
+            // Ensure every receipt has normalized amt & tdsAmt
+            db.receipts = (db.receipts || []).map(r => ({
+                ...r,
+                entryType: r.entryType || (Number(r.tdsAmt) > 0 && Number(r.amt || 0) === 0 ? "TDS" : "PAYMENT"),
+                amt: Number(r.amt) || 0,
+                tdsAmt: Number(r.tdsAmt) || 0
+            }));
+
+            // Sync Invoices from InvoiceEntry.html (atr_invoices_db) so any newly created Invoice appears here
+            const externalInvs = JSON.parse(localStorage.getItem('atr_invoices_db')) || [];
+            const externalPos = JSON.parse(localStorage.getItem('atr_purchase_orders_db')) || [];
+
+            externalInvs.forEach(eInv => {
+                if (!eInv.invNo) return;
+                const compName = COMPANY_ID_NAME_MAP[eInv.compId] || "ATR Construction Main";
+                const siteName = eInv.siteName || "Dum Dum Complex";
+                const matchedPo = externalPos.find(p => p.id == eInv.poId);
+                const poRef = matchedPo ? matchedPo.poNo : (eInv.poId == 101 ? "PO-2026-001" : eInv.poId == 102 ? "PO-2026-002" : "PO-2026-003");
+
+                if (compName && !db.companies.includes(compName)) db.companies.push(compName);
+                if (siteName && !db.sites.includes(siteName)) db.sites.push(siteName);
+
+                // Calculate total settled (Bank + TDS) for this invoice in db.receipts
+                const settledForInv = db.receipts
+                    .filter(r => r.inv === eInv.invNo && !r.pendingStatus)
+                    .reduce((sum, r) => sum + (Number(r.amt) || 0) + (Number(r.tdsAmt) || 0), 0);
+
+                const grossTotal = Number(eInv.gross) || 0;
+                const baseVal = Number(eInv.base) || grossTotal;
+                const computedDue = eInv.status === "Paid" && settledForInv === 0
+                    ? 0
+                    : Math.max(0, grossTotal - settledForInv);
+
+                const existingIdx = db.invoices.findIndex(i => i.invNo === eInv.invNo);
+                if (existingIdx > -1) {
+                    db.invoices[existingIdx].base = baseVal;
+                    db.invoices[existingIdx].total = grossTotal;
+                    db.invoices[existingIdx].comp = compName;
+                    db.invoices[existingIdx].site = siteName;
+                    db.invoices[existingIdx].poId = poRef;
+                    db.invoices[existingIdx].due = computedDue;
+                } else {
+                    db.invoices.push({
+                        invNo: eInv.invNo,
+                        base: baseVal,
+                        total: grossTotal,
+                        due: computedDue,
+                        comp: compName,
+                        site: siteName,
+                        poId: poRef
+                    });
+                }
+            });
+
+            saveBalanceDatabase();
+        }
+
+        function saveBalanceDatabase() {
+            localStorage.setItem('atr_balance_received_db', JSON.stringify(db));
+
+            // Sync flat receipt records to `atr_company_receipts` & `atr_balance_received` so ViewSite.html & InvoiceEntry.html read both Bank Payments & TDS seamlessly
+            const flatReceiptsForLedger = (db.receipts || []).map(r => {
+                const invMeta = db.invoices.find(i => i.invNo === r.inv) || {};
+                const isInfra = String(r.comp || '').toLowerCase().includes('infra');
+                const resolvedCompId = isInfra ? 2 : 1;
+                const isTdsOnly = r.entryType === 'TDS' || (Number(r.tdsAmt) > 0 && Number(r.amt) === 0);
+
+                return {
+                    id: "RCPT-" + r.id,
+                    invNo: r.inv,
+                    invoiceNo: r.inv,
+                    poId: invMeta.poId || "PO-2026-001",
+                    compId: resolvedCompId,
+                    compName: r.comp,
+                    siteName: r.site || invMeta.site || "Dum Dum Complex",
+                    date: r.date,
+                    ref: isTdsOnly
+                        ? `TDS Received - ${r.inv}${r.remark ? ' (' + r.remark + ')' : ''}`
+                        : `${r.method || 'Bank'} - ${r.inv}${r.remark ? ' (' + r.remark + ')' : ''}`,
+                    tds: Number(r.tdsAmt) || 0,
+                    tdsDeducted: Number(r.tdsAmt) || 0,
+                    amount: Number(r.amt) || 0,
+                    receivedAmount: Number(r.amt) || 0,
+                    grossCleared: (Number(r.amt) || 0) + (Number(r.tdsAmt) || 0),
+                    entryType: isTdsOnly ? 'TDS' : 'PAYMENT'
+                };
+            });
+
+            localStorage.setItem('atr_company_receipts', JSON.stringify(flatReceiptsForLedger));
+            localStorage.setItem('atr_balance_received', JSON.stringify(flatReceiptsForLedger));
+
+            // Also update `atr_invoices_db` statuses & receivedAmount if present
+            try {
+                const externalInvs = JSON.parse(localStorage.getItem('atr_invoices_db'));
+                if (Array.isArray(externalInvs) && externalInvs.length > 0) {
+                    let updated = false;
+                    externalInvs.forEach(eInv => {
+                        const matching = flatReceiptsForLedger.filter(fr => fr.invNo === eInv.invNo);
+                        if (matching.length > 0) {
+                            const totalCleared = matching.reduce((s, fr) => s + fr.grossCleared, 0);
+                            eInv.receivedAmount = totalCleared;
+                            const gross = Number(eInv.gross) || 0;
+                            eInv.status = totalCleared >= gross - 0.5 ? "Paid" : (totalCleared > 0 ? "Partial" : "Unpaid");
+                            updated = true;
+                        }
+                    });
+                    if (updated) {
+                        localStorage.setItem('atr_invoices_db', JSON.stringify(externalInvs));
+                    }
+                }
+            } catch (e) {}
+        }
+
+        function checkPortalPermissions() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewParam = (urlParams.get('view') || '').toLowerCase();
+            const badge = document.getElementById('roleModeBadge');
+            const backBtn = document.getElementById('btnBackDashboard');
+            const submitBtn = document.getElementById('btnSubmitPayment');
+            const submitTdsBtn = document.getElementById('btnSubmitTds');
+
+            let parentPath = "";
+            try {
+                if (window.parent && window.parent !== window) {
+                    parentPath = (window.parent.location.pathname || '').toLowerCase();
+                }
+            } catch (e) {}
+
+            if (viewParam === 'office' || parentPath.includes('officedashboard')) {
+                currentPortalMode = 'office';
+                loggedUserId = urlParams.get('userId') || sessionStorage.getItem('atr_logged_office_id') || localStorage.getItem('atr_logged_office_id') || "OFF-101";
+                loggedUserName = urlParams.get('userName') || "Office Staff";
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🏢 Office Mode (${loggedUserName}) — Synced with ApproveOffice.html`;
+                }
+                if (backBtn) {
+                    backBtn.href = "office/office_dashboard_home.html";
+                }
+                if (submitBtn) {
+                    submitBtn.innerText = "📤 Submit Payment for Approval";
+                }
+                if (submitTdsBtn) {
+                    submitTdsBtn.innerText = "📤 Submit TDS for Approval";
+                }
+            } else if (viewParam === 'supervisor' || parentPath.includes('supervisordashboard')) {
+                currentPortalMode = 'supervisor';
+                assignedSite = (urlParams.get('site') || sessionStorage.getItem('atr_supervisor_site') || "Salt Lake Sector 5").trim();
+                loggedUserId = urlParams.get('supId') || "SUP-003";
+                loggedUserName = urlParams.get('supName') || "Supervisor";
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🛡️ Supervisor Mode (🔒 Site: ${assignedSite})`;
+                }
+                if (backBtn) {
+                    backBtn.href = "supervisor/supervisor_dashboard_home.html";
+                }
+            } else {
+                currentPortalMode = 'admin';
+                if (backBtn) {
+                    backBtn.href = "dashboard_home.html";
+                }
+            }
+        }
+
+        function handleBackToDashboard(event) {
+            if (currentPortalMode === 'office') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.loadOfficeWorkspaceHome === 'function') {
+                        window.parent.loadOfficeWorkspaceHome();
+                        return;
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "office_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "office/office_dashboard_home.html";
+            } else if (currentPortalMode === 'supervisor') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window) {
+                        const parentHomeLink = window.parent.document.querySelector('.dashboard-home-link');
+                        if (parentHomeLink) {
+                            window.location.href = parentHomeLink.href;
+                            return;
+                        }
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "supervisor_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "supervisor/supervisor_dashboard_home.html";
+            }
+        }
+
+        // --- 2. DROPDOWN RENDER ENGINE ---
+        function populateCustomDropdown(listId, searchId, dataArray, isInvoice = false, isTdsModal = false) {
+            const listDiv = document.getElementById(listId);
+            if (!listDiv) return;
+            listDiv.innerHTML = "";
+            
+            const activeEditId = isTdsModal ? editingTdsId : editingReceiptId;
+            const currentEditedRcpt = activeEditId !== null
+                ? db.receipts.find(r => String(r.id) === String(activeEditId))
+                : null;
+
+            dataArray.forEach(item => {
+                const isEditedInvoice = isInvoice && currentEditedRcpt && currentEditedRcpt.inv === item.invNo;
+                if(isInvoice && item.due <= 0 && !isEditedInvoice) return; 
+                
+                let textValue = isInvoice ? item.invNo : item;
+                let prevSettledOnEdit = currentEditedRcpt ? ((Number(currentEditedRcpt.amt) || 0) + (Number(currentEditedRcpt.tdsAmt) || 0)) : 0;
+                let effectiveDue = isEditedInvoice ? (Number(item.due) + prevSettledOnEdit) : (isInvoice ? item.due : 0);
+                
+                let div = document.createElement("div");
+                div.innerText = isInvoice
+                    ? `${item.invNo} (Due: ₹${effectiveDue.toLocaleString('en-IN')}${item.site ? ' | ' + item.site : ''})`
+                    : item;
+                
+                div.onclick = function(e) {
+                    e.stopPropagation();
+                    document.getElementById(searchId).value = textValue;
+                    listDiv.style.display = "none";
+                    
+                    if(isInvoice) {
+                        if (isTdsModal) {
+                            selectedTdsInvoiceBase = Number(item.base) || Number(item.total) || 0;
+                            const badge = document.getElementById('tdsDueBadge');
+                            badge.innerText = `Due: ₹${effectiveDue.toLocaleString('en-IN')}`;
+                            badge.style.display = 'block';
+                            document.getElementById('tdsQuickPctBar').style.display = selectedTdsInvoiceBase > 0 ? 'flex' : 'none';
+
+                            // Auto-fill Company & Site if empty
+                            if (item.comp && !document.getElementById('tdsCompSearch').value) {
+                                document.getElementById('tdsCompSearch').value = item.comp;
+                            }
+                            if (item.site && !document.getElementById('tdsSiteSearch').value) {
+                                document.getElementById('tdsSiteSearch').value = item.site;
+                            }
+                        } else {
+                            selectedInvoiceDue = effectiveDue;
+                            const badge = document.getElementById('dueBadge');
+                            badge.innerText = `Due: ₹${effectiveDue.toLocaleString('en-IN')}`;
+                            badge.style.display = 'block';
+
+                            if (item.comp && !document.getElementById('compSearch').value) {
+                                document.getElementById('compSearch').value = item.comp;
+                            }
+                            if (item.site && !document.getElementById('siteSearch').value) {
+                                document.getElementById('siteSearch').value = item.site;
+                            }
+                        }
+                    }
+                };
+                listDiv.appendChild(div);
+            });
+        }
+
+        function applyQuickTdsPct(pct) {
+            if (selectedTdsInvoiceBase <= 0) return;
+            const calcTds = Math.round(selectedTdsInvoiceBase * (pct / 100));
+            document.getElementById('tdsAmount').value = calcTds;
+            if (!document.getElementById('tdsRemarks').value) {
+                document.getElementById('tdsRemarks').value = `TDS @ ${pct}% on Base ₹${selectedTdsInvoiceBase.toLocaleString('en-IN')}`;
+            }
+        }
+
+        function initDropdowns() {
+            // Regular Payment Modal Dropdowns
+            populateCustomDropdown('compList', 'compSearch', db.companies);
+            populateCustomDropdown('siteList', 'siteSearch', db.sites);
+            populateCustomDropdown('invList', 'invSearch', db.invoices, true, false);
+            populateCustomDropdown('bankList', 'bankSearch', db.banks);
+            populateCustomDropdown('payList', 'paySearch', db.paymentMethods);
+
+            // Dedicated TDS Modal Dropdowns
+            populateCustomDropdown('tdsCompList', 'tdsCompSearch', db.companies);
+            populateCustomDropdown('tdsSiteList', 'tdsSiteSearch', db.sites);
+            populateCustomDropdown('tdsInvList', 'tdsInvSearch', db.invoices, true, true);
+        }
+
+        function filterDropdown(searchId, listId) {
+            let filter = document.getElementById(searchId).value.toUpperCase();
+            let div = document.getElementById(listId);
+            let items = div.getElementsByTagName("div");
+            div.style.display = "block";
+            
+            for (let i = 0; i < items.length; i++) {
+                let txtValue = items[i].textContent || items[i].innerText;
+                if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                    items[i].style.display = "";
+                } else {
+                    items[i].style.display = "none";
+                }
+            }
+        }
+
+        function toggleDropdown(listId) {
+            document.querySelectorAll('.dropdown-list').forEach(el => {
+                if(el.id !== listId) el.style.display = 'none';
+            });
+            let list = document.getElementById(listId);
+            list.style.display = list.style.display === "block" ? "none" : "block";
+        }
+
+        document.addEventListener("click", function(e) {
+            if (!e.target.closest(".dropdown-container")) {
+                document.querySelectorAll('.dropdown-list').forEach(el => el.style.display = 'none');
+            }
+        });
+
+        // --- 3. TOAST NOTIFICATION ---
+        function showToast(message, type="success") {
+            const toast = document.getElementById("toast");
+            toast.innerText = message;
+            toast.style.backgroundColor = type === "error" ? "#dc3545" : (type === "tds" ? "#fd7e14" : "var(--theme-color)");
+            toast.className = "show";
+            setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
+        }
+
+        // --- 4. TABLE RENDERING (LIVE UPDATE WITH BANK RECEIVED & TDS RECEIVED) ---
+        function renderTable() {
+            const tbody = document.getElementById('receiptTableBody');
+            tbody.innerHTML = '';
+            
+            let sortedReceipts = [...db.receipts].reverse();
+            let totalBankRcv = 0;
+            let totalTdsRcv = 0;
+
+            sortedReceipts.forEach(rcpt => {
+                const isTdsEntry = rcpt.entryType === 'TDS' || (Number(rcpt.tdsAmt) > 0 && Number(rcpt.amt) === 0);
+                const bankAmt = Number(rcpt.amt) || 0;
+                const tdsAmt = Number(rcpt.tdsAmt) || 0;
+
+                totalBankRcv += bankAmt;
+                totalTdsRcv += tdsAmt;
+
+                const pendingBadge = rcpt.pendingStatus
+                    ? `<br><span class="pending-status-pill">⏳ ${rcpt.pendingStatus}</span>`
+                    : '';
+                const siteLabel = rcpt.site
+                    ? `<br><span style="font-size:11px; color:var(--text-muted);">📍 ${rcpt.site}</span>`
+                    : '';
+
+                const bankOrLedgerCell = isTdsEntry
+                    ? `<span class="tds-ledger-badge">🧾 Direct TDS Ledger</span>${rcpt.remark ? `<br><span style="font-size:11px; color:var(--text-muted);">${rcpt.remark}</span>` : ''}`
+                    : `${rcpt.bank} <br><span style="font-size:11px; color:var(--text-muted);">${rcpt.method}${rcpt.remark ? ' • ' + rcpt.remark : ''}</span>`;
+
+                const tr = document.createElement('tr');
+                if (isTdsEntry) {
+                    tr.style.background = "rgba(253, 126, 20, 0.04)";
+                }
+                tr.innerHTML = `
+                    <td>
+                        <strong>${rcpt.date}</strong>
+                        ${pendingBadge}
+                    </td>
+                    <td style="font-weight:600; color:var(--text-main);">
+                        ${rcpt.comp}
+                        ${siteLabel}
+                    </td>
+                    <td><strong>${rcpt.inv}</strong></td>
+                    <td style="color:var(--theme-color); font-weight:bold;">
+                        ${bankAmt > 0 ? '₹' + bankAmt.toLocaleString('en-IN') : '-'}
+                    </td>
+                    <td style="color:var(--tds-color); font-weight:bold;">
+                        ${tdsAmt > 0 ? '₹' + tdsAmt.toLocaleString('en-IN') : '-'}
+                    </td>
+                    <td>${bankOrLedgerCell}</td>
+                    <td class="action-btns" style="text-align: right;">
+                        <button class="btn-edit" onclick="editReceipt('${rcpt.id}')">✏️ Edit</button>
+                        <button class="btn-delete" onclick="openDeleteModal('${rcpt.id}')">🗑️ Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            
+            if(sortedReceipts.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:30px;">No payment or TDS records found.</td></tr>`;
+            }
+
+            document.getElementById('sumBankReceived').innerText = `₹${totalBankRcv.toLocaleString('en-IN')}`;
+            document.getElementById('sumTdsReceived').innerText = `₹${totalTdsRcv.toLocaleString('en-IN')}`;
+            document.getElementById('sumTotalSettled').innerText = `₹${(totalBankRcv + totalTdsRcv).toLocaleString('en-IN')}`;
+        }
+
+        // --- 5A. REGULAR BANK PAYMENT MODAL OPERATIONS (Add/Edit) ---
+        function openEntryModal() {
+            editingReceiptId = null;
+            initDropdowns();
+            document.getElementById('modalTitle').innerText = "🏢 Add Balance Received";
+            document.getElementById('btnSubmitPayment').innerText = currentPortalMode === 'admin'
+                ? "💾 Submit Payment"
+                : "📤 Submit Payment for Approval";
+            document.getElementById('receiptForm').reset();
+            document.getElementById('dueBadge').style.display = 'none';
+            
+            document.getElementById('rcvDate').value = new Date().toISOString().split('T')[0];
+            
+            document.getElementById('entryModal').style.display = 'flex';
+        }
+
+        function closeEntryModal() {
+            document.getElementById('entryModal').style.display = 'none';
+            editingReceiptId = null;
+        }
+
+        // --- 5B. DEDICATED TDS RECEIVED MODAL OPERATIONS (Add/Edit Direct to Ledger) ---
+        function openTdsModal() {
+            editingTdsId = null;
+            selectedTdsInvoiceBase = 0;
+            initDropdowns();
+            document.getElementById('tdsModalTitle').innerText = "🧾 Add TDS Received (Direct to Ledger)";
+            document.getElementById('btnSubmitTds').innerText = currentPortalMode === 'admin'
+                ? "💾 Save TDS to Ledger"
+                : "📤 Submit TDS for Approval";
+            document.getElementById('tdsForm').reset();
+            document.getElementById('tdsDueBadge').style.display = 'none';
+            document.getElementById('tdsQuickPctBar').style.display = 'none';
+            document.getElementById('tdsDate').value = new Date().toISOString().split('T')[0];
+
+            document.getElementById('tdsModal').style.display = 'flex';
+        }
+
+        function closeTdsModal() {
+            document.getElementById('tdsModal').style.display = 'none';
+            editingTdsId = null;
+        }
+
+        function editReceipt(id) {
+            const rcpt = db.receipts.find(r => String(r.id) === String(id));
+            if (!rcpt) return;
+
+            const isTdsEntry = rcpt.entryType === 'TDS' || (Number(rcpt.tdsAmt) > 0 && Number(rcpt.amt) === 0);
+
+            if (isTdsEntry) {
+                editingTdsId = rcpt.id;
+                initDropdowns();
+
+                document.getElementById('tdsModalTitle').innerText = currentPortalMode === 'admin'
+                    ? "✏️ Edit TDS Received Record"
+                    : "✏️ Edit TDS Record (Requires Approval)";
+                document.getElementById('btnSubmitTds').innerText = currentPortalMode === 'admin'
+                    ? "🔄 Update TDS Record"
+                    : "📤 Send TDS Update for Approval";
+
+                document.getElementById('tdsCompSearch').value = rcpt.comp;
+                document.getElementById('tdsSiteSearch').value = rcpt.site || "Dum Dum Complex";
+                document.getElementById('tdsInvSearch').value = rcpt.inv;
+                document.getElementById('tdsAmount').value = rcpt.tdsAmt;
+                document.getElementById('tdsDate').value = rcpt.date;
+                document.getElementById('tdsRemarks').value = rcpt.remark || "";
+
+                let invObj = db.invoices.find(i => i.invNo === rcpt.inv);
+                if (invObj) {
+                    selectedTdsInvoiceBase = Number(invObj.base) || Number(invObj.total) || 0;
+                    const badge = document.getElementById('tdsDueBadge');
+                    badge.innerText = `Original Due: ₹${(Number(invObj.due) + Number(rcpt.tdsAmt)).toLocaleString('en-IN')}`;
+                    badge.style.display = 'block';
+                    document.getElementById('tdsQuickPctBar').style.display = selectedTdsInvoiceBase > 0 ? 'flex' : 'none';
+                }
+
+                document.getElementById('tdsModal').style.display = 'flex';
+                return;
+            }
+
+            // Regular Bank Payment Edit
+            editingReceiptId = rcpt.id;
+            initDropdowns();
+
+            document.getElementById('modalTitle').innerText = currentPortalMode === 'admin'
+                ? "✏️ Edit Payment Record"
+                : "✏️ Edit Payment Record (Requires Approval)";
+            document.getElementById('btnSubmitPayment').innerText = currentPortalMode === 'admin'
+                ? "🔄 Update Payment"
+                : "📤 Send Update for Approval";
+            
+            document.getElementById('compSearch').value = rcpt.comp;
+            document.getElementById('siteSearch').value = rcpt.site || "Dum Dum Project"; 
+            document.getElementById('invSearch').value = rcpt.inv;
+            document.getElementById('rcvAmount').value = rcpt.amt;
+            document.getElementById('bankSearch').value = rcpt.bank;
+            document.getElementById('paySearch').value = rcpt.method;
+            document.getElementById('rcvDate').value = rcpt.date;
+            document.getElementById('rcvRemarks').value = rcpt.remark || "";
+            
+            let invObj = db.invoices.find(i => i.invNo === rcpt.inv);
+            if(invObj) {
+                const badge = document.getElementById('dueBadge');
+                badge.innerText = `Original Due: ₹${(Number(invObj.due) + Number(rcpt.amt)).toLocaleString('en-IN')}`;
+                badge.style.display = 'block';
+            }
+
+            document.getElementById('entryModal').style.display = 'flex';
+        }
+
+        function saveReceipt(event) {
+            event.preventDefault();
+            
+            const amt = Number(document.getElementById('rcvAmount').value);
+            const invSearch = document.getElementById('invSearch').value.trim();
+            const compSearch = document.getElementById('compSearch').value.trim();
+            const siteSearch = document.getElementById('siteSearch').value.trim();
+            const bankSearch = document.getElementById('bankSearch').value.trim();
+            const paySearch = document.getElementById('paySearch').value.trim();
+            const rcvDate = document.getElementById('rcvDate').value;
+            const rcvRemarks = document.getElementById('rcvRemarks').value.trim();
+            
+            if(amt <= 0) {
+                showToast("Amount must be greater than 0", "error"); return;
+            }
+
+            // Ensure dynamically typed company, site, or bank is also added to dropdown lists
+            if (compSearch && !db.companies.includes(compSearch)) db.companies.push(compSearch);
+            if (siteSearch && !db.sites.includes(siteSearch)) db.sites.push(siteSearch);
+            if (bankSearch && !db.banks.includes(bankSearch)) db.banks.push(bankSearch);
+
+            const receiptData = {
+                entryType: "PAYMENT",
+                comp: compSearch,
+                site: siteSearch,
+                inv: invSearch,
+                amt: amt,
+                tdsAmt: 0,
+                bank: bankSearch,
+                method: paySearch,
+                date: rcvDate,
+                remark: rcvRemarks,
+                pendingStatus: null
+            };
+
+            let invObj = db.invoices.find(i => i.invNo === invSearch);
+
+            if (editingReceiptId !== null) {
+                let index = db.receipts.findIndex(r => String(r.id) === String(editingReceiptId));
+                if (index === -1) return;
+                let oldRcpt = { ...db.receipts[index] };
+
+                receiptData.id = oldRcpt.id;
+
+                // OFFICE PORTAL: Route Edit to ApproveOffice.html
+                if (currentPortalMode !== 'admin') {
+                    openOfficeApprovalModal({
+                        type: 'EDIT',
+                        targetId: oldRcpt.id,
+                        actionLabel: "EDIT BALANCE RECEIVED",
+                        summary: `${compSearch} (${invSearch} | ${siteSearch}) — Amount: ₹${oldRcpt.amt} → ₹${amt} via ${paySearch}`,
+                        oldData: oldRcpt,
+                        newData: receiptData
+                    });
+                    return;
+                }
+
+                // ADMIN DIRECT UPDATE
+                let oldInvObj = db.invoices.find(i => i.invNo === oldRcpt.inv);
+                if(oldInvObj) oldInvObj.due += Number(oldRcpt.amt); 
+
+                db.receipts[index] = receiptData;
+                if(invObj) invObj.due = Math.max(0, Number(invObj.due) - amt); 
+                
+                saveBalanceDatabase();
+                showToast("Payment Updated Successfully!");
+                closeEntryModal(); 
+            } else {
+                receiptData.id = Date.now();
+
+                // OFFICE PORTAL: Route New Payment Entry to ApproveOffice.html
+                if (currentPortalMode !== 'admin') {
+                    openOfficeApprovalModal({
+                        type: 'CREATE',
+                        targetId: receiptData.id,
+                        actionLabel: "NEW BALANCE RECEIVED",
+                        summary: `Received ₹${amt} from ${compSearch} (${invSearch} | ${siteSearch}) in ${bankSearch} [${paySearch}]`,
+                        oldData: null,
+                        newData: receiptData
+                    });
+                    return;
+                }
+
+                // ADMIN DIRECT SAVE
+                db.receipts.push(receiptData);
+                if(invObj) invObj.due = Math.max(0, Number(invObj.due) - amt);
+                
+                saveBalanceDatabase();
+                showToast("Payment Added! Form is ready for next entry.");
+                document.getElementById('rcvAmount').value = '';
+                document.getElementById('invSearch').value = '';
+                document.getElementById('rcvRemarks').value = '';
+                document.getElementById('dueBadge').style.display = 'none';
+            }
+
+            initDropdowns(); 
+            renderTable();
+        }
+
+        // --- SAVE DEDICATED TDS RECEIPT (DIRECT TO LEDGER, NO BANK) ---
+        function saveTdsReceipt(event) {
+            event.preventDefault();
+
+            const tdsAmt = Number(document.getElementById('tdsAmount').value);
+            const compSearch = document.getElementById('tdsCompSearch').value.trim();
+            const siteSearch = document.getElementById('tdsSiteSearch').value.trim();
+            const invSearch = document.getElementById('tdsInvSearch').value.trim();
+            const tdsDate = document.getElementById('tdsDate').value;
+            const tdsRemarks = document.getElementById('tdsRemarks').value.trim();
+
+            if (tdsAmt <= 0) {
+                showToast("TDS Amount must be greater than 0", "error");
+                return;
+            }
+
+            if (compSearch && !db.companies.includes(compSearch)) db.companies.push(compSearch);
+            if (siteSearch && !db.sites.includes(siteSearch)) db.sites.push(siteSearch);
+
+            const tdsReceiptData = {
+                entryType: "TDS",
+                comp: compSearch,
+                site: siteSearch,
+                inv: invSearch,
+                amt: 0,
+                tdsAmt: tdsAmt,
+                bank: "Direct TDS Ledger",
+                method: "TDS Deducted",
+                date: tdsDate,
+                remark: tdsRemarks || "Direct TDS Credit",
+                pendingStatus: null
+            };
+
+            let invObj = db.invoices.find(i => i.invNo === invSearch);
+
+            if (editingTdsId !== null) {
+                let index = db.receipts.findIndex(r => String(r.id) === String(editingTdsId));
+                if (index === -1) return;
+                let oldRcpt = { ...db.receipts[index] };
+
+                tdsReceiptData.id = oldRcpt.id;
+
+                if (currentPortalMode !== 'admin') {
+                    openOfficeApprovalModal({
+                        type: 'EDIT_TDS',
+                        targetId: oldRcpt.id,
+                        actionLabel: "EDIT TDS RECEIVED",
+                        summary: `TDS from ${compSearch} (${invSearch} | ${siteSearch}) — TDS: ₹${oldRcpt.tdsAmt} → ₹${tdsAmt}`,
+                        oldData: oldRcpt,
+                        newData: tdsReceiptData
+                    });
+                    return;
+                }
+
+                let oldInvObj = db.invoices.find(i => i.invNo === oldRcpt.inv);
+                if (oldInvObj) oldInvObj.due += Number(oldRcpt.tdsAmt || 0);
+
+                db.receipts[index] = tdsReceiptData;
+                if (invObj) invObj.due = Math.max(0, Number(invObj.due) - tdsAmt);
+
+                saveBalanceDatabase();
+                showToast("TDS Record Updated in Ledger!", "tds");
+                closeTdsModal();
+            } else {
+                tdsReceiptData.id = Date.now();
+
+                if (currentPortalMode !== 'admin') {
+                    openOfficeApprovalModal({
+                        type: 'CREATE_TDS',
+                        targetId: tdsReceiptData.id,
+                        actionLabel: "NEW TDS RECEIVED (DIRECT LEDGER)",
+                        summary: `TDS ₹${tdsAmt} received from ${compSearch} (${invSearch} | ${siteSearch}) on ${tdsDate}`,
+                        oldData: null,
+                        newData: tdsReceiptData
+                    });
+                    return;
+                }
+
+                db.receipts.push(tdsReceiptData);
+                if (invObj) invObj.due = Math.max(0, Number(invObj.due) - tdsAmt);
+
+                saveBalanceDatabase();
+                showToast("🧾 TDS Saved Directly to Ledger & ViewSite!", "tds");
+                document.getElementById('tdsAmount').value = '';
+                document.getElementById('tdsInvSearch').value = '';
+                document.getElementById('tdsRemarks').value = '';
+                document.getElementById('tdsDueBadge').style.display = 'none';
+                document.getElementById('tdsQuickPctBar').style.display = 'none';
+            }
+
+            initDropdowns();
+            renderTable();
+        }
+
+        // --- 6. DYNAMIC PAYMENT METHOD LOGIC (Admin Password vs Office Approval) ---
+        function openMethodModal() {
+            document.getElementById('addMethodModal').style.display = 'flex';
+            document.getElementById('authPassMethod').value = '';
+            document.getElementById('newMethodName').value = '';
+
+            if (currentPortalMode !== 'admin') {
+                // Office Staff does not need Admin Password; directly enter method name & send for approval
+                document.getElementById('methodModalDesc').innerText = "Enter new payment method name (will be sent to ApproveOffice.html):";
+                document.getElementById('authPassMethod').style.display = 'none';
+                document.getElementById('newMethodName').style.display = 'block';
+                document.getElementById('methodActions1').style.display = 'none';
+                document.getElementById('methodActions2').style.display = 'flex';
+                document.getElementById('newMethodName').focus();
+            } else {
+                document.getElementById('methodModalDesc').innerText = "Admin password required to add dynamic lists.";
+                document.getElementById('newMethodName').style.display = 'none';
+                document.getElementById('authPassMethod').style.display = 'block';
+                document.getElementById('methodActions1').style.display = 'flex';
+                document.getElementById('methodActions2').style.display = 'none';
+                document.getElementById('authPassMethod').focus();
+            }
+        }
+
+        function closeMethodModal() { document.getElementById('addMethodModal').style.display = 'none'; }
+
+        function verifyMethodAdmin() {
+            if(document.getElementById('authPassMethod').value === 'admin123') {
+                document.getElementById('authPassMethod').style.display = 'none';
+                document.getElementById('newMethodName').style.display = 'block';
+                document.getElementById('methodActions1').style.display = 'none';
+                document.getElementById('methodActions2').style.display = 'flex';
+                document.getElementById('newMethodName').focus();
+            } else {
+                showToast("Incorrect Admin Password!", "error");
+            }
+        }
+
+        function saveNewMethod() {
+            const newMethod = document.getElementById('newMethodName').value.trim();
+            if(newMethod) {
+                if (!db.paymentMethods.some(m => m.toLowerCase() === newMethod.toLowerCase())) {
+                    db.paymentMethods.push(newMethod);
+                    saveBalanceDatabase();
+                }
+                initDropdowns(); 
+                document.getElementById('paySearch').value = newMethod; 
+                closeMethodModal();
+
+                if (currentPortalMode !== 'admin') {
+                    pushRequestToApproveOffice(
+                        "ADD PAYMENT METHOD",
+                        `Added New Payment Method: "${newMethod}"`,
+                        null,
+                        { paymentMethod: newMethod },
+                        `New payment method added by ${loggedUserName}`
+                    );
+                    showToast("Method Added & Sent to ApproveOffice.html!");
+                } else {
+                    showToast("New Payment Method Added Live!");
+                }
+            }
+        }
+
+        // --- 7. DELETE LOGIC (Admin Password vs Office Approval) ---
+        let receiptToDelete = null;
+        function openDeleteModal(id) {
+            let rcpt = db.receipts.find(r => String(r.id) === String(id));
+            if (!rcpt) return;
+
+            const isTdsEntry = rcpt.entryType === 'TDS' || (Number(rcpt.tdsAmt) > 0 && Number(rcpt.amt) === 0);
+
+            if (currentPortalMode !== 'admin') {
+                openOfficeApprovalModal({
+                    type: 'DELETE',
+                    targetId: rcpt.id,
+                    actionLabel: isTdsEntry ? "DELETE TDS RECEIVED" : "DELETE BALANCE RECEIVED",
+                    summary: isTdsEntry
+                        ? `Delete TDS of ₹${rcpt.tdsAmt} from ${rcpt.comp} (${rcpt.inv} | Date: ${rcpt.date})`
+                        : `Delete Payment of ₹${rcpt.amt} from ${rcpt.comp} (${rcpt.inv} | Date: ${rcpt.date})`,
+                    oldData: { ...rcpt },
+                    newData: null
+                });
+                return;
+            }
+
+            receiptToDelete = rcpt.id;
+            document.getElementById('deleteModal').style.display = 'flex';
+            document.getElementById('authPassDelete').value = '';
+            document.getElementById('authPassDelete').focus();
+        }
+
+        function closeDeleteModal() { document.getElementById('deleteModal').style.display = 'none'; receiptToDelete = null; }
+
+        function confirmDelete() {
+            if(document.getElementById('authPassDelete').value === 'admin123') {
+                let rcpt = db.receipts.find(r => String(r.id) === String(receiptToDelete));
+                if (rcpt) {
+                    let invObj = db.invoices.find(i => i.invNo === rcpt.inv);
+                    if(invObj) {
+                        invObj.due += (Number(rcpt.amt) || 0) + (Number(rcpt.tdsAmt) || 0);
+                    }
+                }
+
+                db.receipts = db.receipts.filter(r => String(r.id) !== String(receiptToDelete));
+                saveBalanceDatabase();
+                
+                initDropdowns();
+                renderTable();
+                closeDeleteModal();
+                showToast("Entry Deleted & Invoice Due Reverted", "error");
+            } else {
+                showToast("Incorrect Admin Password!", "error");
+            }
+        }
+
+        // =========================================================================================
+        // 8. OFFICE PORTAL APPROVAL MODAL ENGINE (ROUTES TO ApproveOffice.html)
+        // =========================================================================================
+        function openOfficeApprovalModal(payload) {
+            pendingOfficePayload = payload;
+            document.getElementById('officeApprovalSummary').value = `${payload.actionLabel}: ${payload.summary}`;
+            document.getElementById('officeApprovalReason').value = '';
+            document.getElementById('officeApprovalModal').style.display = 'flex';
+            setTimeout(() => document.getElementById('officeApprovalReason').focus(), 50);
+        }
+
+        function closeOfficeApprovalModal() {
+            document.getElementById('officeApprovalModal').style.display = 'none';
+            pendingOfficePayload = null;
+        }
+
+        function confirmOfficeApprovalRequest() {
+            const reason = document.getElementById('officeApprovalReason').value.trim();
+            if (!reason) {
+                showToast("Please enter a reason for Admin Approval", "error");
+                return;
+            }
+            if (!pendingOfficePayload) return;
+
+            if (pendingOfficePayload.type === 'CREATE') {
+                db.receipts.push({
+                    ...pendingOfficePayload.newData,
+                    pendingStatus: "Pending in ApproveOffice"
+                });
+                saveBalanceDatabase();
+                document.getElementById('rcvAmount').value = '';
+                document.getElementById('invSearch').value = '';
+                document.getElementById('rcvRemarks').value = '';
+                document.getElementById('dueBadge').style.display = 'none';
+            } else if (pendingOfficePayload.type === 'CREATE_TDS') {
+                db.receipts.push({
+                    ...pendingOfficePayload.newData,
+                    pendingStatus: "Pending in ApproveOffice"
+                });
+                saveBalanceDatabase();
+                document.getElementById('tdsAmount').value = '';
+                document.getElementById('tdsInvSearch').value = '';
+                document.getElementById('tdsRemarks').value = '';
+                document.getElementById('tdsDueBadge').style.display = 'none';
+                document.getElementById('tdsQuickPctBar').style.display = 'none';
+            } else if (pendingOfficePayload.type === 'EDIT' || pendingOfficePayload.type === 'EDIT_TDS') {
+                const idx = db.receipts.findIndex(r => String(r.id) === String(pendingOfficePayload.targetId));
+                if (idx > -1) {
+                    db.receipts[idx].pendingStatus = "Edit Pending";
+                    saveBalanceDatabase();
+                }
+                closeEntryModal();
+                closeTdsModal();
+            } else if (pendingOfficePayload.type === 'DELETE') {
+                const idx = db.receipts.findIndex(r => String(r.id) === String(pendingOfficePayload.targetId));
+                if (idx > -1) {
+                    db.receipts[idx].pendingStatus = "Delete Pending";
+                    saveBalanceDatabase();
+                }
+            }
+
+            pushRequestToApproveOffice(
+                pendingOfficePayload.actionLabel,
+                pendingOfficePayload.summary,
+                pendingOfficePayload.oldData,
+                pendingOfficePayload.newData,
+                reason
+            );
+
+            closeOfficeApprovalModal();
+            initDropdowns();
+            renderTable();
+            showToast("📤 Request sent to ApproveOffice.html!");
+        }
+
+        function pushRequestToApproveOffice(actionLabel, summaryText, oldDataObj, newDataObj, reasonText) {
+            const newReq = {
+                reqId: "OFF-BAL-" + Date.now().toString().slice(-5),
+                userId: loggedUserId,
+                userName: loggedUserName,
+                designation: "Office Staff",
+                module: "BalanceReceived.html",
+                action: actionLabel,
+                summary: summaryText,
+                oldData: oldDataObj,
+                newData: newDataObj,
+                reason: reasonText,
+                timestamp: new Date().toLocaleString('en-IN'),
+                status: "Pending"
+            };
+
+            const officeQueue = JSON.parse(localStorage.getItem('atr_office_approvals')) || [];
+            officeQueue.unshift(newReq);
+            localStorage.setItem('atr_office_approvals', JSON.stringify(officeQueue));
+            localStorage.setItem('approve_office_requests', JSON.stringify(officeQueue));
+            localStorage.setItem('ApproveOffice_requests', JSON.stringify(officeQueue));
+
+            // Log in Office Daily Work Report (office_dashboard_home.html)
+            const workLogs = JSON.parse(localStorage.getItem('atr_office_daily_work')) || [];
+            const todayStr = new Date().toISOString().split('T')[0];
+            const nowTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+            workLogs.unshift({
+                id: "WRK-" + Date.now().toString().slice(-5),
+                userId: loggedUserId,
+                userName: loggedUserName,
+                date: todayStr,
+                time: nowTime,
+                module: "Balance Received (BalanceReceived.html)",
+                refNo: (newDataObj && newDataObj.inv) ? newDataObj.inv : newReq.reqId,
+                desc: `${actionLabel}: ${summaryText}`,
+                status: "Sent for Approval"
+            });
+            localStorage.setItem('atr_office_daily_work', JSON.stringify(workLogs));
+
+            try {
+                if (window.parent && window.parent !== window && typeof window.parent.refreshNotificationsUI === 'function') {
+                    window.parent.refreshNotificationsUI();
+                }
+            } catch (e) {}
+        }
+
+        window.onload = () => {
+            checkPortalPermissions();
+            loadBalanceDatabase();
+            initDropdowns();
+            renderTable();
+        };
+
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'atr_balance_received_db' || e.key === 'atr_invoices_db') {
+                loadBalanceDatabase();
+                initDropdowns();
+                renderTable();
+            }
+        });
+    </script>
+</body>
+</html>

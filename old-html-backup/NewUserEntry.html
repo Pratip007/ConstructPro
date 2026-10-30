@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR - New User Entry</title>
+    
+    <!-- Sync theme with Master Dashboard -->
+    <script>
+        function applyDashboardTheme() {
+            const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        }
+        applyDashboardTheme();
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'atr_theme' || !e.key) {
+                applyDashboardTheme();
+            }
+        });
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap');
+
+        :root {
+            --bg-body: transparent; 
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.1);
+            
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(15, 15, 15, 0.6);
+            --input-focus-bg: rgba(0, 0, 0, 0.4);
+            
+            --shadow: 0 4px 15px rgba(0,0,0,0.3);
+            
+            --theme-color: #007bff;
+            --theme-glow: rgba(0, 123, 255, 0.4);
+            --theme-transition: all 0.3s ease;
+        }
+
+        [data-theme="light"] {
+            --bg-body: transparent;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #555555;
+            --border-color: rgba(0, 0, 0, 0.1);
+            
+            --glass-bg: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --input-bg: rgba(240, 240, 240, 0.8);
+            --input-focus-bg: #ffffff;
+            
+            --shadow: 0 8px 25px rgba(0,0,0,0.05);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(136, 136, 136, 0.3); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(136, 136, 136, 0.6); }
+
+        /* 🔥 FIXED LAYOUT: Only Table Scrolls 🔥 */
+        body { background-color: var(--bg-body); color: var(--text-main); height: 100vh; overflow: hidden; display: flex; flex-direction: column; transition: var(--theme-transition); }
+        .main-content { padding: 20px 40px; width: 100%; max-width: 1400px; margin: 0 auto; flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* HEADER SECTION */
+        .header-section { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; flex-shrink: 0; flex-wrap: wrap; gap: 15px;}
+        .header-section h1 { font-size: 22px; color: var(--theme-color); font-weight: 700; transition: var(--theme-transition); display: flex; align-items: center; gap: 10px; flex-wrap: wrap;}
+        .btn-back { background-color: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color); text-decoration: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; font-size: 12px; transition: all 0.3s; cursor: pointer;}
+        .btn-back:hover { background-color: var(--theme-color); color: #fff; border-color: var(--theme-color); transform: translateY(-2px); }
+
+        .role-mode-badge {
+            display: none;
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 700;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* FILTER SECTION (Search & Add Button) */
+        .filter-section { background: var(--bg-card); padding: 15px 20px; border-radius: 10px 10px 0 0; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color); border-left: 4px solid var(--theme-color); box-shadow: var(--shadow); flex-shrink: 0; z-index: 5; flex-wrap: wrap; gap: 10px;}
+        .search-input { background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 10px 15px; border-radius: 6px; font-size: 13px; width: 300px; outline: none; transition: 0.3s; color-scheme: dark; }
+        [data-theme="light"] .search-input { color-scheme: light; }
+        .search-input:focus { border-color: var(--theme-color); box-shadow: 0 0 8px var(--theme-glow); }
+        .btn-primary { background: var(--theme-color); color: #fff; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 10px var(--theme-glow); display: flex; align-items: center; justify-content: center; gap: 8px; text-transform: uppercase; }
+        .btn-primary:hover { filter: brightness(1.1); transform: translateY(-2px); }
+
+        /* TABLE CONTAINER (Scrollable) */
+        .table-container { flex: 1; background-color: var(--bg-card); border-radius: 0 0 10px 10px; border: 1px solid var(--border-color); border-top: none; box-shadow: var(--shadow); overflow-y: auto; transition: var(--theme-transition); }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        
+        /* Sticky Header inside Table */
+        thead th { position: sticky; top: 0; background: var(--input-bg); padding: 15px; color: var(--theme-color); font-size: 12px; text-transform: uppercase; border-bottom: 2px solid var(--theme-color); z-index: 2; white-space: nowrap; }
+        tbody td { padding: 15px; border-bottom: 1px solid var(--border-color); font-size: 13px; color: var(--text-main); transition: var(--theme-transition); }
+
+        .user-status { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+        .status-active { background: rgba(40, 167, 69, 0.2); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.4); }
+        .status-disabled { background: rgba(220, 53, 69, 0.2); color: #ff6b6b; border: 1px solid rgba(220, 53, 69, 0.4); }
+
+        .pending-status-pill {
+            display: inline-block;
+            background: rgba(255, 193, 7, 0.16);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.45);
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            margin-top: 5px;
+            text-transform: uppercase;
+        }
+
+        .btn-mini { padding: 6px 12px; font-size: 11px; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; margin-right: 5px; text-transform: uppercase; transition: all 0.2s;}
+        .btn-mini:hover { transform: translateY(-1px); }
+        .btn-disable { background: #ffc107; color: #121212; }
+        .btn-edit { background: var(--theme-color); color: white; }
+        
+        .row-disabled { opacity: 0.4; }
+        .pass-text { font-family: 'Courier New', Courier, monospace; color: var(--theme-color); letter-spacing: 0.5px; font-weight: bold;}
+        .emp-id-text { color: var(--theme-color); font-weight: 700; font-size: 13px; }
+        .emp-role-text { font-size: 11.5px; color: var(--text-muted); display: block; margin-top: 3px; }
+
+        /* 🔥 MODAL POP-UP DESIGN FOR ENTRY FORM 🔥 */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 20px; opacity: 0; transition: opacity 0.3s ease; }
+        .modal-overlay.active { display: flex; opacity: 1; }
+        .modal-container { background: var(--bg-card); width: 100%; max-width: 800px; border-radius: 12px; border: 1px solid var(--border-color); border-top: 4px solid var(--theme-color); box-shadow: 0 15px 40px rgba(0,0,0,0.5); transform: translateY(-20px); transition: all 0.3s ease; display: flex; flex-direction: column; max-height: 90vh; }
+        .modal-overlay.active .modal-container { transform: translateY(0); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 25px; border-bottom: 1px solid var(--border-color); }
+        .modal-header h2 { font-size: 18px; color: var(--theme-color); font-weight: 700; }
+        .close-btn { background: none; border: none; color: var(--text-muted); font-size: 26px; cursor: pointer; transition: 0.2s; line-height: 1; }
+        .close-btn:hover { color: #dc3545; }
+        .modal-body { padding: 30px; overflow-y: auto; overflow-x: hidden; }
+
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+        .form-group { display: flex; flex-direction: column; position: relative; margin-bottom: 5px; }
+        .form-group label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; font-weight: 600; transition: color 0.3s;}
+        .form-group input, .form-group select { padding: 12px 14px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-main); font-size: 13px; outline: none; transition: all 0.3s ease; width: 100%; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); color-scheme: dark;}
+        [data-theme="light"] .form-group input, [data-theme="light"] .form-group select { color-scheme: light; }
+        .form-group input:focus, .form-group select:focus { border-color: var(--theme-color); box-shadow: 0 0 10px var(--theme-glow); }
+        .form-group input:focus + label, .form-group select:focus + label, .form-group:focus-within label { color: var(--theme-color); }
+        select option { background-color: var(--bg-card); color: var(--text-main); }
+
+        /* SEARCHABLE DROPDOWN inside Modal */
+        .custom-dropdown-container { position: relative; width: 100%; }
+        .glassy-dropdown-list { position: absolute; top: calc(100% + 5px); left: 0; width: 100%; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); max-height: 200px; overflow-y: auto; z-index: 2000; display: none; }
+        .glassy-dropdown-list.show { display: block; }
+        .dropdown-item { padding: 12px 15px; font-size: 13px; color: var(--text-main); border-bottom: 1px solid var(--border-color); cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; }
+        .dropdown-item:last-child { border-bottom: none; }
+        .dropdown-item:hover { background: var(--theme-color); color: #fff; }
+        .emp-id-badge { font-size: 10px; opacity: 0.7; }
+        .no-result { padding: 12px 15px; font-size: 13px; color: #ff6b6b; font-style: italic; text-align: center; }
+
+        .btn-submit { grid-column: 1 / -1; padding: 14px; background: var(--theme-color); color: #ffffff; border: none; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; border-radius: 8px; cursor: pointer; font-size: 13px; box-shadow: 0 4px 15px var(--theme-glow); transition: all 0.3s ease; margin-top: 10px; display: flex; justify-content: center; align-items: center; gap: 8px; }
+        .btn-submit:hover { transform: translateY(-2px); filter: brightness(1.1); }
+        .empty-state { text-align: center; padding: 40px; color: var(--text-muted); font-size: 14px; font-weight: 600; }
+
+        /* Approval Modal Styling */
+        .approval-form-group { margin-bottom: 15px; }
+        .approval-form-group label { display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; }
+        .approval-input { width: 100%; padding: 11px 14px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-main); font-size: 13px; outline: none; transition: border-color 0.3s; }
+        .approval-input:focus { border-color: var(--theme-color); }
+
+        /* Toast Notification */
+        #toastPopup {
+            visibility: hidden; min-width: 260px; background-color: var(--theme-color); color: #fff;
+            text-align: center; border-radius: 8px; padding: 14px 20px; position: fixed; z-index: 3000;
+            right: 25px; bottom: 25px; font-size: 13px; font-weight: 700; box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+            opacity: 0; transition: opacity 0.3s, bottom 0.3s;
+        }
+        #toastPopup.show { visibility: visible; opacity: 1; bottom: 35px; }
+    </style>
+</head>
+<body>
+
+    <div class="main-content">
+        <!-- HEADER SECTION -->
+        <div class="header-section">
+            <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                <a href="dashboard_home.html" id="btnBackDashboard" class="btn-back" onclick="handleBackToDashboard(event)">← Dashboard</a>
+                <h1>
+                    👥 User Directory & Entry
+                    <span id="roleModeBadge" class="role-mode-badge">🏢 Office Mode</span>
+                </h1>
+            </div>
+        </div>
+
+        <!-- FILTER SECTION -->
+        <div class="filter-section">
+            <input type="text" id="tableSearchInput" class="search-input" placeholder="🔍 Search by Name, Emp ID, User ID..." onkeyup="filterTable()">
+            <button class="btn-primary" id="btnAddNewUser" onclick="openEntryModal(false)">➕ Add New User</button>
+        </div>
+
+        <!-- TABLE CONTAINER -->
+        <div class="table-container">
+            <table id="userTable">
+                <thead>
+                    <tr>
+                        <th>Emp ID</th>
+                        <th>Name & Designation</th>
+                        <th>User ID</th>
+                        <th>Password</th>
+                        <th>Contact</th>
+                        <th>Status</th>
+                        <th id="actionsHeader">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="userTableBody">
+                    <!-- Populated dynamically via JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ================= MODAL FOR NEW USER ENTRY & EDIT ================= -->
+    <div class="modal-overlay" id="entryModal">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2 id="modalTitle">➕ Register New User</h2>
+                <button class="close-btn" onclick="closeEntryModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="userEntryForm" onsubmit="handleFormSubmit(event)" autocomplete="off">
+                    <div class="form-grid">
+                        
+                        <!-- SEARCHABLE DROPDOWN -->
+                        <div class="form-group custom-dropdown-container">
+                            <label>Full Name (Select Active Employee)</label>
+                            <input type="text" id="uName" placeholder="🔍 Search Employee Name..." onfocus="toggleDropdown(true)" oninput="filterDropdown()" required>
+                            <input type="hidden" id="uEmpId">
+                            <div id="empDropdownList" class="glassy-dropdown-list">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Role / Designation</label>
+                            <input type="text" id="uRole" placeholder="e.g., Office Staff, Manager" required>
+                        </div>
+                        <div class="form-group"><label>User ID / Username</label><input type="text" id="uId" placeholder="e.g., rahul_atr" required></div>
+                        <div class="form-group"><label>Password</label><input type="password" id="uPass" placeholder="••••••••" required></div>
+                        <div class="form-group"><label>Contact Number</label><input type="tel" id="uContact" placeholder="e.g., +91 9876543210" required></div>
+                        
+                        <button type="submit" id="btnFormSubmit" class="btn-submit">💾 Save & Register User</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= APPROVAL REQUEST MODAL (ROUTES TO ApproveOffice.html) ================= -->
+    <div id="roleApprovalModal" class="modal-overlay" style="z-index: 1200;">
+        <div class="modal-container" style="max-width: 500px; border-top-color: var(--theme-color);">
+            <div class="modal-header">
+                <h2 id="approvalModalTitle" style="color: var(--theme-color);">🏢 Send Request to ApproveOffice.html</h2>
+                <button class="close-btn" onclick="closeRoleApprovalModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p id="approvalModalDesc" style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">
+                    অফিস পোর্টাল থেকে কোনো ইউজার যোগ, পরিবর্তন বা স্ট্যাটাস আপডেট করতে চাইলে তা অ্যাডমিনের <strong>ApproveOffice.html</strong>-এ পাঠানো হবে।
+                </p>
+                <div class="approval-form-group">
+                    <label>Action & Target User</label>
+                    <input type="text" id="approvalTargetSummary" class="approval-input" readonly style="color: var(--theme-color); font-weight: 700;">
+                </div>
+                <div class="approval-form-group">
+                    <label>Reason / Remarks for Admin Approval <span style="color: #ff4d4d;">*</span></label>
+                    <textarea id="approvalReasonInput" class="approval-input" rows="3" placeholder="Explain clearly why this action is needed..." style="resize: none;"></textarea>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 18px;">
+                    <button type="button" class="btn-primary" style="flex: 1; justify-content: center;" onclick="confirmRoleApprovalSubmit()">📤 Send for Approval</button>
+                    <button type="button" class="btn-primary" style="background: #dc3545; box-shadow: 0 4px 10px rgba(220,53,69,0.3);" onclick="closeRoleApprovalModal()">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastPopup">Message</div>
+
+    <script>
+        // =========================================================================================
+        // 1. PORTAL ROLE DETECTION (ADMIN vs OFFICE STAFF) & NAVIGATION
+        // =========================================================================================
+        let currentPortalMode = "admin";
+        let loggedUserId = "ADMIN";
+        let loggedUserName = "Super Admin";
+
+        function checkPortalPermissions() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewParam = (urlParams.get('view') || '').toLowerCase();
+
+            let parentPath = "";
+            try {
+                if (window.parent && window.parent !== window) {
+                    parentPath = (window.parent.location.pathname || '').toLowerCase();
+                }
+            } catch (e) {}
+
+            const badge = document.getElementById('roleModeBadge');
+            const backBtn = document.getElementById('btnBackDashboard');
+            const addBtn = document.getElementById('btnAddNewUser');
+            const actHeader = document.getElementById('actionsHeader');
+
+            if (viewParam === 'office' || parentPath.includes('officedashboard')) {
+                currentPortalMode = 'office';
+                loggedUserId = urlParams.get('userId') || sessionStorage.getItem('atr_logged_office_id') || localStorage.getItem('atr_logged_office_id') || "OFF-101";
+                loggedUserName = urlParams.get('userName') || "Office Staff";
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🏢 Office Mode (${loggedUserName}) - Requires Approval`;
+                    badge.style.borderColor = "#ffc107";
+                    badge.style.color = "#ffc107";
+                }
+                if (backBtn) backBtn.href = "office/office_dashboard_home.html";
+
+            } else if (viewParam === 'supervisor' || parentPath.includes('supervisordashboard')) {
+                currentPortalMode = 'supervisor';
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🛡️ Supervisor Mode - View Only`;
+                    badge.style.borderColor = "#ffc107";
+                    badge.style.color = "#ffc107";
+                }
+                if (addBtn) addBtn.style.display = 'none';
+                if (actHeader) actHeader.style.display = 'none';
+                if (backBtn) backBtn.href = "supervisor/supervisor_dashboard_home.html";
+            } else {
+                currentPortalMode = 'admin';
+                if (backBtn) backBtn.href = "dashboard_home.html";
+            }
+        }
+
+        function handleBackToDashboard(event) {
+            if (currentPortalMode === 'office') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.loadOfficeWorkspaceHome === 'function') {
+                        window.parent.loadOfficeWorkspaceHome();
+                        return;
+                    }
+                } catch (e) {}
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "office_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "office/office_dashboard_home.html";
+            } else if (currentPortalMode === 'supervisor') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window) {
+                        const parentHomeLink = window.parent.document.querySelector('.dashboard-home-link');
+                        if (parentHomeLink) {
+                            window.location.href = parentHomeLink.href;
+                            return;
+                        }
+                    }
+                } catch (e) {}
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "supervisor_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "supervisor/supervisor_dashboard_home.html";
+            }
+        }
+
+        // =========================================================================================
+        // 2. USER DATABASE SYNC & RENDER LOGIC (LOCALSTORAGE)
+        // =========================================================================================
+        const DEFAULT_USERS = [
+            { id: "OFF-101", userId: "OFF-101", name: "Anuradha Dipali", username: "anuradha_atr", pass: "office123", contact: "+91 9876543210", designation: "Accounts & Billing Executive", status: "Active" },
+            { id: "OFF-102", userId: "OFF-102", name: "Vikas Pandey", username: "vikas_atr", pass: "office123", contact: "+91 9123456789", designation: "HR & Employee Coordinator", status: "Active" },
+            { id: "OFF-103", userId: "OFF-103", name: "Murshed Akhter", username: "murshed_atr", pass: "office123", contact: "+91 8765432101", designation: "Purchase & Stock Executive", status: "Active" }
+        ];
+
+        let usersList = [];
+        let pendingActionObj = null;
+
+        function loadUserDatabase() {
+            const possibleKeys = ['atr_office_users', 'atr_users', 'new_user_entry', 'NewUserEntry', 'users', 'office_users', 'atr_user_list'];
+            let foundData = null;
+
+            for (let k of possibleKeys) {
+                try {
+                    const parsed = JSON.parse(localStorage.getItem(k));
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        foundData = parsed;
+                        break;
+                    }
+                } catch (e) {}
+            }
+
+            if (foundData) {
+                usersList = foundData.map(u => ({
+                    id: String(u.userId || u.id || u.empId || "").trim(),
+                    name: String(u.name || u.userName || u.fullName || "").trim(),
+                    username: String(u.username || u.user_id || u.id || "").trim(),
+                    pass: String(u.pass || u.password || "office123").trim(),
+                    contact: String(u.contact || u.phone || u.mobile || "N/A").trim(),
+                    designation: String(u.designation || u.role || u.userType || "Office Staff").trim(),
+                    status: String(u.status || "Active").trim(),
+                    pendingStatus: u.pendingStatus || null
+                }));
+            } else {
+                usersList = JSON.parse(JSON.stringify(DEFAULT_USERS));
+                saveUserDatabase();
+            }
+        }
+
+        function saveUserDatabase() {
+            localStorage.setItem('atr_office_users', JSON.stringify(usersList));
+            localStorage.setItem('atr_users', JSON.stringify(usersList));
+            localStorage.setItem('new_user_entry', JSON.stringify(usersList));
+        }
+
+        window.onload = () => {
+            checkPortalPermissions();
+            loadUserDatabase();
+            fetchActiveEmployeesForDropdown();
+            renderTable();
+        };
+
+        window.addEventListener('storage', function(e) {
+            const keys = ['atr_office_users', 'atr_users', 'new_user_entry', 'atr_employees'];
+            if (keys.includes(e.key)) {
+                loadUserDatabase();
+                fetchActiveEmployeesForDropdown();
+                renderTable();
+            }
+        });
+
+        function renderTable() {
+            const tbody = document.getElementById('userTableBody');
+            tbody.innerHTML = '';
+            
+            const filter = document.getElementById("tableSearchInput").value.toLowerCase();
+            const canModify = (currentPortalMode === 'admin' || currentPortalMode === 'office');
+
+            let filteredUsers = usersList.filter(u => 
+                u.id.toLowerCase().includes(filter) || 
+                u.name.toLowerCase().includes(filter) || 
+                u.username.toLowerCase().includes(filter)
+            );
+
+            if (filteredUsers.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="${canModify ? 7 : 6}" class="empty-state">No users found.</td></tr>`;
+                return;
+            }
+
+            filteredUsers.forEach((u) => {
+                const tr = document.createElement('tr');
+                if (u.status !== 'Active') tr.classList.add('row-disabled');
+
+                const statusClass = u.status === 'Active' ? 'status-active' : 'status-disabled';
+                const toggleBtnClass = u.status === 'Active' ? 'btn-disable' : 'btn-edit';
+                const toggleBtnText = u.status === 'Active' ? 'Disable' : 'Enable';
+                const pendingBadge = u.pendingStatus ? `<br><span style="font-size:10px; color:#ffc107; display:inline-block; margin-top:4px; font-weight:700;">⏳ ${u.pendingStatus}</span>` : '';
+
+                let actionHtml = '';
+                if (canModify) {
+                    actionHtml = `
+                    <td style="white-space: nowrap;">
+                        <button class="btn-mini ${toggleBtnClass}" onclick="toggleUserStatus('${u.id}')">${toggleBtnText}</button>
+                        <button class="btn-mini btn-edit" onclick="openEntryModal(true, '${u.id}')">Edit</button>
+                    </td>`;
+                }
+
+                tr.innerHTML = `
+                    <td class="emp-id-text">${u.id}</td>
+                    <td><strong>${u.name}</strong><span class="emp-role-text">${u.designation}</span></td>
+                    <td>${u.username}</td>
+                    <td class="pass-text">${u.pass}</td>
+                    <td>${u.contact}</td>
+                    <td>
+                        <span class="user-status ${statusClass}">${u.status}</span>
+                        ${pendingBadge}
+                    </td>
+                    ${actionHtml}
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filterTable() {
+            renderTable();
+        }
+
+        // =====================================================================
+        // 3. EMPLOYEES DATA FETCHING FOR DROPDOWN
+        // =====================================================================
+        let activeEmployees = [];
+
+        function fetchActiveEmployeesForDropdown() {
+            const allEmps = JSON.parse(localStorage.getItem('atr_employees')) || [];
+            activeEmployees = allEmps.filter(e => e.status === 'Active').map(e => ({
+                empId: e.id,
+                name: e.name,
+                phone: e.personal_number || e.phone || "N/A"
+            }));
+            
+            if (activeEmployees.length === 0) {
+                activeEmployees = [
+                    { empId: "EMP001", name: "Rahul Sk", phone: "+91 9876543210" },
+                    { empId: "EMP002", name: "Amit Das", phone: "+91 9123456789" },
+                    { empId: "EMP003", name: "Sumi", phone: "+91 8765432101" }
+                ];
+            }
+            populateDropdown(activeEmployees);
+        }
+
+        const searchInput = document.getElementById('uName');
+        const empIdInput = document.getElementById('uEmpId');
+        const dropdownList = document.getElementById('empDropdownList');
+        const contactInput = document.getElementById('uContact');
+
+        function populateDropdown(dataList) {
+            dropdownList.innerHTML = '';
+            if (dataList.length === 0) {
+                dropdownList.innerHTML = '<div class="no-result">No active employee found</div>';
+                return;
+            }
+
+            dataList.forEach(emp => {
+                const item = document.createElement('div');
+                item.className = 'dropdown-item';
+                item.innerHTML = `<span>${emp.name}</span> <span class="emp-id-badge">${emp.empId}</span>`;
+                
+                item.onclick = () => {
+                    searchInput.value = emp.name;
+                    empIdInput.value = emp.empId; 
+                    contactInput.value = emp.phone;
+                    toggleDropdown(false);
+                };
+                dropdownList.appendChild(item);
+            });
+        }
+
+        function filterDropdown() {
+            const query = searchInput.value.toLowerCase();
+            const filtered = activeEmployees.filter(emp => emp.name.toLowerCase().includes(query) || emp.empId.toLowerCase().includes(query));
+            populateDropdown(filtered);
+            toggleDropdown(true);
+            empIdInput.value = ""; 
+        }
+
+        function toggleDropdown(show) {
+            if (show) dropdownList.classList.add('show');
+            else dropdownList.classList.remove('show');
+        }
+
+        document.addEventListener('click', function(e) {
+            if (!searchInput.contains(e.target) && !dropdownList.contains(e.target)) {
+                toggleDropdown(false);
+            }
+        });
+
+        // =====================================================================
+        // 4. MODAL CONTROL & FORM LOGIC (Handles Both Add & Edit)
+        // =====================================================================
+        let editModeId = null;
+
+        function openEntryModal(isEdit = false, rowId = null) {
+            if (currentPortalMode !== 'admin' && currentPortalMode !== 'office') return;
+
+            const modalTitle = document.getElementById('modalTitle');
+            const submitBtn = document.getElementById('btnFormSubmit');
+            
+            if (isEdit && rowId) {
+                editModeId = rowId;
+                modalTitle.innerText = "✏️ Edit User";
+                submitBtn.innerText = currentPortalMode === 'office' ? "📤 Submit Edit for Approval" : "💾 Update User Data";
+                
+                const user = usersList.find(u => u.id === rowId);
+                if (user) {
+                    document.getElementById('uEmpId').value = user.id;
+                    document.getElementById('uName').value = user.name;
+                    document.getElementById('uId').value = user.username;
+                    document.getElementById('uPass').value = user.pass;
+                    document.getElementById('uContact').value = user.contact;
+                    document.getElementById('uRole').value = user.designation;
+                }
+            } else {
+                editModeId = null;
+                modalTitle.innerText = "➕ Register New User";
+                submitBtn.innerText = currentPortalMode === 'office' ? "📤 Request New User Creation" : "💾 Save & Register User";
+                document.getElementById('userEntryForm').reset();
+                document.getElementById('uEmpId').value = "";
+                document.getElementById('uRole').value = "Office Staff";
+            }
+            
+            document.getElementById('entryModal').classList.add('active');
+        }
+
+        function closeEntryModal() {
+            document.getElementById('entryModal').classList.remove('active');
+            document.getElementById('userEntryForm').reset();
+            document.getElementById('uEmpId').value = "";
+            editModeId = null; 
+            toggleDropdown(false);
+        }
+
+        function handleFormSubmit(event) {
+            event.preventDefault();
+            if (currentPortalMode !== 'admin' && currentPortalMode !== 'office') return;
+            
+            const rawEmpId = document.getElementById('uEmpId').value.trim(); 
+            const name = searchInput.value.trim();
+            const role = document.getElementById('uRole').value.trim() || "Office Staff";
+            const username = document.getElementById('uId').value.trim();
+            const pass = document.getElementById('uPass').value.trim();
+            const contact = contactInput.value.trim();
+
+            if(!name || !username || !pass || !contact) { alert("Please fill all fields!"); return; }
+
+            const empId = rawEmpId || `OFF-${Math.floor(100 + Math.random() * 900)}`;
+
+            // Office Portal: Route to Approval
+            if (currentPortalMode === 'office') {
+                const oldData = editModeId !== null ? usersList.find(u => u.id === editModeId) : null;
+                const payload = {
+                    type: editModeId !== null ? 'USER_EDIT' : 'USER_ADD',
+                    actionLabel: editModeId !== null ? "EDIT SYSTEM USER" : "ADD NEW SYSTEM USER",
+                    summary: `${name} (${username}) - Role: ${role}`,
+                    oldData: oldData ? { ...oldData } : null,
+                    newData: { id: empId, userId: empId, name, username, pass, contact, designation: role, status: oldData ? oldData.status : "Active" }
+                };
+                openRoleApprovalModal(payload);
+                closeEntryModal();
+                return;
+            }
+
+            // Admin Portal: Direct Save
+            if (editModeId !== null) {
+                const userIdx = usersList.findIndex(u => u.id === editModeId);
+                if (userIdx > -1) {
+                    usersList[userIdx].id = empId;
+                    usersList[userIdx].userId = empId;
+                    usersList[userIdx].name = name;
+                    usersList[userIdx].username = username;
+                    usersList[userIdx].pass = pass;
+                    usersList[userIdx].contact = contact;
+                    usersList[userIdx].designation = role;
+                    usersList[userIdx].pendingStatus = null;
+                }
+            } else {
+                const isDuplicate = usersList.some(u => u.username.toLowerCase() === username.toLowerCase());
+                if (isDuplicate) {
+                    alert("User ID / Username already exists. Please choose a different one.");
+                    return;
+                }
+                usersList.push({
+                    id: empId,
+                    userId: empId,
+                    name: name,
+                    username: username,
+                    pass: pass,
+                    contact: contact,
+                    designation: role,
+                    status: "Active",
+                    pendingStatus: null
+                });
+            }
+            
+            saveUserDatabase();
+            closeEntryModal();
+            renderTable();
+            showToast("✅ User record saved successfully!");
+        }
+
+        function toggleUserStatus(uid) {
+            const user = usersList.find(u => u.id === uid);
+            if (!user) return;
+            const newStatus = user.status === 'Active' ? 'Disabled' : 'Active';
+
+            // Office Portal: Route Status Change to Approval
+            if (currentPortalMode === 'office') {
+                openRoleApprovalModal({
+                    type: 'USER_STATUS_TOGGLE',
+                    actionLabel: `${newStatus === 'Active' ? 'ENABLE' : 'DISABLE'} SYSTEM USER`,
+                    summary: `${user.name} (${user.id}) -> ${newStatus}`,
+                    oldData: { ...user },
+                    newData: { ...user, status: newStatus }
+                });
+                return;
+            }
+
+            // Admin Portal: Direct Status Toggle
+            user.status = newStatus;
+            user.pendingStatus = null;
+            saveUserDatabase();
+            renderTable();
+            showToast(`✅ User status changed to ${newStatus}!`);
+        }
+
+        // =========================================================================================
+        // 5. OFFICE APPROVAL MODAL ENGINE
+        // =========================================================================================
+        function openRoleApprovalModal(actionPayload) {
+            pendingActionObj = actionPayload;
+            document.getElementById('approvalTargetSummary').value = `${actionPayload.actionLabel} — ${actionPayload.summary}`;
+            document.getElementById('approvalReasonInput').value = '';
+            document.getElementById('roleApprovalModal').classList.add('active');
+            setTimeout(() => document.getElementById('approvalReasonInput').focus(), 50);
+        }
+
+        function closeRoleApprovalModal() {
+            document.getElementById('roleApprovalModal').classList.remove('active');
+            pendingActionObj = null;
+        }
+
+        function confirmRoleApprovalSubmit() {
+            const reason = document.getElementById('approvalReasonInput').value.trim();
+            if (!reason) {
+                alert("⚠️ Please enter a valid reason for Admin Approval.");
+                return;
+            }
+            if (!pendingActionObj) return;
+
+            // Mark existing user as pending if it's an edit or status toggle
+            if (pendingActionObj.type === 'USER_STATUS_TOGGLE' || pendingActionObj.type === 'USER_EDIT') {
+                const targetId = pendingActionObj.oldData.id;
+                const idx = usersList.findIndex(u => u.id === targetId);
+                if (idx > -1) {
+                    usersList[idx].pendingStatus = pendingActionObj.type === 'USER_STATUS_TOGGLE' ? 'Status Pending' : 'Edit Pending';
+                    saveUserDatabase();
+                    renderTable();
+                }
+            }
+
+            const newReq = {
+                reqId: "OFF-USR-" + Date.now().toString().slice(-5),
+                userId: loggedUserId,
+                userName: loggedUserName,
+                designation: "Office Staff",
+                module: "NewUserEntry.html",
+                action: pendingActionObj.actionLabel,
+                summary: pendingActionObj.summary,
+                oldData: pendingActionObj.oldData,
+                newData: pendingActionObj.newData,
+                reason: reason,
+                timestamp: new Date().toLocaleString('en-IN'),
+                status: "Pending"
+            };
+
+            const officeQueue = JSON.parse(localStorage.getItem('atr_office_approvals')) || [];
+            officeQueue.unshift(newReq);
+            localStorage.setItem('atr_office_approvals', JSON.stringify(officeQueue));
+            localStorage.setItem('approve_office_requests', JSON.stringify(officeQueue));
+            localStorage.setItem('ApproveOffice_requests', JSON.stringify(officeQueue));
+
+            logOfficeWork(
+                "System Admin (NewUserEntry.html)",
+                newReq.reqId,
+                `${pendingActionObj.actionLabel}: ${pendingActionObj.summary}`,
+                "Sent for Approval"
+            );
+
+            try {
+                if (window.parent && window.parent !== window && typeof window.parent.refreshNotificationsUI === 'function') {
+                    window.parent.refreshNotificationsUI();
+                }
+            } catch (e) {}
+
+            closeRoleApprovalModal();
+            showToast(`📤 Request sent to ApproveOffice.html for Admin Approval!`);
+        }
+
+        function logOfficeWork(moduleName, refNo, desc, status) {
+            const workLogs = JSON.parse(localStorage.getItem('atr_office_daily_work')) || [];
+            const todayStr = new Date().toISOString().split('T')[0];
+            const nowTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+            workLogs.unshift({
+                id: "WRK-" + Date.now().toString().slice(-5),
+                userId: loggedUserId,
+                userName: loggedUserName,
+                date: todayStr,
+                time: nowTime,
+                module: moduleName,
+                refNo: refNo,
+                desc: desc,
+                status: status
+            });
+            localStorage.setItem('atr_office_daily_work', JSON.stringify(workLogs));
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toastPopup');
+            toast.innerText = msg;
+            toast.classList.add('show');
+            setTimeout(() => { toast.classList.remove('show'); }, 3500);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Menu Allotment</title>
+    
+    <script>
+        function applyDashboardTheme() {
+            const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        }
+        applyDashboardTheme();
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'atr_theme' || !e.key) {
+                applyDashboardTheme();
+            }
+        });
+
+        // =========================================================================
+        // 🚀 CENTRAL MASTER MENU CONFIGURATION (SYNCED WITH DASHBOARD.HTML)
+        // =========================================================================
+        const MASTER_MENU_CONFIG = [
+            {
+                sectionName: "🛠️ Master Section",
+                items: [
+                    { id: "menu_new_user", name: "New User Entry", url: "NewUserEntry.html", icon: "👤" },
+                    { id: "menu_allotment", name: "Menu Allotment", url: "MenuAlotment.html", icon: "📋" },
+                    { id: "menu_head_entry", name: "Head Entry", url: "HeadAllotment.html", icon: "🏷️" },
+                    { id: "menu_bank_entry", name: "Bank Entry", url: "BankEntry.html", icon: "🏦" },
+                    { id: "menu_tc_entry", name: "Add T&C Entry", url: "T&CEntry.html", icon: "📜" }
+                ]
+            },
+            {
+                sectionName: "✅ Approval Section",
+                items: [
+                    { id: "menu_apprv_office", name: "Office User Requests", url: "ApproveOffice.html", icon: "🏢" },
+                    { id: "menu_apprv_supervisor", name: "Supervisor Requests", url: "ApproveSupervisor.html", icon: "🛡️" },
+                    { id: "menu_apprv_logs", name: "Approval History", url: "ApprovalLogs.html", icon: "📜" }
+                ]
+            },
+            {
+                sectionName: "👥 Employee Section",
+                items: [
+                    { id: "menu_emp_category", name: "Position Category", url: "EmployeeCategory.html", icon: "👔" },
+                    { id: "menu_emp_joining", name: "Employee Joining", url: "RegisteredEmployeeRecords.html", icon: "📝" },
+                    { id: "menu_emp_sitetag", name: "Site Tagging", url: "SiteTagging.html", icon: "📍" },
+                    { id: "menu_emp_subid", name: "Sub ID Create", url: "EmployeeSubId.html", icon: "🆔" },
+                    { id: "menu_emp_paymentlist", name: "Payment List", url: "Paymentlist.html", icon: "📄" },
+                    { id: "menu_emp_attendance", name: "Attendence", url: "EmployeeAttendance.html", icon: "📅" },
+                    { id: "menu_emp_leave", name: "Site Leave Entry", url: "SiteLeaveEntry.html", icon: "🚪" },
+                    { id: "menu_emp_ledger", name: "Employee Ledger", url: "EmployeeLedger.html", icon: "📖" }
+                ]
+            },
+            {
+                sectionName: "🏗️ Contractor Section",
+                items: [
+                    { id: "menu_cont_add", name: "Add Contractor", url: "AddContractor.html", icon: "👷" },
+                    { id: "menu_cont_siteorder", name: "Site Order Entry", url: "SiteOrderEntry.html", icon: "📦" },
+                    { id: "menu_cont_product", name: "Product Entry", url: "ProductEntry.html", icon: "🧱" },
+                    { id: "menu_cont_ledger", name: "Contractor Ledger", url: "ContractorLedger.html", icon: "📖" }
+                ]
+            },
+            {
+                sectionName: "⚙️ Mobilization Section",
+                items: [
+                    { id: "menu_mob_addequip", name: "Add Equipment", url: "AddEquipment.html", icon: "🚜" },
+                    { id: "menu_mob_orderequip", name: "Site Order Equipment", url: "SiteOrderEquipment.html", icon: "📋" },
+                    { id: "menu_mob_leave", name: "Equipment Leave", url: "EquipmentLeave.html", icon: "⏱️" },
+                    { id: "menu_mob_sitetag", name: "Site Tagging Equipment", url: "SiteTaggingEquipment.html", icon: "📍" }
+                ]
+            },
+            {
+                sectionName: "🏢 Company Section",
+                items: [
+                    { id: "menu_comp_add", name: "Add Company", url: "AddCompany.html", icon: "🏢" },
+                    { id: "menu_comp_bal", name: "Balance Received", url: "BalanceReceived.html", icon: "💰" },
+                    { id: "menu_comp_ledger", name: "Company Ledger", url: "CompanyLedger.html", icon: "📊" },
+                    { id: "menu_comp_loan", name: "Company Loan Management", url: "CompanyLoanManagement.html", icon: "🏦" },
+                    { id: "menu_comp_vehicle", name: "Vehicle Management", url: "VehicleManagement.html", icon: "🚜" },
+                    { id: "menu_comp_incexp", name: "Income Expense Entry", url: "IncomeExpenseEntry.html", icon: "💸" },
+                    { id: "menu_comp_bank", name: "Bank Statement", url: "bankstatement.html", icon: "📜" }
+                ]
+            },
+            {
+                sectionName: "🛡️ Supervisor Section",
+                items: [
+                    { id: "menu_sup_add", name: "Add Supervisor", url: "AddSupervisor.html", icon: "👤" },
+                    { id: "menu_sup_tag", name: "Site Tagging Supervisor", url: "SiteTaggingSupervisor.html", icon: "📍" },
+                    { id: "menu_sup_ledger", name: "Supervisor Ledger", url: "SupervisorLedger.html", icon: "📖" }
+                ]
+            },
+            {
+                sectionName: "🛍️ Sales Section",
+                items: [
+                    { id: "menu_sale_po", name: "Purchase Order Entry", url: "PurchaseOrderEntry.html", icon: "📄" },
+                    { id: "menu_sale_invoice", name: "Invoice Entry", url: "InvoiceEntry.html", icon: "🧾" },
+                    { id: "menu_sale_viewsite", name: "View Site", url: "ViewSite.html", icon: "👁️" }
+                ]
+            },
+            {
+                sectionName: "🛒 Purchase Section",
+                items: [
+                    { id: "menu_pur_addret", name: "Add Retailer", url: "AddRetailer.html", icon: "🏪" },
+                    { id: "menu_pur_invoice", name: "Retail Site Invoice", url: "RetailSiteInvoice.html", icon: "🧾" },
+                    { id: "menu_pur_gst", name: "GST Report", url: "GstReport.html", icon: "📈" },
+                    { id: "menu_pur_nongst", name: "Non GST Report", url: "NonGstReport.html", icon: "📉" },
+                    { id: "menu_pur_ledger", name: "Retail Ledger", url: "RetailLedger.html", icon: "📖" }
+                ]
+            },
+            {
+                sectionName: "💳 Payment Section",
+                items: [
+                    { id: "menu_pay_all", name: "All Type Payment", url: "AllTypePayment.html", icon: "💸" }
+                ]
+            },
+            {
+                sectionName: "📊 Report Section",
+                items: [
+                    { id: "menu_rpt_MobilizationReport", name: "Mobilization Report", url: "MobilizationReport.html", icon: "🚜" },
+                    { id: "menu_rpt_emp", name: "Employee Report", url: "EmployeeReport.html", icon: "👥" },
+                    { id: "menu_rpt_cont", name: "Contractor Report", url: "ContractorReport.html", icon: "👷" },
+                    { id: "menu_rpt_comp", name: "Company Report", url: "CompanyReport.html", icon: "🏢" },
+                    { id: "menu_rpt_sup", name: "Supervisor Report", url: "SupervisorReport.html", icon: "🛡️" },
+                    { id: "menu_rpt_sales", name: "Selles Report", url: "SalesReport.html", icon: "💰" },
+                    { id: "menu_rpt_pur", name: "Purchase Report", url: "PurchaseReport.html", icon: "🛍️" },
+                    { id: "menu_rpt_gstdown", name: "GST Bill Download", url: "GstBillDownload.html", icon: "📥" },
+                    { id: "menu_rpt_nongstdown", name: "Non GST Bill Download", url: "NonGstBillDownload.html", icon: "📥" },
+                    { id: "menu_rpt_fullsite", name: "Full Site Report Ledger", url: "FullSiteLedger.html", icon: "📊" }
+                ]
+            },
+            {
+                sectionName: "📦 Stock Management",
+                items: [
+                    { id: "menu_stk_view", name: "Add/View Stock", url: "StockView.html", icon: "🔍" },
+                    { id: "menu_stk_current", name: "Current Stock", url: "CurrentStock.html", icon: "📊" },
+                    { id: "menu_stk_transfer", name: "Stock Transfer", url: "StockTransfer.html", icon: "🔄" },
+                    { id: "menu_stk_report", name: "Stock Report", url: "StockReport.html", icon: "📋" }
+                ]
+            },
+            {
+                sectionName: "📜 Company Document",
+                items: [
+                    { id: "menu_doc_list", name: "Create Doc List", url: "CreateDocList.html", icon: "📁" },
+                    { id: "menu_doc_backup", name: "Company Full Backup", url: "Backup.html", icon: "💾" }
+                ]
+            }
+        ];
+        
+        localStorage.setItem('atr_master_menu', JSON.stringify(MASTER_MENU_CONFIG));
+
+        const MOCK_ROLES = ["Manager", "Accountant", "Site Supervisor", "Admin", "HR", "Staff", "Engineer", "Office Staff"];
+    </script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-body: transparent; --bg-card: #1e1e1e;
+            --text-main: #ffffff; --text-muted: #b0b0b0;
+            --border-color: rgba(255, 255, 255, 0.12);
+            --glass-bg: rgba(30, 30, 30, 0.75);
+            --input-bg: rgba(15, 15, 15, 0.6);
+            --shadow: 0 4px 20px rgba(0,0,0,0.4);
+            
+            --theme-color: #0888C9;
+            --theme-glow: rgba(8, 136, 201, 0.3);
+            --theme-transition: all 0.3s ease;
+        }
+
+        [data-theme="light"] {
+            --bg-card: #ffffff; --text-main: #1a1a1a; --text-muted: #666666;
+            --border-color: rgba(0, 0, 0, 0.12); --glass-bg: rgba(255, 255, 255, 0.85);
+            --input-bg: rgba(240, 240, 240, 0.8); --shadow: 0 8px 25px rgba(0,0,0,0.06);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; -webkit-font-smoothing: antialiased; }
+        body { background-color: var(--bg-body); color: var(--text-main); height: 100vh; overflow: hidden; display: flex; flex-direction: column; transition: var(--theme-transition); }
+        .main-content { padding: 20px 40px; width: 100%; max-width: 1400px; margin: 0 auto; flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; flex-wrap: wrap; gap: 15px;}
+        .header h1 { font-size: 22px; color: var(--theme-color); font-weight: 700; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .btn-back-dash { background: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color); text-decoration: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; font-size: 12px; transition: 0.3s; cursor: pointer; }
+        .btn-back-dash:hover { background: var(--theme-color); color: #fff; border-color: var(--theme-color); }
+
+        .role-mode-badge {
+            display: none;
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 700;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .filter-section { background: var(--bg-card); padding: 15px 20px; border-radius: 10px 10px 0 0; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color); border-left: 4px solid var(--theme-color); box-shadow: var(--shadow); flex-shrink: 0; flex-wrap: wrap; gap: 10px;}
+        .search-input { background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 10px 15px; border-radius: 6px; font-size: 13px; width: 250px; outline: none; transition: 0.3s; color-scheme: dark;}
+        [data-theme="light"] .search-input { color-scheme: light; }
+        .search-input:focus { border-color: var(--theme-color); box-shadow: 0 0 8px var(--theme-glow); }
+        .btn-primary { background: var(--theme-color); color: #fff; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 10px var(--theme-glow); display: inline-flex; align-items: center; justify-content: center; gap: 8px;}
+        .btn-primary:hover { filter: brightness(1.1); transform: translateY(-2px); }
+
+        .table-container { flex: 1; background: var(--bg-card); border-radius: 0 0 10px 10px; border: 1px solid var(--border-color); border-top: none; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        thead th { position: sticky; top: 0; background: var(--input-bg); padding: 15px 15px; color: var(--theme-color); font-size: 12px; text-transform: uppercase; border-bottom: 2px solid var(--theme-color); z-index: 5;}
+        tbody td { padding: 15px; border-bottom: 1px solid var(--border-color); font-size: 13px; transition: var(--theme-transition); }
+        .badge { background: rgba(8, 136, 201, 0.15); color: var(--theme-color); padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin: 2px; display: inline-block; border: 1px solid rgba(8, 136, 201, 0.3); }
+
+        /* MODAL */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 1000; display: none; justify-content: center; align-items: center; padding: 20px; opacity: 0; transition: opacity 0.3s ease; }
+        .modal-overlay.show { display: flex; opacity: 1; }
+        .modal-container { background: var(--bg-card); width: 100%; max-width: 850px; max-height: 90vh; overflow-y: auto; border-radius: 12px; border: 1px solid var(--theme-color); box-shadow: 0 15px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column; transform: translateY(-20px); transition: all 0.3s ease; }
+        .modal-overlay.show .modal-container { transform: translateY(0); }
+        .modal-header { padding: 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; position: sticky; top:0; background: var(--bg-card); z-index: 10; }
+        .close-btn { background: none; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; transition: 0.2s;}
+        .close-btn:hover { color: #dc3545; }
+        .modal-body { padding: 25px; }
+        
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        @media(max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
+        .form-group label { display: block; font-size: 12px; color: var(--text-muted); font-weight: bold; text-transform: uppercase; margin-bottom: 8px; }
+        .form-select { width: 100%; background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 12px; border-radius: 6px; font-size: 14px; outline: none; transition: 0.3s; color-scheme: dark;}
+        [data-theme="light"] .form-select { color-scheme: light; }
+        .form-select:focus { border-color: var(--theme-color); }
+        .form-select option { background-color: var(--bg-card); color: var(--text-main); }
+        
+        /* 🔥 PURE HIERARCHICAL TREE DESIGN 🔥 */
+        .menu-section { border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 12px; overflow: hidden; background: var(--input-bg); }
+        .menu-section-header { 
+            background: rgba(0,0,0,0.2); padding: 12px 15px; font-weight: bold; color: var(--theme-color); 
+            font-size: 14px; display: flex; justify-content: space-between; align-items: center; 
+            cursor: pointer; transition: background 0.3s; user-select: none;
+        }
+        .menu-section-header:hover { background: rgba(8, 136, 201, 0.1); }
+        .tree-arrow { display: inline-block; transition: transform 0.3s ease; font-size: 12px; margin-right: 8px; }
+        .tree-arrow.open { transform: rotate(90deg); }
+        
+        .menu-tree { 
+            display: none; flex-direction: column; gap: 12px; padding: 15px 15px 15px 40px; 
+            background: var(--bg-card); border-top: 1px solid var(--border-color); position: relative;
+        }
+        
+        .menu-tree::before {
+            content: ''; position: absolute; left: 24px; top: 0; bottom: 25px; 
+            width: 1px; border-left: 1px dashed var(--theme-color); opacity: 0.5;
+        }
+
+        .menu-item { 
+            display: flex; align-items: center; gap: 10px; font-size: 13px; 
+            color: var(--text-main); position: relative; 
+        }
+        
+        .menu-item::before {
+            content: ''; position: absolute; left: -16px; top: 50%; width: 12px; 
+            height: 1px; border-top: 1px dashed var(--theme-color); opacity: 0.5;
+        }
+
+        .menu-item input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--theme-color); cursor: pointer; }
+        .menu-item label { cursor: pointer; display: flex; align-items: center; gap: 8px; user-select: none; flex: 1;}
+
+        /* Approval Modal Styling */
+        .approval-form-group { margin-bottom: 15px; }
+        .approval-form-group label { display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; }
+        .approval-input { width: 100%; padding: 11px 14px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-main); font-size: 13px; outline: none; transition: border-color 0.3s; }
+        .approval-input:focus { border-color: #ffc107; }
+
+        #toastPopup {
+            visibility: hidden; min-width: 260px; background-color: var(--theme-color); color: #fff;
+            text-align: center; border-radius: 8px; padding: 14px 20px; position: fixed; z-index: 3000;
+            right: 25px; bottom: 25px; font-size: 13px; font-weight: 700; box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+            opacity: 0; transition: opacity 0.3s, bottom 0.3s;
+        }
+        #toastPopup.show { visibility: visible; opacity: 1; bottom: 35px; }
+    </style>
+</head>
+<body>
+
+    <div class="main-content">
+        <div class="header">
+            <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                <a href="dashboard_home.html" id="btnBackDashboard" class="btn-back-dash" onclick="handleBackToDashboard(event)">← Dashboard</a>
+                <h1>
+                    🔐 User Menu Allotment
+                    <span id="roleModeBadge" class="role-mode-badge">🏢 Office Mode (Requires Admin Approval)</span>
+                </h1>
+            </div>
+        </div>
+
+        <div class="filter-section">
+            <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search user..." onkeyup="renderTable()">
+            <button class="btn-primary" onclick="openModal()">➕ Allot / Edit Menus</button>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>User Name</th>
+                        <th>Employee Category (Role)</th>
+                        <th>Status</th>
+                        <th>Allotted Menus</th>
+                        <th style="text-align: center;">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="allotmentTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ALLOTMENT MODAL -->
+    <div class="modal-overlay" id="allotmentModal">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2 style="color: var(--theme-color); font-size: 18px;">🛠️ Manage User Access</h2>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>1. Select Active User</label>
+                        <select id="userDropdown" class="form-select" onchange="loadUserDetails(this.value)">
+                            <option value="">-- Choose User --</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>2. Employee Category (Role)</label>
+                        <select id="roleDropdown" class="form-select">
+                            <option value="">-- Select Role --</option>
+                            <!-- Generated dynamically -->
+                        </select>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 10px; font-size: 12px; font-weight: bold; color: var(--text-muted); text-transform: uppercase;">
+                    3. Select Module Access (Tree View)
+                </div>
+                <div id="dynamicMenuContainer">
+                    <!-- Tree View checkboxes will be generated here by Javascript -->
+                </div>
+
+                <div style="text-align: right; margin-top: 25px;">
+                    <button class="btn-primary" id="btnSaveAllotment" onclick="saveAllotment()">💾 Save User Access</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Office Approval Request Modal -->
+    <div id="roleApprovalModal" class="modal-overlay" style="z-index: 1200;">
+        <div class="modal-container" style="max-width: 500px; border-top-color: #ffc107; max-height: none;">
+            <div class="modal-header">
+                <h2 id="approvalModalTitle" style="color: #ffc107; font-size: 18px; margin: 0;">🏢 Send Request to ApproveOffice.html</h2>
+                <button class="close-btn" onclick="closeRoleApprovalModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p id="approvalModalDesc" style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">
+                    অফিস পোর্টাল থেকে কোনো ইউজারের মেনু অ্যাক্সেস বা রোল পরিবর্তন করতে চাইলে তা অ্যাডমিনের <strong>ApproveOffice.html</strong>-এ পাঠানো হবে।
+                </p>
+                <div class="approval-form-group">
+                    <label>Action & Target User</label>
+                    <input type="text" id="approvalTargetSummary" class="approval-input" readonly style="color: #ffc107; font-weight: 700;">
+                </div>
+                <div class="approval-form-group">
+                    <label>Reason / Remarks for Admin Approval <span style="color: #ff4d4d;">*</span></label>
+                    <textarea id="approvalReasonInput" class="approval-input" rows="3" placeholder="Explain clearly why these menus are needed..." style="resize: none;"></textarea>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 18px;">
+                    <button type="button" class="btn-primary" style="flex: 1; justify-content: center; background: #ffc107; color: #121212;" onclick="confirmRoleApprovalSubmit()">📤 Send for Approval</button>
+                    <button type="button" class="btn-primary" style="background: #dc3545; box-shadow: 0 4px 10px rgba(220,53,69,0.3);" onclick="closeRoleApprovalModal()">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastPopup">Message</div>
+
+    <script>
+        // =========================================================================================
+        // 1. PORTAL ROLE DETECTION (ADMIN vs OFFICE STAFF) & NAVIGATION
+        // =========================================================================================
+        let currentPortalMode = "admin";
+        let loggedUserId = "ADMIN";
+        let loggedUserName = "Super Admin";
+        let pendingActionObj = null;
+
+        function checkPortalPermissions() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewParam = (urlParams.get('view') || '').toLowerCase();
+
+            let parentPath = "";
+            try {
+                if (window.parent && window.parent !== window) {
+                    parentPath = (window.parent.location.pathname || '').toLowerCase();
+                }
+            } catch (e) {}
+
+            const badge = document.getElementById('roleModeBadge');
+            const backBtn = document.getElementById('btnBackDashboard');
+            const submitBtn = document.getElementById('btnSaveAllotment');
+
+            if (viewParam === 'office' || parentPath.includes('officedashboard')) {
+                currentPortalMode = 'office';
+                loggedUserId = urlParams.get('userId') || sessionStorage.getItem('atr_logged_office_id') || localStorage.getItem('atr_logged_office_id') || "OFF-101";
+                loggedUserName = urlParams.get('userName') || "Office Staff";
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🏢 Office Mode (${loggedUserName}) - Requires Approval`;
+                }
+                if (submitBtn) {
+                    submitBtn.innerText = "📤 Request Menu Allotment Approval";
+                }
+                if (backBtn) backBtn.href = "office/office_dashboard_home.html";
+
+            } else if (viewParam === 'supervisor' || parentPath.includes('supervisordashboard')) {
+                currentPortalMode = 'supervisor';
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🛡️ Supervisor Mode - View Only`;
+                }
+                if (submitBtn) submitBtn.style.display = 'none';
+                if (backBtn) backBtn.href = "supervisor/supervisor_dashboard_home.html";
+            } else {
+                currentPortalMode = 'admin';
+                if (backBtn) backBtn.href = "dashboard_home.html";
+            }
+        }
+
+        function handleBackToDashboard(event) {
+            if (currentPortalMode === 'office') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.loadOfficeWorkspaceHome === 'function') {
+                        window.parent.loadOfficeWorkspaceHome();
+                        return;
+                    }
+                } catch (e) {}
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "office_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "office/office_dashboard_home.html";
+            } else if (currentPortalMode === 'supervisor') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window) {
+                        const parentHomeLink = window.parent.document.querySelector('.dashboard-home-link');
+                        if (parentHomeLink) {
+                            window.location.href = parentHomeLink.href;
+                            return;
+                        }
+                    }
+                } catch (e) {}
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "supervisor_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "supervisor/supervisor_dashboard_home.html";
+            }
+        }
+
+        // =========================================================================================
+        // 2. USER DATABASE SYNC (LOCALSTORAGE) & RENDER LOGIC
+        // =========================================================================================
+        const DEFAULT_USERS = [
+            { id: "OFF-101", userId: "OFF-101", name: "Anuradha Dipali", designation: "Accounts & Billing Executive", role: "Office Staff", status: "Active" },
+            { id: "OFF-102", userId: "OFF-102", name: "Vikas Pandey", designation: "HR & Employee Coordinator", role: "Office Staff", status: "Active" },
+            { id: "OFF-103", userId: "OFF-103", name: "Murshed Akhter", designation: "Purchase & Stock Executive", role: "Office Staff", status: "Active" }
+        ];
+
+        let MOCK_USERS = [];
+        let permissions = {};
+
+        function loadUserDatabase() {
+            permissions = JSON.parse(localStorage.getItem('atr_menu_alotment')) || JSON.parse(localStorage.getItem('atr_menu_allotments')) || JSON.parse(localStorage.getItem('atr_permissions')) || {};
+
+            const possibleKeys = ['atr_office_users', 'atr_users', 'new_user_entry', 'NewUserEntry', 'users', 'office_users'];
+            let foundData = null;
+
+            for (let k of possibleKeys) {
+                try {
+                    const parsed = JSON.parse(localStorage.getItem(k));
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        foundData = parsed;
+                        break;
+                    }
+                } catch (e) {}
+            }
+
+            if (foundData) {
+                MOCK_USERS = foundData.map(u => ({
+                    id: String(u.userId || u.id || u.empId || "").trim(),
+                    name: String(u.name || u.userName || u.fullName || "").trim(),
+                    role: String(u.designation || u.role || u.userType || "Office Staff").trim(),
+                    status: String(u.status || "Active").trim(),
+                    pendingStatus: u.pendingStatus || null
+                }));
+            } else {
+                MOCK_USERS = JSON.parse(JSON.stringify(DEFAULT_USERS));
+            }
+        }
+
+        window.onload = () => {
+            checkPortalPermissions();
+            loadUserDatabase();
+            populateRoles();
+            renderTable();
+            populateActiveUsers();
+            generateTreeMenuUI();
+        };
+
+        window.addEventListener('storage', function(e) {
+            const keys = ['atr_office_users', 'atr_users', 'new_user_entry', 'atr_menu_alotment', 'atr_menu_allotments', 'atr_permissions'];
+            if (keys.includes(e.key)) {
+                loadUserDatabase();
+                populateActiveUsers();
+                renderTable();
+            }
+        });
+
+        function populateRoles() {
+            const roleSelect = document.getElementById('roleDropdown');
+            roleSelect.innerHTML = '<option value="">-- Select Role --</option>';
+            MOCK_ROLES.forEach(role => {
+                roleSelect.innerHTML += `<option value="${role}">${role}</option>`;
+            });
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('allotmentTableBody');
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            tbody.innerHTML = '';
+
+            const activeUsers = MOCK_USERS.filter(u => u.status === 'Active');
+
+            if (activeUsers.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 25px;">No active users found.</td></tr>`;
+                return;
+            }
+            
+            activeUsers.forEach(user => {
+                if(!user.name.toLowerCase().includes(query) && !user.id.toLowerCase().includes(query)) return;
+
+                let userMenus = permissions[user.id] || [];
+                let badges = userMenus.length > 0 
+                    ? userMenus.map(menuFile => {
+                        let mName = "Unknown";
+                        let mIcon = "📄";
+                        MASTER_MENU_CONFIG.forEach(sec => sec.items.forEach(i => { 
+                            if(i.id === menuFile || i.url === menuFile) {
+                                mName = i.name;
+                                mIcon = i.icon;
+                            }
+                        }));
+                        return `<span class="badge">${mIcon} ${mName}</span>`;
+                    }).join(' ') 
+                    : `<span style="color:var(--text-muted); font-size:12px; font-style:italic;">No menus allotted</span>`;
+
+                const pendingBadge = user.pendingStatus ? `<br><span style="font-size:10px; color:#ffc107; display:inline-block; margin-top:4px; font-weight:700;">⏳ ${user.pendingStatus}</span>` : '';
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td style="font-weight: bold; color: var(--text-main);">${user.name} <span style="font-size:10px; color:var(--text-muted);">(${user.id})</span></td>
+                        <td style="color: var(--theme-color); font-weight: 500;">${user.role}</td>
+                        <td>
+                            <span style="color:#28a745; font-weight:bold;">● Active</span>
+                            ${pendingBadge}
+                        </td>
+                        <td>${badges}</td>
+                        <td style="text-align: center; white-space: nowrap;">
+                            <button class="btn-back-dash" style="display:inline-block;" onclick="editUser('${user.id}')">✏️ Edit Access</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function populateActiveUsers() {
+            const dropdown = document.getElementById('userDropdown');
+            dropdown.innerHTML = '<option value="">-- Choose User --</option>'; 
+            MOCK_USERS.filter(u => u.status === 'Active').forEach(user => {
+                dropdown.innerHTML += `<option value="${user.id}">${user.name} (${user.id})</option>`;
+            });
+        }
+
+        // 🌳 TREE GENERATOR LOGIC
+        function generateTreeMenuUI() {
+            const container = document.getElementById('dynamicMenuContainer');
+            container.innerHTML = '';
+
+            MASTER_MENU_CONFIG.forEach((section, sIndex) => {
+                let itemsHtml = section.items.map(item => `
+                    <div class="menu-item">
+                        <input type="checkbox" id="chk_${item.id}" class="menu-cb" value="${item.url}" onchange="checkMasterSync(${sIndex})"> 
+                        <label for="chk_${item.id}">
+                            ${item.icon} ${item.name}
+                        </label>
+                    </div>
+                `).join('');
+
+                container.innerHTML += `
+                    <div class="menu-section">
+                        <div class="menu-section-header" onclick="toggleTreeSection(${sIndex})">
+                            <span style="display:flex; align-items:center;">
+                                <span class="tree-arrow" id="arrow_${sIndex}">▶</span>
+                                ${section.sectionName}
+                            </span>
+                            <div onclick="event.stopPropagation();">
+                                <label style="font-size:11px; cursor:pointer; color:var(--text-main); display:flex; align-items:center; user-select:none;">
+                                    <input type="checkbox" id="masterCb_${sIndex}" onchange="toggleSectionAll(this, ${sIndex})" style="accent-color:var(--theme-color); margin-right:5px; cursor:pointer; width:14px; height:14px;"> 
+                                    Select All
+                                </label>
+                            </div>
+                        </div>
+                        <div class="menu-tree" id="secGrid_${sIndex}">
+                            ${itemsHtml}
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function toggleTreeSection(index) {
+            const tree = document.getElementById(`secGrid_${index}`);
+            const arrow = document.getElementById(`arrow_${index}`);
+            
+            if (tree.style.display === "flex") {
+                tree.style.display = "none";
+                arrow.classList.remove('open');
+            } else {
+                tree.style.display = "flex";
+                arrow.classList.add('open');
+            }
+        }
+
+        function toggleSectionAll(masterCb, index) {
+            const checkboxes = document.querySelectorAll(`#secGrid_${index} .menu-cb`);
+            checkboxes.forEach(cb => cb.checked = masterCb.checked);
+        }
+
+        function checkMasterSync(index) {
+            const allCbs = document.querySelectorAll(`#secGrid_${index} .menu-cb`);
+            const masterCb = document.getElementById(`masterCb_${index}`);
+            const allChecked = Array.from(allCbs).every(cb => cb.checked);
+            masterCb.checked = (allChecked && allCbs.length > 0);
+        }
+
+        function openModal() {
+            if (currentPortalMode === 'supervisor') {
+                alert("🔒 View Only Mode: Supervisors cannot edit menu allotments.");
+                return;
+            }
+            document.getElementById('userDropdown').value = '';
+            document.getElementById('roleDropdown').value = '';
+            document.querySelectorAll('.menu-cb, input[id^="masterCb_"]').forEach(cb => cb.checked = false);
+            
+            document.querySelectorAll('.menu-tree').forEach(tree => tree.style.display = 'none');
+            document.querySelectorAll('.tree-arrow').forEach(arrow => arrow.classList.remove('open'));
+            
+            document.getElementById('allotmentModal').classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('allotmentModal').classList.remove('show');
+        }
+
+        function editUser(userId) {
+            if (currentPortalMode === 'supervisor') {
+                alert("🔒 View Only Mode: Supervisors cannot edit menu allotments.");
+                return;
+            }
+            openModal();
+            document.getElementById('userDropdown').value = userId;
+            loadUserDetails(userId);
+        }
+
+        function loadUserDetails(userId) {
+            document.querySelectorAll('.menu-cb, input[id^="masterCb_"]').forEach(cb => cb.checked = false);
+            document.getElementById('roleDropdown').value = '';
+
+            if (!userId) return;
+            
+            const user = MOCK_USERS.find(u => u.id === userId);
+            if (user) {
+                document.getElementById('roleDropdown').value = user.role;
+            }
+
+            let userMenus = permissions[userId] || [];
+            document.querySelectorAll('.menu-cb').forEach(cb => {
+                if(userMenus.includes(cb.value)) cb.checked = true;
+            });
+            
+            MASTER_MENU_CONFIG.forEach((section, sIndex) => {
+                const hasSelected = section.items.some(item => userMenus.includes(item.url));
+                if (hasSelected) {
+                    document.getElementById(`secGrid_${sIndex}`).style.display = "flex";
+                    document.getElementById(`arrow_${sIndex}`).classList.add('open');
+                }
+                checkMasterSync(sIndex);
+            });
+        }
+
+        function saveAllotment() {
+            const userId = document.getElementById('userDropdown').value;
+            const newRole = document.getElementById('roleDropdown').value;
+
+            if(!userId) {
+                alert("Please select a user first.");
+                return;
+            }
+            if(!newRole) {
+                alert("Please assign an Employee Category (Role).");
+                return;
+            }
+
+            const targetUser = MOCK_USERS.find(u => u.id === userId);
+            const userName = targetUser ? targetUser.name : userId;
+
+            let selectedMenus = [];
+            document.querySelectorAll('.menu-cb:checked').forEach(cb => {
+                selectedMenus.push(cb.value);
+            });
+
+            // Office Portal: Route to Approval
+            if (currentPortalMode === 'office') {
+                const payload = {
+                    type: 'MENU_ALLOTMENT_UPDATE',
+                    actionLabel: "UPDATE MENU ALLOTMENT",
+                    summary: `User: ${userName} (${userId}) - Allotted ${selectedMenus.length} Menus`,
+                    oldData: { id: userId, menus: permissions[userId] || [] },
+                    newData: { id: userId, menus: selectedMenus, role: newRole }
+                };
+                openRoleApprovalModal(payload);
+                closeModal();
+                return;
+            }
+
+            // Admin Portal: Direct Save
+            permissions[userId] = selectedMenus;
+            localStorage.setItem('atr_permissions', JSON.stringify(permissions));
+            localStorage.setItem('atr_menu_alotment', JSON.stringify(permissions));
+            localStorage.setItem('atr_menu_allotments', JSON.stringify(permissions));
+
+            const userIndex = MOCK_USERS.findIndex(u => u.id === userId);
+            if (userIndex !== -1) {
+                MOCK_USERS[userIndex].role = newRole;
+                MOCK_USERS[userIndex].pendingStatus = null;
+                
+                const keys = ['atr_office_users', 'atr_users', 'new_user_entry'];
+                keys.forEach(k => {
+                    try {
+                        const parsed = JSON.parse(localStorage.getItem(k));
+                        if (Array.isArray(parsed)) {
+                            let updated = false;
+                            parsed.forEach(u => {
+                                if (String(u.userId || u.id || '').toUpperCase() === userId.toUpperCase()) {
+                                    u.designation = newRole;
+                                    u.pendingStatus = null;
+                                    updated = true;
+                                }
+                            });
+                            if (updated) localStorage.setItem(k, JSON.stringify(parsed));
+                        }
+                    } catch (e) {}
+                });
+            }
+            
+            showToast("✅ User Role & Access Menus Saved Successfully!");
+            closeModal();
+            renderTable();
+        }
+
+        // =========================================================================================
+        // 3. OFFICE APPROVAL MODAL ENGINE
+        // =========================================================================================
+        function openRoleApprovalModal(actionPayload) {
+            pendingActionObj = actionPayload;
+            document.getElementById('approvalTargetSummary').value = `${actionPayload.actionLabel} — ${actionPayload.summary}`;
+            document.getElementById('approvalReasonInput').value = '';
+            document.getElementById('roleApprovalModal').classList.add('show');
+            setTimeout(() => document.getElementById('approvalReasonInput').focus(), 50);
+        }
+
+        function closeRoleApprovalModal() {
+            document.getElementById('roleApprovalModal').classList.remove('show');
+            pendingActionObj = null;
+        }
+
+        function confirmRoleApprovalSubmit() {
+            const reason = document.getElementById('approvalReasonInput').value.trim();
+            if (!reason) {
+                alert("⚠️ Please enter a valid reason for Admin Approval.");
+                return;
+            }
+            if (!pendingActionObj) return;
+
+            const targetId = pendingActionObj.oldData.id;
+            const idx = MOCK_USERS.findIndex(u => u.id === targetId);
+            if (idx > -1) {
+                MOCK_USERS[idx].pendingStatus = 'Menu Edit Pending';
+                const keys = ['atr_office_users', 'atr_users', 'new_user_entry'];
+                keys.forEach(k => {
+                    try {
+                        const parsed = JSON.parse(localStorage.getItem(k));
+                        if (Array.isArray(parsed)) {
+                            parsed.forEach(u => {
+                                if (String(u.userId || u.id || '').toUpperCase() === targetId.toUpperCase()) {
+                                    u.pendingStatus = 'Menu Edit Pending';
+                                }
+                            });
+                            localStorage.setItem(k, JSON.stringify(parsed));
+                        }
+                    } catch (e) {}
+                });
+                renderTable();
+            }
+
+            const newReq = {
+                reqId: "OFF-MNU-" + Date.now().toString().slice(-5),
+                userId: loggedUserId,
+                userName: loggedUserName,
+                designation: "Office Staff",
+                module: "MenuAlotment.html",
+                action: pendingActionObj.actionLabel,
+                summary: pendingActionObj.summary,
+                oldData: pendingActionObj.oldData,
+                newData: pendingActionObj.newData,
+                reason: reason,
+                timestamp: new Date().toLocaleString('en-IN'),
+                status: "Pending"
+            };
+
+            const officeQueue = JSON.parse(localStorage.getItem('atr_office_approvals')) || [];
+            officeQueue.unshift(newReq);
+            localStorage.setItem('atr_office_approvals', JSON.stringify(officeQueue));
+            localStorage.setItem('approve_office_requests', JSON.stringify(officeQueue));
+            localStorage.setItem('ApproveOffice_requests', JSON.stringify(officeQueue));
+
+            const workLogs = JSON.parse(localStorage.getItem('atr_office_daily_work')) || [];
+            const todayStr = new Date().toISOString().split('T')[0];
+            const nowTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+            workLogs.unshift({
+                id: "WRK-" + Date.now().toString().slice(-5),
+                userId: loggedUserId,
+                userName: loggedUserName,
+                date: todayStr,
+                time: nowTime,
+                module: "Menu Allotment (MenuAlotment.html)",
+                refNo: newReq.reqId,
+                desc: `${pendingActionObj.actionLabel}: ${pendingActionObj.summary}`,
+                status: "Sent for Approval"
+            });
+            localStorage.setItem('atr_office_daily_work', JSON.stringify(workLogs));
+
+            try {
+                if (window.parent && window.parent !== window && typeof window.parent.refreshNotificationsUI === 'function') {
+                    window.parent.refreshNotificationsUI();
+                }
+            } catch (e) {}
+
+            closeRoleApprovalModal();
+            showToast(`📤 Request sent to ApproveOffice.html for Admin Approval!`);
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toastPopup');
+            toast.innerText = msg;
+            toast.classList.add('show');
+            setTimeout(() => { toast.classList.remove('show'); }, 3500);
+        }
+    </script>
+</body>
+</html>

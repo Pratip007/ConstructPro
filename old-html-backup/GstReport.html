@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - GST Report & GSTR-1</title>
+    
+    <!-- Sync theme with Master Dashboard -->
+    <script>
+        const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        window.addEventListener('storage', function(e) {
+            if(e.key === 'atr_theme') { document.documentElement.setAttribute('data-theme', e.newValue); }
+        });
+    </script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- SheetJS (XLSX), JSZip & jsPDF Libraries for Real GSTR-1 Excel, PDF & Bulk ZIP Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-body: transparent; 
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #b0b0b0;
+            --border-color: rgba(255, 255, 255, 0.12);
+            
+            /* Dynamic Glass & Input Variables */
+            --glass-bg: rgba(30, 30, 30, 0.75);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --input-bg: rgba(15, 15, 15, 0.6);
+            --input-focus-bg: rgba(20, 20, 20, 0.9);
+            
+            --shadow: 0 4px 20px rgba(0,0,0,0.4);
+            
+            /* Primary Theme Color (#0888C9) */
+            --theme-color: #0888C9;
+            --theme-glow: rgba(8, 136, 201, 0.3);
+            --theme-transition: all 0.3s ease;
+        }
+
+        [data-theme="light"] {
+            --bg-body: transparent;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #666666;
+            --border-color: rgba(0, 0, 0, 0.12);
+            
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(0, 0, 0, 0.1);
+            --input-bg: rgba(240, 240, 240, 0.8);
+            --input-focus-bg: #ffffff;
+            
+            --shadow: 0 8px 25px rgba(0,0,0,0.06);
+        }
+
+        /* Crisp Font Rendering to eliminate blur */
+        * { 
+            margin: 0; padding: 0; box-sizing: border-box; 
+            font-family: 'Montserrat', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+        }
+        
+        body { background-color: var(--bg-body); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; transition: var(--theme-transition); }
+        .main-content { flex: 1; display: flex; flex-direction: column; padding: 20px 40px; overflow: hidden; width: 100%; max-width: 1600px; margin: 0 auto; }
+
+        /* HEADER */
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; flex-shrink: 0; flex-wrap: wrap; gap: 15px; transition: var(--theme-transition); }
+        .header h1 { font-size: 26px; color: var(--theme-color); display: flex; align-items: center; gap: 12px; margin-top: 8px; font-weight: 700; flex-wrap: wrap; }
+
+        .role-mode-badge {
+            display: none;
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 700;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .btn-back-dash { 
+            background-color: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color); 
+            text-decoration: none; padding: 9px 16px; border-radius: 6px; font-weight: bold; font-size: 13px; 
+            transition: all 0.3s; display: flex; align-items: center; width: max-content; margin-bottom: 10px; cursor: pointer;
+        }
+        .btn-back-dash:hover { background-color: var(--theme-color); color: #ffffff; border-color: var(--theme-color); transform: translateY(-2px); box-shadow: 0 4px 10px var(--theme-glow); }
+
+        /* ACTION BAR */
+        .top-action-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-shrink: 0; gap: 15px; flex-wrap: wrap;}
+        .btn { padding: 10px 20px; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; border: none; display: flex; align-items: center; gap: 8px; text-transform: uppercase; transition: all 0.3s; }
+        
+        .btn-export-gstr1 { background: rgba(255, 193, 7, 0.15); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.4); }
+        .btn-export-gstr1:hover { background-color: #ffc107; color: #121212; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(255,193,7,0.3); }
+        
+        .btn-download-all { background-color: var(--theme-color); color: #ffffff; box-shadow: 0 4px 10px var(--theme-glow); }
+        .btn-download-all:hover { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 6px 15px var(--theme-glow); }
+
+        /* FILTER SECTION */
+        .filter-section { background: var(--bg-card); padding: 15px 20px; border-radius: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color); border-left: 4px solid var(--theme-color); box-shadow: var(--shadow); flex-shrink: 0; gap: 15px; flex-wrap: wrap; transition: var(--theme-transition); }
+        .filter-title { font-size: 14px; font-weight: bold; color: var(--theme-color); text-transform: uppercase; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+        .filter-controls { flex: 1; display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap;}
+        
+        .filter-controls select, .filter-controls input { background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 10px 12px; border-radius: 6px; font-size: 13px; outline: none; transition: 0.3s; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); font-weight: 500; color-scheme: dark; }
+        [data-theme="light"] .filter-controls select, [data-theme="light"] .filter-controls input { color-scheme: light; }
+        .filter-controls select, .filter-controls input[type="month"] { width: 175px; cursor: pointer; }
+        ::-webkit-datetime-edit-year-field, ::-webkit-datetime-edit-month-field { color: var(--text-main); }
+        .filter-controls input[type="text"] { width: 100%; max-width: 250px; }
+        .filter-controls select:focus, .filter-controls input:focus { border-color: var(--theme-color); box-shadow: 0 0 8px var(--theme-glow); }
+        select option { background-color: var(--bg-card); color: var(--text-main); font-weight: 500; }
+
+        /* TABLE SECTION */
+        .table-container { flex: 1; background: var(--bg-card); border-radius: 10px 10px 0 0; border: 1px solid var(--border-color); border-top: 4px solid var(--theme-color); box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: hidden; min-height: 0; transition: var(--theme-transition); }
+        .table-scroll { flex: 1; overflow-y: auto; padding: 0 15px; }
+        
+        .table-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+        .table-scroll::-webkit-scrollbar-track { background: transparent; }
+        .table-scroll::-webkit-scrollbar-thumb { background: rgba(8, 136, 201, 0.3); border-radius: 4px; }
+        .table-scroll::-webkit-scrollbar-thumb:hover { background: var(--theme-color); }
+
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        thead th { position: sticky; top: 0; background-color: var(--input-bg); z-index: 10; padding: 15px 10px; color: var(--theme-color); font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; border-bottom: 2px solid var(--theme-color); white-space: nowrap; transition: var(--theme-transition); }
+        tbody td { padding: 12px 10px; border-bottom: 1px solid var(--border-color); font-size: 13px; color: var(--text-main); vertical-align: middle; transition: var(--theme-transition); font-weight: 500; }
+        tbody tr:hover { background: var(--glass-bg); }
+        
+        .tag-gst { background: rgba(40, 167, 69, 0.2); color: #28a745; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid rgba(40, 167, 69, 0.4); display: inline-block; }
+        
+        .btn-sm { padding: 6px 10px; font-size: 11px; border-radius: 4px; border: none; cursor: pointer; font-weight: bold; text-transform: uppercase; transition: 0.2s; background: rgba(8, 136, 201, 0.15); color: var(--theme-color); border: 1px solid rgba(8, 136, 201, 0.3); }
+        .btn-sm:hover { background: var(--theme-color); color: #ffffff; }
+        .btn-sm:disabled { background: var(--input-bg); color: var(--text-muted); border-color: var(--border-color); cursor: not-allowed; }
+
+        /* SUMMARY BAR */
+        .summary-bar { background: var(--input-bg); padding: 15px 25px; border-radius: 0 0 10px 10px; display: flex; justify-content: space-around; align-items: center; border-top: 2px solid var(--theme-color); flex-shrink: 0; box-shadow: 0 -4px 15px rgba(0,0,0,0.2); z-index: 20; transition: var(--theme-transition); flex-wrap: wrap; gap: 15px; }
+        .summary-box { text-align: center; }
+        .summary-box span { display: block; font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: bold; margin-bottom: 5px; }
+        .summary-box h3 { font-size: 18px; margin: 0; font-weight: 700; color: var(--text-main); }
+        .text-taxable { color: #ffc107; }
+        .text-tax { color: #dc3545; }
+        .text-total { color: #28a745; }
+        .align-right { text-align: right; }
+    </style>
+</head>
+<body>
+
+    <div class="main-content">
+        <!-- FIXED HEADER -->
+        <div class="header">
+            <div>
+                <a href="dashboard_home.html" id="btnBackDashboard" class="btn-back-dash" onclick="handleBackToDashboard(event)">← Back to Dashboard</a>
+                <h1>
+                    📊 GST Return Dashboard
+                    <span id="roleModeBadge" class="role-mode-badge">🏢 Office Mode</span>
+                </h1>
+            </div>
+            <div style="color: var(--theme-color); font-size: 14px; font-weight: 600; margin-top: 10px;">Only Registered GST Invoices</div>
+        </div>
+
+        <!-- FIXED ACTION BAR -->
+        <div class="top-action-bar">
+            <div>
+                <p style="font-size: 13px; color: var(--text-muted); font-weight: 500;">GSTR-1 Format includes: GSTIN, Retailer, Inv No, Inv Date, Taxable Value & Rate.</p>
+            </div>
+            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                <button class="btn btn-download-all" onclick="bulkDownloadInvoices()">⬇️ Download All Invoices</button>
+                <button class="btn btn-export-gstr1" onclick="exportGSTR1()">📥 Export GSTR-1 (Excel)</button>
+            </div>
+        </div>
+
+        <!-- FILTERS -->
+        <div class="filter-section">
+            <div class="filter-title">🔎 Filter Report</div>
+            <div class="filter-controls">
+                
+                <!-- YEAR & MONTH PICKER -->
+                <input type="month" id="filterMonthYear" onchange="filterTable()" title="Select Year and Month">
+                
+                <select id="filterSite" onchange="filterTable()">
+                    <option value="">All Sites</option>
+                    <option value="Dum Dum Project">Dum Dum Project</option>
+                    <option value="Commercial Complex B3">Commercial Complex B3</option>
+                </select>
+                
+                <input type="text" id="tableSearch" placeholder="Search GSTIN, Invoice, Retailer..." onkeyup="filterTable()">
+            </div>
+        </div>
+
+        <!-- SCROLLABLE TABLE AREA -->
+        <div class="table-container">
+            <div class="table-scroll">
+                <table id="gstTable">
+                    <thead>
+                        <tr>
+                            <th>Invoice Date</th>
+                            <th>Invoice No</th>
+                            <th>Retailer Name</th>
+                            <th>Site Name</th>
+                            <th>GSTIN / UIN</th>
+                            <th class="align-right">Taxable Value (₹)</th>
+                            <th class="align-right">Rate (%)</th>
+                            <th class="align-right">Tax Amount (₹)</th>
+                            <th class="align-right">Total Invoice Value (₹)</th>
+                            <th style="text-align:center;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- GST Data will populate here -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- FIXED BOTTOM SUMMARY BAR -->
+            <div class="summary-bar">
+                <div class="summary-box">
+                    <span>Total Taxable Value</span>
+                    <h3 class="text-taxable" id="sumTaxable">₹ 0.00</h3>
+                </div>
+                <div class="summary-box">
+                    <span>Total Tax Amount</span>
+                    <h3 class="text-tax" id="sumTax">₹ 0.00</h3>
+                </div>
+                <div class="summary-box">
+                    <span>Total Invoice Value</span>
+                    <h3 class="text-total" id="sumTotal">₹ 0.00</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================================================
+        // 1. PORTAL NAVIGATION STATE (ADMIN vs OFFICE vs SUPERVISOR)
+        // =========================================================================================
+        let currentPortalMode = "admin";
+
+        function checkPortalPermissions() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewParam = (urlParams.get('view') || '').toLowerCase();
+            const badge = document.getElementById('roleModeBadge');
+            const backBtn = document.getElementById('btnBackDashboard');
+
+            let parentPath = "";
+            try {
+                if (window.parent && window.parent !== window) {
+                    parentPath = (window.parent.location.pathname || '').toLowerCase();
+                }
+            } catch (e) {}
+
+            if (viewParam === 'office' || parentPath.includes('officedashboard')) {
+                currentPortalMode = 'office';
+                const userName = urlParams.get('userName') || "Office Staff";
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🏢 Office Mode (${userName})`;
+                }
+                if (backBtn) {
+                    backBtn.href = "office/office_dashboard_home.html";
+                }
+            } else if (viewParam === 'supervisor' || parentPath.includes('supervisordashboard')) {
+                currentPortalMode = 'supervisor';
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🛡️ Supervisor Mode`;
+                }
+                if (backBtn) {
+                    backBtn.href = "supervisor/supervisor_dashboard_home.html";
+                }
+            } else {
+                currentPortalMode = 'admin';
+                if (backBtn) {
+                    backBtn.href = "dashboard_home.html";
+                }
+            }
+        }
+
+        function handleBackToDashboard(event) {
+            if (currentPortalMode === 'office') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.loadOfficeWorkspaceHome === 'function') {
+                        window.parent.loadOfficeWorkspaceHome();
+                        return;
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "office_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "office/office_dashboard_home.html";
+            } else if (currentPortalMode === 'supervisor') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window) {
+                        const parentHomeLink = window.parent.document.querySelector('.dashboard-home-link');
+                        if (parentHomeLink) {
+                            window.location.href = parentHomeLink.href;
+                            return;
+                        }
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "supervisor_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "supervisor/supervisor_dashboard_home.html";
+            }
+        }
+
+        // =========================================================================================
+        // 2. GST INVOICES DATA & SYNC WITH RetailSiteInvoice.html (atr_retailer_bills_db)
+        // =========================================================================================
+        const defaultGstInvoices = [
+            {
+                date: "2026-08-01", invoiceNo: "INV-10023", retailer: "M/S Bengal Traders", site: "Dum Dum Project",
+                gstin: "19ABCDE1234F1ZH", taxableValue: 35000, rate: 28, taxAmount: 9800, totalValue: 44800, hasFile: true, fileName: "", fileBase64: ""
+            },
+            {
+                date: "2026-08-05", invoiceNo: "RT-8845", retailer: "Roy Stores", site: "Commercial Complex B3",
+                gstin: "19XYZAB5678C1Z2", taxableValue: 10000, rate: 18, taxAmount: 1800, totalValue: 11800, hasFile: true, fileName: "", fileBase64: ""
+            },
+            {
+                date: "2025-07-15", invoiceNo: "ACC/25/09", retailer: "ACC Cement Dealership", site: "Dum Dum Project",
+                gstin: "19QWERT9876Y1ZX", taxableValue: 50000, rate: 28, taxAmount: 14000, totalValue: 64000, hasFile: false, fileName: "", fileBase64: ""
+            }
+        ];
+
+        let gstInvoices = [];
+
+        function loadAndSyncGstInvoices() {
+            gstInvoices = JSON.parse(JSON.stringify(defaultGstInvoices));
+
+            // Sync with GST bills saved in RetailSiteInvoice.html (atr_retailer_bills_db)
+            const storedRetailBills = JSON.parse(localStorage.getItem('atr_retailer_bills_db')) || [];
+            storedRetailBills.forEach(rb => {
+                if (rb.gstApp !== 'YES' || !rb.invNo || rb.invNo === 'KACHA') return;
+
+                let taxableSum = 0;
+                let taxSum = 0;
+                let primaryRate = 18;
+
+                if (Array.isArray(rb.cartItems) && rb.cartItems.length > 0) {
+                    rb.cartItems.forEach(item => {
+                        const sub = Number(item.lineTotal) || 0;
+                        const gstA = Number(item.lineGst) || 0;
+                        taxableSum += sub;
+                        taxSum += gstA;
+                        if (item.gstPercent !== undefined) primaryRate = Number(item.gstPercent) || 18;
+                    });
+                } else {
+                    const tot = Number(rb.totalAmt) || 0;
+                    taxableSum = Number((tot / 1.18).toFixed(2));
+                    taxSum = Number((tot - taxableSum).toFixed(2));
+                }
+
+                const existingIdx = gstInvoices.findIndex(g => g.invoiceNo === rb.invNo);
+                const mappedObj = {
+                    date: rb.date,
+                    invoiceNo: rb.invNo,
+                    retailer: rb.ret,
+                    site: rb.site,
+                    gstin: rb.gstNumVal && rb.gstNumVal !== 'N/A' ? rb.gstNumVal : '19UNREG0000Z1Z0',
+                    taxableValue: taxableSum,
+                    rate: primaryRate,
+                    taxAmount: taxSum,
+                    totalValue: Number(rb.totalAmt) || (taxableSum + taxSum),
+                    hasFile: Boolean(rb.fileBase64 || rb.fileName || existingIdx > -1),
+                    fileName: rb.fileName || "",
+                    fileBase64: rb.fileBase64 || ""
+                };
+
+                if (existingIdx > -1) {
+                    gstInvoices[existingIdx] = mappedObj;
+                } else {
+                    gstInvoices.unshift(mappedObj);
+                }
+            });
+
+            populateDynamicSiteFilter();
+        }
+
+        function populateDynamicSiteFilter() {
+            const siteSelect = document.getElementById('filterSite');
+            const prevVal = siteSelect.value;
+            const uniqueSites = [...new Set(["Dum Dum Project", "Commercial Complex B3", ...gstInvoices.map(i => i.site).filter(Boolean)])];
+
+            siteSelect.innerHTML = `<option value="">All Sites</option>`;
+            uniqueSites.forEach(site => {
+                siteSelect.innerHTML += `<option value="${site}">${site}</option>`;
+            });
+            if (uniqueSites.includes(prevVal)) siteSelect.value = prevVal;
+        }
+
+        window.onload = function() {
+            checkPortalPermissions();
+            loadAndSyncGstInvoices();
+            renderTable();
+        };
+
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'atr_retailer_bills_db') {
+                loadAndSyncGstInvoices();
+                renderTable();
+                filterTable();
+            }
+        });
+
+        // =========================================================================================
+        // 3. RENDER TABLE, FILTER & SUMMARY CALCULATION
+        // =========================================================================================
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            
+            gstInvoices.forEach(inv => {
+                const tr = document.createElement('tr');
+                tr.setAttribute('data-invno', inv.invoiceNo);
+                tr.setAttribute('data-date', inv.date);
+                tr.setAttribute('data-site', inv.site);
+                tr.setAttribute('data-search', `${inv.gstin} ${inv.invoiceNo} ${inv.retailer} ${inv.site}`.toUpperCase());
+                tr.setAttribute('data-taxable', inv.taxableValue);
+                tr.setAttribute('data-tax', inv.taxAmount);
+                tr.setAttribute('data-total', inv.totalValue);
+
+                tr.innerHTML = `
+                    <td>${inv.date}</td>
+                    <td style="color:var(--theme-color); font-weight:bold;">${inv.invoiceNo}</td>
+                    <td>${inv.retailer}</td>
+                    <td>${inv.site}</td>
+                    <td><span class="tag-gst">${inv.gstin}</span></td>
+                    <td class="align-right">${Number(inv.taxableValue).toFixed(2)}</td>
+                    <td class="align-right">${inv.rate}%</td>
+                    <td class="align-right" style="color:#dc3545; font-weight:bold;">${Number(inv.taxAmount).toFixed(2)}</td>
+                    <td class="align-right" style="color:#28a745; font-weight:bold;">${Number(inv.totalValue).toFixed(2)}</td>
+                    <td style="text-align:center;">
+                        <button class="btn-sm" onclick="downloadSingleInvoice('${inv.invoiceNo}')" ${!inv.hasFile ? 'disabled title="File Not Uploaded"' : ''}>
+                            ${inv.hasFile ? '📄 PDF' : 'No File'}
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            calculateSummary();
+        }
+
+        function filterTable() {
+            const search = document.getElementById('tableSearch').value.toUpperCase();
+            const monthYearFilter = document.getElementById('filterMonthYear').value; 
+            const siteFilter = document.getElementById('filterSite').value.toUpperCase();
+            const tr = document.getElementById('tableBody').getElementsByTagName('tr');
+
+            for (let i = 0; i < tr.length; i++) {
+                let rowSearch = tr[i].getAttribute('data-search') || '';
+                let rowDate = tr[i].getAttribute('data-date') || ''; 
+                let rowSite = (tr[i].getAttribute('data-site') || '').toUpperCase();
+                
+                let matchSearch = rowSearch.indexOf(search) > -1;
+                let matchMonthYear = monthYearFilter === "" || rowDate.startsWith(monthYearFilter); 
+                let matchSite = siteFilter === "" || rowSite === siteFilter;
+
+                tr[i].style.display = (matchSearch && matchMonthYear && matchSite) ? "" : "none";
+            }
+            calculateSummary(); 
+        }
+
+        function calculateSummary() {
+            const rows = document.getElementById('tableBody').getElementsByTagName('tr');
+            let totalTaxable = 0, totalTax = 0, totalVal = 0;
+
+            for(let i=0; i<rows.length; i++) {
+                if(rows[i].style.display !== "none") {
+                    totalTaxable += parseFloat(rows[i].getAttribute('data-taxable')) || 0;
+                    totalTax += parseFloat(rows[i].getAttribute('data-tax')) || 0;
+                    totalVal += parseFloat(rows[i].getAttribute('data-total')) || 0;
+                }
+            }
+            document.getElementById('sumTaxable').innerText = `₹ ${totalTaxable.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('sumTax').innerText = `₹ ${totalTax.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('sumTotal').innerText = `₹ ${totalVal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        }
+
+        // =========================================================================================
+        // 4. SINGLE INVOICE PDF DOWNLOAD, BULK ZIP DOWNLOAD & GSTR-1 EXCEL EXPORT
+        // =========================================================================================
+        function buildInvoicePdfBlob(inv) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            doc.setFontSize(18);
+            doc.text("ATR CONSTRUCTION - GST TAX INVOICE", 105, 16, null, null, "center");
+
+            doc.setFontSize(10.5);
+            doc.text(`Retailer Name: ${inv.retailer}`, 14, 30);
+            doc.text(`Recipient GSTIN: ${inv.gstin}`, 14, 36);
+            doc.text(`Project Site: ${inv.site}`, 14, 42);
+
+            doc.text(`Invoice No: ${inv.invoiceNo}`, 135, 30);
+            doc.text(`Invoice Date: ${inv.date}`, 135, 36);
+
+            doc.autoTable({
+                startY: 50,
+                head: [['Invoice No', 'Retailer Name', 'GSTIN', 'Taxable Value (Rs.)', 'GST Rate', 'Tax Amt (Rs.)', 'Total Value (Rs.)']],
+                body: [[
+                    inv.invoiceNo,
+                    inv.retailer,
+                    inv.gstin,
+                    inv.taxableValue.toFixed(2),
+                    `${inv.rate}%`,
+                    inv.taxAmount.toFixed(2),
+                    inv.totalValue.toFixed(2)
+                ]],
+                theme: 'grid',
+                headStyles: { fillColor: [8, 136, 201] }
+            });
+
+            const finalY = doc.lastAutoTable.finalY || 70;
+            doc.setFontSize(11);
+            doc.text(`Total Taxable Value: Rs. ${inv.taxableValue.toFixed(2)}`, 130, finalY + 12);
+            doc.text(`Total GST Tax (${inv.rate}%): Rs. ${inv.taxAmount.toFixed(2)}`, 130, finalY + 18);
+            doc.setTextColor(40, 167, 69);
+            doc.text(`Grand Total Invoice Value: Rs. ${inv.totalValue.toFixed(2)}`, 130, finalY + 25);
+
+            return doc.output('blob');
+        }
+
+        function downloadSingleInvoice(invNo) {
+            const inv = gstInvoices.find(i => i.invoiceNo === invNo);
+            if (!inv) return;
+
+            if (inv.fileBase64) {
+                const a = document.createElement('a');
+                a.href = inv.fileBase64;
+                a.download = inv.fileName || `${inv.invoiceNo}_GST_Invoice`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                return;
+            }
+
+            if (typeof window.jspdf !== 'undefined') {
+                const pdfBlob = buildInvoicePdfBlob(inv);
+                const url = URL.createObjectURL(pdfBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                const safeInv = String(inv.invoiceNo).replace(/[^a-zA-Z0-9_-]/g, '_');
+                a.download = `GST_Invoice_${safeInv}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } else {
+                alert(`Downloading Invoice Document for ${invNo}...`);
+            }
+        }
+
+        async function bulkDownloadInvoices() {
+            const rows = document.getElementById('tableBody').getElementsByTagName('tr');
+            const downloadableInvoices = [];
+
+            for(let i=0; i<rows.length; i++) {
+                if(rows[i].style.display !== "none" && !rows[i].querySelector('button').disabled) {
+                    const invNo = rows[i].getAttribute('data-invno');
+                    const matched = gstInvoices.find(item => item.invoiceNo === invNo);
+                    if (matched) downloadableInvoices.push(matched);
+                }
+            }
+
+            if(downloadableInvoices.length === 0) {
+                alert("⚠️ No invoice files available to download for the current filter.");
+                return;
+            }
+
+            if (typeof JSZip === 'undefined' || typeof window.jspdf === 'undefined') {
+                alert(`✅ Initiating Bulk Download!\nZipping ${downloadableInvoices.length} invoice(s)...`);
+                return;
+            }
+
+            const zip = new JSZip();
+            const docsFolder = zip.folder("GST_Invoice_Documents");
+
+            downloadableInvoices.forEach(inv => {
+                const safeInv = String(inv.invoiceNo).replace(/[^a-zA-Z0-9_-]/g, '_');
+                const safeRet = String(inv.retailer).replace(/[^a-zA-Z0-9_-]/g, '_');
+
+                if (inv.fileBase64 && inv.fileBase64.includes(',')) {
+                    const base64Data = inv.fileBase64.split(',')[1];
+                    const cleanName = (inv.fileName || "Invoice.pdf").replace(/[^a-zA-Z0-9._-]/g, '_');
+                    docsFolder.file(`${safeInv}_${safeRet}_${cleanName}`, base64Data, { base64: true });
+                } else {
+                    const pdfBlob = buildInvoicePdfBlob(inv);
+                    docsFolder.file(`${safeInv}_${safeRet}.pdf`, pdfBlob);
+                }
+            });
+
+            const content = await zip.generateAsync({ type: "blob" });
+            const url = URL.createObjectURL(content);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `GST_Invoices_${new Date().toISOString().slice(0,10)}.zip`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function exportGSTR1() {
+            const rows = document.getElementById('tableBody').getElementsByTagName('tr');
+            let gstr1Data = [];
+
+            for(let i=0; i<rows.length; i++) {
+                if(rows[i].style.display !== "none") {
+                    let cells = rows[i].cells;
+                    
+                    gstr1Data.push({
+                        "GSTIN/UIN of Recipient": cells[4].innerText.trim(),
+                        "Receiver Name": cells[2].innerText.trim(),
+                        "Invoice Number": cells[1].innerText.trim(),
+                        "Invoice date": cells[0].innerText.trim(),
+                        "Invoice Value": parseFloat(cells[8].innerText.replace(/,/g, '')),
+                        "Place Of Supply": "19-West Bengal",
+                        "Reverse Charge": "N",
+                        "Applicable % of Tax Rate": "",
+                        "Invoice Type": "Regular B2B",
+                        "E-Commerce GSTIN": "",
+                        "Rate": parseFloat(cells[6].innerText.replace('%', '')),
+                        "Taxable Value": parseFloat(cells[5].innerText.replace(/,/g, '')),
+                        "Cess Amount": 0
+                    });
+                }
+            }
+
+            if(gstr1Data.length === 0) {
+                alert("No data available to export.");
+                return;
+            }
+
+            let ws = XLSX.utils.json_to_sheet(gstr1Data);
+            let wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "B2B");
+            
+            let fileName = `GSTR1_Export_${new Date().toISOString().slice(0,10)}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+        }
+    </script>
+</body>
+</html>

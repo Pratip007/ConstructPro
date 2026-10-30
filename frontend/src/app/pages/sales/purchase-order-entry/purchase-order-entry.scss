@@ -1,0 +1,51 @@
+.section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 20px 0 15px;
+}
+
+.items-table {
+  margin-bottom: 20px;
+
+  table {
+    margin-top: 0;
+  }
+
+  input {
+    padding: 8px 12px;
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-main);
+    font-size: 13px;
+    width: 100%;
+    outline: none;
+
+    &:focus {
+      border-color: var(--accent);
+    }
+  }
+}
+
+.amount-cell {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.total-field {
+  font-weight: 800 !important;
+  font-size: 18px !important;
+  color: var(--accent) !important;
+}
+
+.btn-sm {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.form-actions {
+  margin-top: 25px;
+  display: flex;
+  gap: 15px;
+}

@@ -1,0 +1,20 @@
+:host { display: block; }
+
+.edit-input {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--accent);
+  color: var(--text-main);
+  border-radius: 6px;
+  font-size: 13px;
+  outline: none;
+  transition: 0.3s;
+  &:focus {
+    box-shadow: 0 0 8px var(--accent-glow);
+  }
+}
+
+.row-disabled {
+  opacity: 0.4;
+}

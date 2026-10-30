@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Company Loan Management</title>
+    
+    <!-- Sync theme with Master Dashboard -->
+    <script>
+        const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        window.addEventListener('storage', function(e) {
+            if(e.key === 'atr_theme') { document.documentElement.setAttribute('data-theme', e.newValue); }
+        });
+    </script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-body: transparent; 
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #b0b0b0;
+            --border-color: rgba(255, 255, 255, 0.12);
+            
+            /* Dynamic Glass Variables */
+            --glass-bg: rgba(30, 30, 30, 0.75);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --input-bg: rgba(15, 15, 15, 0.6);
+            --input-focus-bg: rgba(20, 20, 20, 0.9);
+            
+            --shadow: 0 4px 20px rgba(0,0,0,0.4);
+            
+            /* Primary Theme Color for Loan Management (Purple) */
+            --theme-color: #6f42c1;
+            --theme-glow: rgba(111, 66, 193, 0.3);
+            --theme-transition: all 0.3s ease;
+        }
+
+        [data-theme="light"] {
+            --bg-body: transparent;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #666666;
+            --border-color: rgba(0, 0, 0, 0.12);
+            
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(0, 0, 0, 0.1);
+            --input-bg: rgba(240, 240, 240, 0.8);
+            --input-focus-bg: #ffffff;
+            
+            --shadow: 0 8px 25px rgba(0,0,0,0.06);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; -webkit-font-smoothing: antialiased; }
+        body { background-color: var(--bg-body); color: var(--text-main); display: flex; flex-direction: column; height: 100vh; overflow: hidden; transition: var(--theme-transition); }
+
+        select, select.form-control { background-color: var(--bg-card) !important; color: var(--text-main) !important; color-scheme: dark; }
+        [data-theme="light"] select, [data-theme="light"] select.form-control { color-scheme: light; }
+        select option { background-color: var(--bg-card) !important; color: var(--text-main) !important; padding: 10px; }
+
+        /* Notification Banner */
+        #emiNotificationBanner {
+            display: none;
+            background: rgba(220, 53, 69, 0.15);
+            border-bottom: 1px solid rgba(220, 53, 69, 0.4);
+            color: #ff6b6b;
+            padding: 12px 20px;
+            font-size: 13px;
+            font-weight: 700;
+            text-align: center;
+            z-index: 1000;
+        }
+        #emiNotificationBanner span { margin-right: 15px; }
+
+        .main-content { flex: 1; display: flex; flex-direction: column; padding: 20px 30px; height: 100%; overflow: hidden; width: 100%; max-width: 1600px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; flex-shrink: 0; transition: var(--theme-transition); flex-wrap: wrap; gap: 15px; }
+        .header h1 { font-size: 26px; color: var(--theme-color); display: flex; align-items: center; gap: 12px; margin-top: 8px; font-weight: 700; flex-wrap: wrap;}
+        
+        .role-mode-badge { display: none; background: rgba(255, 193, 7, 0.15); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.4); padding: 5px 12px; border-radius: 20px; font-size: 11.5px; font-weight: 700; align-items: center; gap: 6px; }
+        .btn-back-dash { background-color: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color); text-decoration: none; padding: 9px 16px; border-radius: 6px; font-weight: bold; font-size: 13px; transition: all 0.3s; display: flex; align-items: center; width: max-content; margin-bottom: 10px; cursor: pointer; }
+        .btn-back-dash:hover { background-color: var(--theme-color); color: #fff; border-color: var(--theme-color); transform: translateY(-2px); box-shadow: 0 4px 10px var(--theme-glow); }
+
+        .btn-primary { background-color: var(--theme-color); color: #ffffff; padding: 10px 15px; border: none; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; text-transform: uppercase; box-shadow: 0 4px 15px var(--theme-glow); transition: all 0.3s; margin-right: 10px;}
+        .btn-primary:hover { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 6px 15px var(--theme-glow); }
+        
+        .btn-emi { background: rgba(40, 167, 69, 0.15); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.4); padding: 10px 15px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; text-transform: uppercase; transition: all 0.3s; margin-right: 10px;}
+        .btn-emi:hover { background-color: #28a745; color: white; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(40,167,69,0.3); }
+
+        /* Tabs UI */
+        .tabs-container { display: flex; gap: 10px; margin-bottom: 15px; }
+        .tab-btn { background: var(--glass-bg); border: 1px solid var(--border-color); color: var(--text-muted); padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s; }
+        .tab-btn:hover { background: rgba(255,255,255,0.05); }
+        .tab-btn.active { background: var(--theme-color); color: #fff; border-color: var(--theme-color); box-shadow: 0 4px 10px var(--theme-glow); }
+
+        /* Dashboard Controls */
+        .controls-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); padding: 15px; border-radius: 12px; border: 1px solid var(--glass-border); transition: var(--theme-transition); flex-wrap: wrap; gap: 15px; flex-shrink: 0; }
+        .stat-container { display: flex; gap: 20px; background: var(--input-bg); padding: 8px 15px; border-radius: 8px; border: 1px solid var(--border-color); flex-wrap: wrap; }
+        .stat-box { font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 8px;}
+        .stat-box span { font-weight: bold; font-size: 15px; }
+
+        .search-box { background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 10px 15px; border-radius: 8px; width: 300px; outline: none; transition: 0.3s; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);}
+        .search-box:focus { border-color: var(--theme-color); box-shadow: 0 0 10px var(--theme-glow); }
+
+        /* Table & Footer */
+        .table-container-box { background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-radius: 12px 12px 0 0; box-shadow: var(--shadow); flex: 1; min-height: 0; border: 1px solid var(--glass-border); border-top: 4px solid var(--theme-color); border-bottom: none; overflow: auto; transition: var(--theme-transition); }
+        .table-container-box::-webkit-scrollbar { width: 8px; height: 8px; }
+        .table-container-box::-webkit-scrollbar-track { background: transparent; }
+        .table-container-box::-webkit-scrollbar-thumb { background: rgba(111, 66, 193, 0.3); border-radius: 4px; }
+        .table-container-box::-webkit-scrollbar-thumb:hover { background: var(--theme-color); }
+        
+        table.dash-table { width: 100%; border-collapse: collapse; text-align: left; }
+        .dash-table thead { position: sticky; top: 0; background-color: var(--input-bg); z-index: 10; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        .dash-table th { padding: 14px 16px; color: var(--theme-color); font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: 0.8px; border-bottom: 2px solid var(--theme-color); white-space: nowrap; }
+        .dash-table td { padding: 12px 16px; border-bottom: 1px solid var(--border-color); font-size: 13px; color: var(--text-main); vertical-align: middle; transition: var(--theme-transition); white-space: nowrap; }
+        .dash-table tbody tr { transition: background 0.2s; }
+        .dash-table tbody tr:hover { background: var(--glass-bg); }
+
+        .pending-status-pill { display: inline-block; background: rgba(255, 193, 7, 0.16); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.45); padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; margin-top: 4px;}
+
+        /* Footer Summary */
+        .summary-footer-bar { background: var(--input-bg); padding: 15px 25px; border-radius: 0 0 12px 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color); border-top: 2px solid var(--theme-color); flex-shrink: 0; box-shadow: 0 -4px 15px rgba(0,0,0,0.2); transition: var(--theme-transition); z-index: 20; flex-wrap: wrap; gap: 15px; }
+        .summary-footer-box { text-align: center; }
+        .summary-footer-box span { display: block; font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: bold; margin-bottom: 5px; }
+        .summary-footer-box h3 { font-size: 18px; margin: 0; font-weight: 700; }
+        .text-base-val { color: #007bff; text-shadow: 0 0 10px rgba(0,123,255,0.4); }
+        .text-gst-val { color: #28a745; text-shadow: 0 0 10px rgba(40,167,69,0.4); }
+        .text-gross-val { color: #dc3545; text-shadow: 0 0 10px rgba(220,53,69,0.4); }
+
+        /* Action Buttons */
+        .action-btns { display: inline-flex; gap: 6px; flex-wrap: nowrap; align-items: center; min-width: max-content; }
+        .btn-action { width: 28px; height: 28px; display: inline-flex; justify-content: center; align-items: center; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; color: white; transition: 0.2s; }
+        .btn-edit { background: rgba(0, 123, 255, 0.15); color: #007bff; border: 1px solid rgba(0, 123, 255, 0.4); } .btn-edit:hover { background: #007bff; color: white; }
+        .btn-del { background: rgba(220, 53, 69, 0.15); color: #dc3545; border: 1px solid rgba(220, 53, 69, 0.4); } .btn-del:hover { background: #dc3545; color: white; }
+        .btn-view { background: rgba(23, 162, 184, 0.15); color: #17a2b8; border: 1px solid rgba(23, 162, 184, 0.4); } .btn-view:hover { background: #17a2b8; color: white; }
+        .btn-status-toggle { background: rgba(255, 193, 7, 0.15); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.4); } .btn-status-toggle:hover { background: #ffc107; color: #121212; }
+
+        /* Modals */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); display: none; justify-content: center; align-items: center; z-index: 1000; opacity: 0; transition: opacity 0.3s ease; padding: 20px; }
+        .modal-overlay.active { display: flex; opacity: 1; }
+        .modal-card { background: var(--bg-card); width: 100%; max-width: 600px; border-radius: 12px; border-top: 4px solid var(--theme-color); box-shadow: 0 10px 40px rgba(0,0,0,0.6); transform: translateY(-20px); transition: transform 0.3s ease, background 0.4s ease; max-height: 95vh; display: flex; flex-direction: column; border: 1px solid var(--border-color); border-top: 4px solid var(--theme-color); }
+        .modal-overlay.active .modal-card { transform: translateY(0); }
+        .modal-card.large-modal { max-width: 800px; }
+        
+        .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 25px; border-bottom: 1px solid var(--border-color); }
+        .modal-header h2 { font-size: 18px; color: var(--theme-color); }
+        .close-btn { background: none; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; transition: 0.3s;}
+        .close-btn:hover { color: #dc3545; }
+        
+        .modal-body { padding: 25px; overflow-y: auto; flex: 1; }
+        .modal-body::-webkit-scrollbar { width: 6px; }
+        .modal-body::-webkit-scrollbar-track { background: transparent; }
+        .modal-body::-webkit-scrollbar-thumb { background: rgba(111, 66, 193, 0.3); border-radius: 3px; }
+        .modal-footer { padding: 15px 25px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 10px; background: var(--input-bg); border-radius: 0 0 12px 12px; }
+
+        .form-section { background: var(--glass-bg); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 20px; }
+        .form-section h3 { font-size: 14px; color: var(--theme-color); margin-bottom: 15px; text-transform: uppercase; border-bottom: 1px dashed var(--theme-glow); padding-bottom: 5px;}
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; position: relative;}
+        .form-group label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; transition: 0.3s;}
+        .form-group:focus-within label { color: var(--theme-color); }
+        
+        .form-control { background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 10px 12px; border-radius: 6px; font-size: 13px; outline: none; transition: all 0.3s; width: 100%; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); color-scheme: dark; }
+        [data-theme="light"] .form-control { color-scheme: light; }
+        .form-control:focus { border-color: var(--theme-color); box-shadow: 0 0 5px var(--theme-glow); }
+        .form-control[readonly] { opacity: 0.7; cursor: not-allowed; }
+
+        .btn-save { background: var(--theme-color); color: white; padding: 10px 20px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-transform: uppercase; transition: 0.3s; box-shadow: 0 4px 10px var(--theme-glow);}
+        .btn-save:hover { filter: brightness(1.1); transform: translateY(-2px); }
+
+        .toast-popup { position: fixed; bottom: 20px; right: 20px; background: #28a745; color: #fff; padding: 12px 20px; border-radius: 8px; font-size: 12.5px; font-weight: 700; box-shadow: 0 5px 20px rgba(0,0,0,0.35); display: none; z-index: 3000; border-left: 4px solid #1e7e34; }
+
+        .interest-toggle { display: flex; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; }
+        .interest-toggle button { flex: 1; padding: 8px; border: none; background: var(--input-bg); color: var(--text-muted); font-size: 12px; font-weight: 700; cursor: pointer; transition: 0.3s; }
+        .interest-toggle button.active { background: var(--theme-color); color: #fff; }
+
+        /* Tally Format Ledger View & Print Config */
+        .ledger-view-box { background: #fff; color: #000; padding: 25px; border-radius: 8px; overflow: hidden; position: relative;}
+        .tally-header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 15px;}
+        .tally-header h2 { font-size: 20px; color: #6f42c1; margin: 0; text-transform: uppercase; font-weight: 800;}
+        .tally-sub { font-size: 12px; font-weight: bold; color: #555;}
+        .tally-details { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 15px;}
+        .tally-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        .tally-table th { background: #f0f0f0; border: 1px solid #ccc; padding: 6px; color: #333; font-weight: 700; text-align: left;}
+        .tally-table td { border: 1px solid #ccc; padding: 6px; color: #111; }
+
+        @media print {
+            @page { size: A4 portrait; margin: 0; }
+            html, body { margin: 0 !important; padding: 0 !important; width: 210mm !important; height: 297mm !important; overflow: hidden !important; background: #fff !important; display: block !important; color: #000 !important; }
+            body > * { display: none !important; }
+            body > #viewEmiModal.active { display: block !important; position: absolute !important; top: 0 !important; left: 0 !important; width: 210mm !important; height: 297mm !important; padding: 0 !important; margin: 0 !important; background: #fff !important; opacity: 1 !important; overflow: hidden !important; border: none !important; }
+            body > #viewEmiModal.active .modal-card { display: block !important; width: 210mm !important; height: 297mm !important; padding: 0 !important; margin: 0 !important; background: #fff !important; border: none !important; border-radius: 0 !important; box-shadow: none !important; transform: none !important; overflow: hidden !important; }
+            body > #viewEmiModal.active .modal-header, body > #viewEmiModal.active .modal-footer { display: none !important; }
+            body > #viewEmiModal.active .modal-body { display: block !important; padding: 10mm !important; margin: 0 !important; background: #fff !important; overflow: hidden !important; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Notification Banner -->
+    <div id="emiNotificationBanner"></div>
+
+    <div class="main-content">
+        <div class="header">
+            <div>
+                <a href="dashboard_home.html" id="btnBackDashboard" class="btn-back-dash" onclick="handleBackToDashboard(event)">← Back to Dashboard</a>
+                <h1>
+                    🏦 Company Loan & EMI Management
+                    <span id="roleModeBadge" class="role-mode-badge">🏢 Office Mode</span>
+                </h1>
+            </div>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+                <button class="btn-emi" onclick="openEmiModal()">💸 Pay EMI</button>
+                <button class="btn-primary" onclick="openLoanModal()">➕ Register New Loan</button>
+            </div>
+        </div>
+
+        <!-- NEW: Active / Deactivated Tabs -->
+        <div class="tabs-container">
+            <button class="tab-btn active" id="tabActive" onclick="switchTab('Active')">🟢 Active Loans</button>
+            <button class="tab-btn" id="tabClosed" onclick="switchTab('Closed')">🔴 Deactivated / Closed</button>
+        </div>
+
+        <div class="controls-bar">
+            <div class="stat-container">
+                <span class="stat-box" id="statLoanLabel">Active Loans: <span id="statLoanCount" style="color: var(--theme-color);">0</span></span>
+            </div>
+            <input type="text" class="search-box" id="searchBox" placeholder="🔍 Search Loan ID, Bank or Details..." onkeyup="renderLoanTable()">
+        </div>
+
+        <div class="table-container-box">
+            <table class="dash-table" id="loanTable">
+                <thead>
+                    <tr>
+                        <th>Loan ID</th>
+                        <th>Disbursal Date</th>
+                        <th>Bank / Financier</th>
+                        <th>Purpose</th>
+                        <th>EMI Due Date</th>
+                        <th>Total Payable (₹)</th>
+                        <th>EMI Paid (₹)</th>
+                        <th>Out. Balance (₹)</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="loanTableBody">
+                    <!-- Data populated via JS -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="summary-footer-bar">
+            <div class="summary-footer-box">
+                <span>Gross Corporate Loan Amount</span>
+                <h3 class="text-base-val" id="sumTotalLoan">₹ 0.00</h3>
+            </div>
+            <div class="summary-footer-box">
+                <span>Total EMI Paid Till Date</span>
+                <h3 class="text-gst-val" id="sumPaidEmi">₹ 0.00</h3>
+            </div>
+            <div class="summary-footer-box">
+                <span>Total Outstanding Balance</span>
+                <h3 class="text-gross-val" id="sumOutBal" style="color: #dc3545;">₹ 0.00</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 1. NEW LOAN REGISTRATION MODAL ================= -->
+    <div class="modal-overlay" id="loanModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2 id="loanModalTitle">➕ Register New Loan Account</h2>
+                <button class="close-btn" onclick="closeLoanModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-section">
+                    <h3>Basic Loan Information</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Loan Account ID</label>
+                            <input type="text" class="form-control" id="lAccountId" placeholder="e.g. HDFC-LN-001" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Date of Disbursal</label>
+                            <input type="date" class="form-control" id="lDate" required>
+                        </div>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Bank / Financier Name</label>
+                            <input type="text" class="form-control" id="lBank" placeholder="e.g. HDFC Bank" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Loan Purpose</label>
+                            <input type="text" class="form-control" id="lPurpose" placeholder="e.g. Tata Ace Vehicle" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section" style="border-color: rgba(220, 53, 69, 0.4);">
+                    <h3 style="color: #dc3545;">Financial Details & Interest Rate</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Principal Loan Amount (₹)</label>
+                            <input type="number" class="form-control" id="lAmount" placeholder="e.g. 500000" min="0" step="any" oninput="calculateTotalPayableLoan()" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Tenure (Months)</label>
+                            <input type="number" class="form-control" id="lTenure" placeholder="e.g. 36" min="1" oninput="calculateTotalPayableLoan()" required>
+                        </div>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label style="display:flex; justify-content:space-between; align-items:center;">
+                                Interest Type & Value 
+                                <div class="interest-toggle" id="intToggleGroup">
+                                    <button type="button" class="active" id="btnPct" onclick="setInterestType('%')">% Percentage</button>
+                                    <button type="button" id="btnAmt" onclick="setInterestType('₹')">₹ Flat Amt/Mo</button>
+                                </div>
+                            </label>
+                            <input type="hidden" id="lInterestType" value="%">
+                            <input type="number" class="form-control" id="lInterest" placeholder="e.g. 9.5" step="any" oninput="calculateTotalPayableLoan()" required>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px; padding: 15px; background: rgba(0,0,0,0.2); border: 1px dashed var(--theme-color); border-radius: 8px;">
+                        <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: bold;">Calculated Total Payable:</span>
+                        <h3 style="color: var(--theme-color); margin-top: 5px; font-size: 22px;" id="lTotalPayableDisplay">₹0.00</h3>
+                        <input type="hidden" id="lTotalPayableValue" value="0">
+                    </div>
+                </div>
+
+                <div class="form-section" style="border-color: rgba(255, 193, 7, 0.4);">
+                    <h3 style="color: #ffc107;">Notification Setup</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>EMI Due Date (Monthly)</label>
+                            <select class="form-control" id="lDueDate">
+                                <!-- Generated by JS -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Remind Before (Days)</label>
+                            <input type="number" class="form-control" id="lRemindDays" placeholder="e.g. 2" min="1" max="15" value="2">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="btnSaveLoan" class="btn-save" onclick="saveLoan()">💾 Save Loan Account</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 2. EMI PAYMENT MODAL ================= -->
+    <div class="modal-overlay" id="emiModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2 style="color: #28a745;">💸 Pay EMI / Loan Repayment</h2>
+                <button class="close-btn" onclick="closeEmiModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label>Select Active Loan Account</label>
+                    <select class="form-control" id="emiLoanSelect" onchange="onEmiLoanSelect()">
+                        <option value="">-- Choose Loan Account --</option>
+                    </select>
+                </div>
+                
+                <div id="emiDetailsBlock" style="display:none;">
+                    <div class="form-section">
+                        <h3>Payment Details</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Date of Payment</label>
+                                <input type="date" class="form-control" id="emiDate" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Reference No</label>
+                                <input type="text" class="form-control" id="emiRef" placeholder="e.g. NEFT/UPI Ref" required>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label>Select Payment Bank</label>
+                            <select class="form-control" id="emiPaymentBank" required>
+                                <option value="">-- Select Bank Account --</option>
+                            </select>
+                        </div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Amount Paid (₹)</label>
+                                <input type="number" class="form-control" id="emiAmount" placeholder="e.g. 15000" min="1" step="any" style="border-color: #28a745; font-weight: bold; color: #28a745;" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Outstanding Balance</label>
+                                <input type="text" class="form-control" id="emiOutBal" readonly>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-save" style="background:#28a745; box-shadow: 0 4px 10px rgba(40,167,69,0.3);" onclick="saveEmiPayment()">📤 Process Payment</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 3. EMI LEDGER VIEW MODAL ================= -->
+    <div class="modal-overlay" id="viewEmiModal" style="z-index: 1200;">
+        <div class="modal-card large-modal">
+            <div class="modal-header">
+                <h2 style="color: #17a2b8;">👁️ Loan Ledger View</h2>
+                <button class="close-btn" onclick="document.getElementById('viewEmiModal').classList.remove('active')">×</button>
+            </div>
+            <div class="modal-body" style="background-color: #eef1f6; padding: 20px 0;">
+                <div class="ledger-view-box" id="printableLedgerView">
+                    <!-- Dynamic Tally Formatted Content Injected Here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-save" style="background: rgba(255,193,7,0.2); color: #ffc107; border: 1px solid #ffc107; box-shadow: none;" onclick="window.print()">📄 Print/PDF (A4 Tally Style)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 4. OFFICE PORTAL APPROVAL MODAL ================= -->
+    <div class="modal-overlay" id="officeApprovalModal" style="z-index: 2500;">
+        <div class="modal-card" style="max-width: 480px; border-top-color: #ffc107;">
+            <div class="modal-header">
+                <h2 style="color: #ffc107; font-size: 18px;">🏢 Send Request to ApproveOffice.html</h2>
+                <button class="close-btn" onclick="closeOfficeApprovalModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.5;">
+                    অফিস পোর্টাল থেকে নতুন লোন তৈরি, এডিট, ডিলিট বা স্ট্যাটাস চেঞ্জ করলে তা অ্যাডমিনের <strong>ApproveOffice.html</strong>-এ পাঠানো হবে।
+                </p>
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label>Action Summary</label>
+                    <input type="text" id="officeApprovalSummary" class="form-control" readonly style="color: #ffc107; font-weight: 700;">
+                </div>
+                <div class="form-group">
+                    <label>Reason / Remarks for Admin <span style="color: #ff4d4d;">*</span></label>
+                    <textarea id="officeApprovalReason" class="form-control" rows="3" placeholder="Write a short note for this action..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-action btn-del" style="width: auto; padding: 10px 18px; height: auto;" onclick="closeOfficeApprovalModal()">Cancel</button>
+                <button type="button" class="btn-save" style="background: #ffc107; color: #121212; box-shadow: none;" onclick="confirmOfficeApprovalRequest()">📤 Send for Approval</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 5. ADMIN VERIFICATION MODAL (DELETE) ================= -->
+    <div class="modal-overlay" id="adminVerifyModal" style="z-index: 2000;">
+        <div class="modal-card" style="max-width: 400px; border-top-color: #dc3545;">
+            <div class="modal-header">
+                <h2 style="color: #dc3545; font-size: 18px;">🔒 Admin Verification Required</h2>
+                <button class="close-btn" onclick="closeAdminVerifyModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.5;">
+                    এই লোন অ্যাকাউন্টটি চিরতরে মুছে ফেলতে চাইলে অ্যাডমিন পাসওয়ার্ড দিন।
+                </p>
+                <div class="form-group">
+                    <label>Enter Admin Password</label>
+                    <input type="password" id="adminPassInput" class="form-control" placeholder="Password (admin123)">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-action btn-del" style="width: auto; padding: 10px 18px; height: auto;" onclick="closeAdminVerifyModal()">Cancel</button>
+                <button type="button" class="btn-save" style="background: #dc3545; box-shadow: none;" onclick="confirmAdminDeleteLoan()">🗑️ Verify & Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-popup" id="toastPopup"></div>
+
+    <script>
+        // =========================================================================================
+        // 1. ROLE DETECTION & NAVIGATION
+        // =========================================================================================
+        let currentPortalMode = "admin";
+        let loggedUserId = "ADMIN";
+        let loggedUserName = "Super Admin";
+        let pendingOfficePayload = null;
+        let pendingDeleteId = null;
+
+        function checkPortalPermissions() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewParam = (urlParams.get('view') || '').toLowerCase();
+            const badge = document.getElementById('roleModeBadge');
+            const backBtn = document.getElementById('btnBackDashboard');
+            const saveLoanBtn = document.getElementById('btnSaveLoan');
+
+            let parentPath = "";
+            try {
+                if (window.parent && window.parent !== window) {
+                    parentPath = (window.parent.location.pathname || '').toLowerCase();
+                }
+            } catch (e) {}
+
+            if (viewParam === 'office' || parentPath.includes('officedashboard')) {
+                currentPortalMode = 'office';
+                loggedUserId = urlParams.get('userId') || sessionStorage.getItem('atr_logged_office_id') || localStorage.getItem('atr_logged_office_id') || "OFF-101";
+                loggedUserName = urlParams.get('userName') || "Office Staff";
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🏢 Office Mode (${loggedUserName}) — Synced with ApproveOffice.html`;
+                }
+                if (backBtn) backBtn.href = "office/office_dashboard_home.html";
+                if (saveLoanBtn) saveLoanBtn.innerText = "📤 Submit Request for Approval";
+            } else if (viewParam === 'supervisor' || parentPath.includes('supervisordashboard')) {
+                currentPortalMode = 'supervisor';
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🛡️ Supervisor Mode (View Only)`;
+                }
+                if (backBtn) backBtn.href = "supervisor/supervisor_dashboard_home.html";
+                document.querySelectorAll('.btn-primary, .btn-emi').forEach(btn => btn.style.display = 'none');
+            } else {
+                currentPortalMode = 'admin';
+                if (backBtn) backBtn.href = "dashboard_home.html";
+            }
+        }
+
+        // =========================================================================================
+        // 2. DATABASE INITIALIZATION & SYNC
+        // =========================================================================================
+        const defaultLoans = [
+            { id: "1700000001", loanId: "HDFC-CV-001", date: "2025-05-10", bank: "HDFC Bank", purpose: "Tata Ace Delivery Vehicle", amount: 450000, interestType: "%", interest: 9.5, tenure: 36, totalPayable: 578250, dueDate: 5, remindDays: 2, status: "Active", pendingStatus: null },
+            { id: "1700000002", loanId: "TMF-JCB-889", date: "2024-11-15", bank: "Tata Motors Finance", purpose: "JCB Machine", amount: 1500000, interestType: "₹", interest: 12000, tenure: 48, totalPayable: 2076000, dueDate: 15, remindDays: 3, status: "Closed", pendingStatus: null }
+        ];
+
+        const defaultEmiPayments = [
+            { loanPrimaryId: "1700000001", date: "2025-06-10", refNo: "NEFT-HDFC-9981", payBank: "State Bank of India", amount: 16062.5 },
+            { loanPrimaryId: "1700000001", date: "2025-07-10", refNo: "NEFT-HDFC-1021", payBank: "State Bank of India", amount: 16062.5 },
+            { loanPrimaryId: "1700000002", date: "2024-12-15", refNo: "UPI-TMF-771", payBank: "HDFC Bank", amount: 2076000 }
+        ];
+
+        let loans = [];
+        let emiPayments = [];
+        let companyBanks = [];
+        let isEditLoan = false; 
+        let editingLoanId = null;
+
+        // Current UI State for Tabs
+        let currentViewTab = 'Active';
+
+        function loadAndSyncDatabases() {
+            const storedLoans = JSON.parse(localStorage.getItem('atr_company_loans_db'));
+            if (Array.isArray(storedLoans) && storedLoans.length > 0) {
+                loans = storedLoans;
+            } else {
+                loans = [...defaultLoans];
+                localStorage.setItem('atr_company_loans_db', JSON.stringify(loans));
+            }
+
+            const storedEmis = JSON.parse(localStorage.getItem('atr_company_emis_db'));
+            if (Array.isArray(storedEmis) && storedEmis.length > 0) {
+                emiPayments = storedEmis;
+            } else {
+                emiPayments = [...defaultEmiPayments];
+                localStorage.setItem('atr_company_emis_db', JSON.stringify(emiPayments));
+            }
+
+            const storedBanks = JSON.parse(localStorage.getItem('atr_company_banks_db'));
+            if (Array.isArray(storedBanks) && storedBanks.length > 0) {
+                companyBanks = storedBanks;
+            } else {
+                companyBanks = [
+                    { id: "BNK-1001", bankName: "HDFC Bank", accNo: "501002345678" },
+                    { id: "BNK-1002", bankName: "State Bank of India", accNo: "0000123456789" }
+                ];
+            }
+        }
+
+        window.onload = function() {
+            checkPortalPermissions();
+            loadAndSyncDatabases();
+            populateDueDateDropdown();
+            renderLoanTable();
+            checkEmiNotifications();
+        };
+
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'atr_company_loans_db' || e.key === 'atr_company_emis_db' || e.key === 'atr_company_banks_db') {
+                loadAndSyncDatabases();
+                renderLoanTable();
+                checkEmiNotifications();
+            }
+        });
+
+        // =========================================================================================
+        // 3. TAB MANAGEMENT & RENDER ENGINE
+        // =========================================================================================
+        function switchTab(tabName) {
+            currentViewTab = tabName;
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('tab' + tabName).classList.add('active');
+            
+            document.getElementById('statLoanLabel').innerHTML = `${tabName === 'Active' ? 'Active' : 'Closed'} Loans: <span id="statLoanCount" style="color: var(--theme-color);">0</span>`;
+            
+            renderLoanTable();
+        }
+
+        function renderLoanTable() {
+            const tbody = document.getElementById('loanTableBody');
+            tbody.innerHTML = '';
+            const searchQuery = document.getElementById('searchBox').value.toLowerCase();
+            
+            let count = 0;
+            let totalGrossLoan = 0;
+            let totalPaidEmi = 0;
+            let totalOutBal = 0;
+
+            [...loans].reverse().forEach(loan => {
+                // Filter by Tab (Active vs Closed/Deactivated)
+                let loanStatus = loan.status || 'Active';
+                if (currentViewTab === 'Closed') {
+                    if (loanStatus !== 'Closed' && loanStatus !== 'Deactivated') return;
+                } else {
+                    if (loanStatus !== 'Active') return;
+                }
+
+                let searchStr = `${loan.loanId} ${loan.bank} ${loan.purpose}`.toLowerCase();
+                if(searchQuery && !searchStr.includes(searchQuery)) return;
+
+                count++;
+                
+                const actualPayable = loan.totalPayable || loan.amount;
+                const paidAmt = calculateTotalPaidEmi(loan.id);
+                const outBal = actualPayable - paidAmt;
+                
+                totalGrossLoan += actualPayable;
+                totalPaidEmi += paidAmt;
+                totalOutBal += outBal;
+
+                const pendingBadge = loan.pendingStatus ? `<br><span class="pending-status-pill">⏳ ${loan.pendingStatus}</span>` : '';
+                
+                let displayStatus = loanStatus === 'Active' ? 'Active' : 'Closed';
+                let badgeStyle = loanStatus === 'Active' 
+                    ? "background:rgba(40,167,69,0.15); color:#28a745; border:1px solid rgba(40,167,69,0.3);" 
+                    : "background:rgba(111, 66, 193, 0.15); color:#b18cfd; border:1px solid rgba(111, 66, 193, 0.3);"; 
+
+                let toggleStatusBtn = loanStatus === 'Active' 
+                    ? `<button class="btn-action btn-status-toggle" title="Deactivate/Close Loan" onclick="toggleLoanStatus('${loan.id}', 'Closed')">🚫</button>`
+                    : `<button class="btn-action btn-status-toggle" style="color:#28a745; border-color:#28a745;" title="Re-Activate Loan" onclick="toggleLoanStatus('${loan.id}', 'Active')">🔄</button>`;
+
+                let actionsHtml = '';
+                if (currentPortalMode !== 'supervisor') {
+                    actionsHtml = `
+                        <button class="btn-action btn-view" title="View EMI Ledger" onclick="viewEmiLedger('${loan.id}')">👁️</button>
+                        <button class="btn-action btn-edit" title="Edit Loan" onclick="editLoan('${loan.id}')">✏️</button>
+                        ${toggleStatusBtn}
+                        <button class="btn-action btn-del" title="Delete Loan" onclick="initiateDeleteLoan('${loan.id}')">🗑️</button>
+                    `;
+                } else {
+                    actionsHtml = `<button class="btn-action btn-view" title="View EMI Ledger" onclick="viewEmiLedger('${loan.id}')">👁️</button>`;
+                }
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>
+                        <span style="font-weight:bold; color:var(--theme-color);">${loan.loanId}</span>
+                        ${pendingBadge}
+                    </td>
+                    <td>${loan.date}</td>
+                    <td><strong style="color:var(--text-main);">${loan.bank}</strong></td>
+                    <td style="color:var(--text-muted); font-size: 11.5px;">${loan.purpose}</td>
+                    <td style="color:#ffc107; font-weight: bold;">${loan.dueDate ? loan.dueDate + getOrdinal(loan.dueDate) : '-'}</td>
+                    <td style="color:#007bff; font-weight: bold;">₹${actualPayable.toLocaleString('en-IN', {minimumFractionDigits:2})}</td>
+                    <td style="color:#28a745; font-weight: bold;">₹${paidAmt.toLocaleString('en-IN', {minimumFractionDigits:2})}</td>
+                    <td style="color:#dc3545; font-weight: bold;">₹${outBal.toLocaleString('en-IN', {minimumFractionDigits:2})}</td>
+                    <td><span style="padding:4px 8px; border-radius:4px; font-size:11px; font-weight:bold; ${badgeStyle}">🏷️ ${displayStatus}</span></td>
+                    <td><div class="action-btns">${actionsHtml}</div></td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('statLoanCount').innerText = count;
+            document.getElementById('sumTotalLoan').innerText = `₹${totalGrossLoan.toLocaleString('en-IN', {minimumFractionDigits:2})}`;
+            document.getElementById('sumPaidEmi').innerText = `₹${totalPaidEmi.toLocaleString('en-IN', {minimumFractionDigits:2})}`;
+            document.getElementById('sumOutBal').innerText = `₹${totalOutBal.toLocaleString('en-IN', {minimumFractionDigits:2})}`;
+        }
+
+        function toggleLoanStatus(id, newStatus) {
+            const loan = loans.find(l => String(l.id) === String(id));
+            if(!loan) return;
+            
+            if (currentPortalMode === 'office') {
+                openOfficeApprovalModal({
+                    type: 'EDIT_LOAN',
+                    targetId: loan.id,
+                    actionLabel: "CHANGE LOAN STATUS",
+                    summary: `Change status of Loan ${loan.loanId} to ${newStatus}`,
+                    oldData: loan,
+                    newData: { ...loan, status: newStatus }
+                });
+                return;
+            }
+
+            loan.status = newStatus;
+            localStorage.setItem('atr_company_loans_db', JSON.stringify(loans));
+            renderLoanTable();
+            checkEmiNotifications();
+            showToast(`✅ Loan marked as ${newStatus}!`);
+        }
+
+        // =========================================================================================
+        // 4. AUTO NOTIFICATION ENGINE
+        // =========================================================================================
+        function checkEmiNotifications() {
+            const today = new Date();
+            const currentDay = today.getDate();
+            const currentMonth = today.getMonth();
+            const currentYear = today.getFullYear();
+            
+            let notifications = [];
+
+            loans.forEach(loan => {
+                if(loan.status !== 'Active') return;
+                
+                const dueDate = parseInt(loan.dueDate) || 0;
+                const remindDays = parseInt(loan.remindDays) || 0;
+
+                if (dueDate === 0) return;
+
+                let emiDateObj = new Date(currentYear, currentMonth, dueDate);
+                const diffTime = emiDateObj - today;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                if (diffDays <= remindDays) {
+                    const monthPadded = String(currentMonth + 1).padStart(2, '0');
+                    const thisMonthStr = `${currentYear}-${monthPadded}`;
+                    
+                    const isPaidThisMonth = emiPayments.some(e => {
+                        return String(e.loanPrimaryId) === String(loan.id) && e.date.startsWith(thisMonthStr);
+                    });
+
+                    if (!isPaidThisMonth) {
+                        let statusText = diffDays < 0 ? `OVERDUE by ${Math.abs(diffDays)} days` : (diffDays === 0 ? "DUE TODAY" : `Due in ${diffDays} days`);
+                        notifications.push(`<span>⚠️ <b>EMI Alert:</b> ${loan.bank} - A/C: ${loan.loanId} (${statusText} on ${dueDate}th)</span>`);
+                    }
+                }
+            });
+
+            const banner = document.getElementById('emiNotificationBanner');
+            if (notifications.length > 0) {
+                banner.innerHTML = notifications.join('');
+                banner.style.display = 'block';
+            } else {
+                banner.style.display = 'none';
+            }
+        }
+
+        // =========================================================================================
+        // 5. LOAN REGISTRATION & DUAL INTEREST CALCULATION
+        // =========================================================================================
+        function populateDueDateDropdown() {
+            const select = document.getElementById('lDueDate');
+            select.innerHTML = '<option value="">-- Select Day --</option>';
+            for(let i=1; i<=31; i++) {
+                select.innerHTML += `<option value="${i}">${i}${getOrdinal(i)} of every month</option>`;
+            }
+        }
+
+        function getOrdinal(n) {
+            const s = ["th", "st", "nd", "rd"];
+            const v = n % 100;
+            return s[(v - 20) % 10] || s[v] || s[0];
+        }
+
+        function setInterestType(type) {
+            document.getElementById('lInterestType').value = type;
+            document.getElementById('btnPct').className = type === '%' ? 'active' : '';
+            document.getElementById('btnAmt').className = type === '₹' ? 'active' : '';
+            document.getElementById('lInterest').placeholder = type === '%' ? "e.g. 9.5" : "e.g. 5000";
+            calculateTotalPayableLoan();
+        }
+
+        function calculateTotalPayableLoan() {
+            const p = parseFloat(document.getElementById('lAmount').value) || 0;
+            const r = parseFloat(document.getElementById('lInterest').value) || 0;
+            const t = parseInt(document.getElementById('lTenure').value) || 0;
+            const type = document.getElementById('lInterestType').value;
+
+            let total = p;
+            if (type === '%') {
+                total = p + (p * r * (t / 12)) / 100;
+            } else if (type === '₹') {
+                total = p + (r * t);
+            }
+
+            document.getElementById('lTotalPayableValue').value = total;
+            document.getElementById('lTotalPayableDisplay').innerText = `₹${total.toLocaleString('en-IN', {minimumFractionDigits:2})}`;
+        }
+
+        function openLoanModal() {
+            isEditLoan = false; editingLoanId = null;
+            document.getElementById('loanModalTitle').innerText = "➕ Register New Loan Account";
+            document.getElementById('lAccountId').value = "";
+            document.getElementById('lDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('lBank').value = "";
+            document.getElementById('lPurpose').value = "";
+            document.getElementById('lAmount').value = "";
+            document.getElementById('lTenure').value = "";
+            setInterestType('%');
+            document.getElementById('lInterest').value = "";
+            document.getElementById('lDueDate').value = "";
+            document.getElementById('lRemindDays').value = "2";
+            document.getElementById('lTotalPayableValue').value = "0";
+            document.getElementById('lTotalPayableDisplay').innerText = "₹0.00";
+            document.getElementById('loanModal').classList.add('active');
+        }
+        function closeLoanModal() { document.getElementById('loanModal').classList.remove('active'); }
+
+        function saveLoan() {
+            const accountId = document.getElementById('lAccountId').value.trim();
+            const date = document.getElementById('lDate').value;
+            const bank = document.getElementById('lBank').value.trim();
+            const purpose = document.getElementById('lPurpose').value.trim();
+            const amount = parseFloat(document.getElementById('lAmount').value);
+            const tenure = parseInt(document.getElementById('lTenure').value) || 0;
+            const interestType = document.getElementById('lInterestType').value;
+            const interest = parseFloat(document.getElementById('lInterest').value) || 0;
+            const totalPayable = parseFloat(document.getElementById('lTotalPayableValue').value) || amount;
+            const dueDate = document.getElementById('lDueDate').value;
+            const remindDays = document.getElementById('lRemindDays').value;
+
+            if(!accountId || !date || !bank || !purpose || isNaN(amount) || tenure <= 0 || !dueDate) {
+                alert("Please fill all required fields correctly (including Due Date)!");
+                return;
+            }
+
+            let existingLoan = isEditLoan ? loans.find(l => String(l.id) === String(editingLoanId)) : null;
+            let loanData = {
+                id: isEditLoan ? existingLoan.id : Date.now().toString(),
+                loanId: accountId, date: date, bank: bank, purpose: purpose, 
+                amount: amount, interestType: interestType, interest: interest, 
+                tenure: tenure, totalPayable: totalPayable,
+                dueDate: dueDate, remindDays: remindDays,
+                status: isEditLoan ? existingLoan.status : "Active", pendingStatus: null
+            };
+
+            if(isEditLoan) {
+                if (currentPortalMode === 'office') {
+                    openOfficeApprovalModal({
+                        type: 'EDIT_LOAN',
+                        targetId: existingLoan.id,
+                        actionLabel: "EDIT COMPANY LOAN",
+                        summary: `Loan ${accountId} (${bank}) — Payable: ₹${existingLoan.totalPayable} → ₹${loanData.totalPayable}`,
+                        oldData: existingLoan,
+                        newData: loanData
+                    });
+                    closeLoanModal();
+                    return;
+                }
+                const idx = loans.findIndex(l => String(l.id) === String(editingLoanId));
+                if (idx > -1) loans[idx] = loanData;
+            } else {
+                if (currentPortalMode === 'office') {
+                    openOfficeApprovalModal({
+                        type: 'CREATE_LOAN',
+                        targetId: loanData.id,
+                        actionLabel: "REGISTER NEW LOAN",
+                        summary: `New Loan ${accountId} (${bank}) — Total Payable: ₹${loanData.totalPayable}`,
+                        oldData: null,
+                        newData: loanData
+                    });
+                    closeLoanModal();
+                    return;
+                }
+                loans.push(loanData);
+            }
+
+            localStorage.setItem('atr_company_loans_db', JSON.stringify(loans));
+            closeLoanModal();
+            renderLoanTable();
+            checkEmiNotifications();
+            showToast("✅ Loan Account Saved Successfully!");
+        }
+
+        function calculateTotalPaidEmi(loanPrimaryId) {
+            const payments = emiPayments.filter(e => String(e.loanPrimaryId) === String(loanPrimaryId));
+            return payments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+        }
+
+        function editLoan(id) {
+            const loan = loans.find(l => String(l.id) === String(id));
+            if(!loan) return;
+            isEditLoan = true; editingLoanId = loan.id;
+            document.getElementById('loanModalTitle').innerText = "✏️ Edit Loan Account";
+            document.getElementById('lAccountId').value = loan.loanId;
+            document.getElementById('lDate').value = loan.date;
+            document.getElementById('lBank').value = loan.bank;
+            document.getElementById('lPurpose').value = loan.purpose;
+            document.getElementById('lAmount').value = loan.amount;
+            document.getElementById('lTenure').value = loan.tenure || "";
+            setInterestType(loan.interestType || "%");
+            document.getElementById('lInterest').value = loan.interest || "";
+            document.getElementById('lDueDate').value = loan.dueDate || "";
+            document.getElementById('lRemindDays').value = loan.remindDays || "2";
+            document.getElementById('lTotalPayableValue').value = loan.totalPayable || loan.amount;
+            document.getElementById('lTotalPayableDisplay').innerText = `₹${Number(loan.totalPayable || loan.amount).toLocaleString('en-IN', {minimumFractionDigits:2})}`;
+            
+            document.getElementById('loanModal').classList.add('active');
+        }
+
+        // --- DELETE WITH ADMIN VERIFICATION LOGIC ---
+        function initiateDeleteLoan(id) {
+            const loan = loans.find(l => String(l.id) === String(id));
+            if(!loan) return;
+
+            if (currentPortalMode === 'office') {
+                openOfficeApprovalModal({
+                    type: 'DELETE_LOAN',
+                    targetId: loan.id,
+                    actionLabel: "DELETE COMPANY LOAN",
+                    summary: `Delete Loan ${loan.loanId} (${loan.bank})`,
+                    oldData: loan,
+                    newData: null
+                });
+                return;
+            }
+
+            // If Admin, prompt for password
+            pendingDeleteId = id;
+            document.getElementById('adminPassInput').value = '';
+            document.getElementById('adminVerifyModal').classList.add('active');
+            setTimeout(() => document.getElementById('adminPassInput').focus(), 50);
+        }
+
+        function closeAdminVerifyModal() {
+            document.getElementById('adminVerifyModal').classList.remove('active');
+            pendingDeleteId = null;
+        }
+
+        function confirmAdminDeleteLoan() {
+            const pass = document.getElementById('adminPassInput').value;
+            if (pass !== 'admin123' && pass !== 'admin') {
+                alert("❌ Incorrect Admin Password! Access Denied.");
+                return;
+            }
+
+            if (pendingDeleteId) {
+                const loan = loans.find(l => String(l.id) === String(pendingDeleteId));
+                loans = loans.filter(l => String(l.id) !== String(pendingDeleteId));
+                emiPayments = emiPayments.filter(e => String(e.loanPrimaryId) !== String(pendingDeleteId));
+                
+                localStorage.setItem('atr_company_loans_db', JSON.stringify(loans));
+                localStorage.setItem('atr_company_emis_db', JSON.stringify(emiPayments));
+                
+                renderLoanTable();
+                checkEmiNotifications();
+                closeAdminVerifyModal();
+                showToast("🗑️ Loan Account & EMI History Successfully Deleted!");
+            }
+        }
+
+        // =========================================================================================
+        // 6. EMI PAYMENT ENGINE WITH BANK SYNC
+        // =========================================================================================
+        function openEmiModal() {
+            let select = document.getElementById('emiLoanSelect');
+            select.innerHTML = `<option value="">-- Choose Loan Account --</option>`;
+            loans.forEach(loan => {
+                if (loan.status === 'Closed' || loan.status === 'Deactivated') return; 
+                
+                const actualPayable = loan.totalPayable || loan.amount;
+                const paidAmt = calculateTotalPaidEmi(loan.id);
+                const outBal = actualPayable - paidAmt;
+                if(outBal > 0) {
+                    select.innerHTML += `<option value="${loan.id}">${loan.loanId} - ${loan.bank} (Due: ₹${outBal.toLocaleString('en-IN')})</option>`;
+                }
+            });
+
+            let bankSelect = document.getElementById('emiPaymentBank');
+            bankSelect.innerHTML = `<option value="">-- Select Bank Account --</option>`;
+            companyBanks.forEach(b => {
+                bankSelect.innerHTML += `<option value="${b.bankName}">${b.bankName} (A/C: ${b.accNo})</option>`;
+            });
+
+            document.getElementById('emiDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('emiRef').value = "";
+            document.getElementById('emiAmount').value = "";
+            document.getElementById('emiDetailsBlock').style.display = "none";
+            document.getElementById('emiModal').classList.add('active');
+        }
+        function closeEmiModal() { document.getElementById('emiModal').classList.remove('active'); }
+
+        function onEmiLoanSelect() {
+            let loanId = document.getElementById('emiLoanSelect').value;
+            if(!loanId) { document.getElementById('emiDetailsBlock').style.display = "none"; return; }
+            let loan = loans.find(l => String(l.id) === String(loanId));
+            const actualPayable = loan.totalPayable || loan.amount;
+            const paidAmt = calculateTotalPaidEmi(loan.id);
+            const outBal = actualPayable - paidAmt;
+            document.getElementById('emiOutBal').value = `₹${outBal.toLocaleString('en-IN', {minimumFractionDigits:2})}`;
+            document.getElementById('emiDetailsBlock').style.display = "block";
+        }
+
+        function saveEmiPayment() {
+            let loanId = document.getElementById('emiLoanSelect').value;
+            let date = document.getElementById('emiDate').value;
+            let ref = document.getElementById('emiRef').value.trim();
+            let bankName = document.getElementById('emiPaymentBank').value;
+            let amount = parseFloat(document.getElementById('emiAmount').value);
+
+            if(!loanId || !date || !ref || !bankName || isNaN(amount) || amount <= 0) {
+                alert("Please fill all valid EMI details including the Payment Bank!");
+                return;
+            }
+
+            let loan = loans.find(l => String(l.id) === String(loanId));
+            const actualPayable = loan.totalPayable || loan.amount;
+            const paidAmt = calculateTotalPaidEmi(loan.id);
+            const outBal = actualPayable - paidAmt;
+
+            if (amount > outBal) {
+                alert(`EMI amount (₹${amount}) cannot be greater than Outstanding Balance (₹${outBal})!`);
+                return;
+            }
+
+            let emiData = {
+                id: "EMI-" + Date.now(),
+                loanPrimaryId: loanId,
+                date: date,
+                refNo: ref,
+                payBank: bankName,
+                amount: amount,
+                timestamp: new Date().toISOString()
+            };
+
+            if (currentPortalMode === 'office') {
+                openOfficeApprovalModal({
+                    type: 'PAY_EMI',
+                    targetId: loan.id,
+                    actionLabel: "EMI PAYMENT ENTRY",
+                    summary: `EMI Paid: ₹${amount.toLocaleString('en-IN')} for Loan ${loan.loanId} from ${bankName}`,
+                    oldData: null,
+                    newData: emiData
+                });
+                closeEmiModal();
+                return;
+            }
+
+            emiPayments.push(emiData);
+            localStorage.setItem('atr_company_emis_db', JSON.stringify(emiPayments));
+            closeEmiModal();
+            renderLoanTable();
+            checkEmiNotifications();
+            showToast("💸 EMI Payment Processed Successfully!");
+        }
+
+        // =========================================================================================
+        // 7. VIEW EMI LEDGER & TALLY PDF EXPORT
+        // =========================================================================================
+        let viewTargetLoanId = null;
+
+        function viewEmiLedger(loanId) {
+            const loan = loans.find(l => String(l.id) === String(loanId));
+            if(!loan) return;
+            viewTargetLoanId = loan.id;
+
+            const actualPayable = loan.totalPayable || loan.amount;
+            const totalPaid = calculateTotalPaidEmi(loanId);
+            const outBal = actualPayable - totalPaid;
+
+            let html = `
+                <div class="tally-header">
+                    <h2>ATR CONSTRUCTION</h2>
+                    <div class="tally-sub">LOAN & EMI LEDGER REPORT</div>
+                </div>
+                <div class="tally-details">
+                    <div>
+                        <b>Loan A/C ID:</b> ${loan.loanId}<br>
+                        <b>Bank / Financer:</b> ${loan.bank}<br>
+                        <b>Purpose:</b> ${loan.purpose}<br>
+                        <b>Interest:</b> ${loan.interest} ${loan.interestType === '%' ? '% p.a' : '₹/month'}
+                    </div>
+                    <div style="text-align:right;">
+                        <b>Disbursal Date:</b> ${loan.date}<br>
+                        <b>Total Payable:</b> ₹${actualPayable.toLocaleString('en-IN', {minimumFractionDigits:2})}<br>
+                        <b>Total Paid:</b> ₹${totalPaid.toLocaleString('en-IN', {minimumFractionDigits:2})}<br>
+                        <b style="color: #dc3545;">Closing Due: ₹${outBal.toLocaleString('en-IN', {minimumFractionDigits:2})}</b>
+                    </div>
+                </div>
+                <table class="tally-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 15%;">Date</th>
+                            <th style="width: 35%;">Particulars / Reference</th>
+                            <th style="width: 30%;">Payment Bank</th>
+                            <th style="text-align: right; width: 20%;">Paid (Cr)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            const myEmis = emiPayments.filter(e => String(e.loanPrimaryId) === String(loanId));
+            
+            if(myEmis.length === 0) {
+                html += `<tr><td colspan="4" style="text-align:center; padding: 20px; color: #888;">No EMI payments recorded yet.</td></tr>`;
+            } else {
+                let rBal = actualPayable;
+                myEmis.forEach(emi => {
+                    rBal -= emi.amount;
+                    html += `
+                        <tr>
+                            <td>${emi.date}</td>
+                            <td>${emi.refNo}</td>
+                            <td>${emi.payBank || '-'}</td>
+                            <td style="text-align: right;">₹${parseFloat(emi.amount).toLocaleString('en-IN', {minimumFractionDigits:2})}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            html += `
+                    </tbody>
+                </table>
+                <div style="margin-top: 15px; font-size: 10px; color: #666; text-align: center; border-top: 1px dashed #ccc; padding-top: 10px;">
+                    * This is a system-generated Loan Statement.
+                </div>
+            `;
+
+            document.getElementById('printableLedgerView').innerHTML = html;
+            document.getElementById('viewEmiModal').classList.add('active');
+        }
+
+        // =========================================================================================
+        // 8. OFFICE APPROVAL ROUTING SYSTEM
+        // =========================================================================================
+        function openOfficeApprovalModal(payload) {
+            pendingOfficePayload = payload;
+            document.getElementById('officeApprovalSummary').value = `${payload.actionLabel}: ${payload.summary}`;
+            document.getElementById('officeApprovalReason').value = '';
+            document.getElementById('officeApprovalModal').classList.add('active');
+            setTimeout(() => document.getElementById('officeApprovalReason').focus(), 50);
+        }
+
+        function closeOfficeApprovalModal() {
+            document.getElementById('officeApprovalModal').classList.remove('active');
+            pendingOfficePayload = null;
+        }
+
+        function confirmOfficeApprovalRequest() {
+            const reason = document.getElementById('officeApprovalReason').value.trim();
+            if (!reason) { alert("⚠️ Please enter a reason/remark for Admin Approval."); return; }
+            if (!pendingOfficePayload) return;
+
+            // Mark Pending Status locally before sending
+            if (pendingOfficePayload.type === 'CREATE_LOAN') {
+                loans.push({ ...pendingOfficePayload.newData, pendingStatus: "Registration Pending" });
+                localStorage.setItem('atr_company_loans_db', JSON.stringify(loans));
+            } else if (pendingOfficePayload.type === 'EDIT_LOAN') {
+                const idx = loans.findIndex(l => String(l.id) === String(pendingOfficePayload.targetId));
+                if (idx > -1) { loans[idx].pendingStatus = "Edit Pending"; localStorage.setItem('atr_company_loans_db', JSON.stringify(loans)); }
+            } else if (pendingOfficePayload.type === 'DELETE_LOAN') {
+                const idx = loans.findIndex(l => String(l.id) === String(pendingOfficePayload.targetId));
+                if (idx > -1) { loans[idx].pendingStatus = "Delete Pending"; localStorage.setItem('atr_company_loans_db', JSON.stringify(loans)); }
+            } else if (pendingOfficePayload.type === 'PAY_EMI') {
+                const idx = loans.findIndex(l => String(l.id) === String(pendingOfficePayload.targetId));
+                if (idx > -1) { loans[idx].pendingStatus = "EMI Verification Pending"; localStorage.setItem('atr_company_loans_db', JSON.stringify(loans)); }
+            }
+
+            const newReq = {
+                reqId: "OFF-LOAN-" + Date.now().toString().slice(-5),
+                userId: loggedUserId,
+                userName: loggedUserName,
+                designation: "Office Staff",
+                module: "CompanyLoanManagement.html",
+                action: pendingOfficePayload.actionLabel,
+                summary: pendingOfficePayload.summary,
+                oldData: pendingOfficePayload.oldData,
+                newData: pendingOfficePayload.newData,
+                reason: reason,
+                timestamp: new Date().toLocaleString('en-IN'),
+                status: "Pending"
+            };
+
+            const officeQueue = JSON.parse(localStorage.getItem('atr_office_approvals')) || [];
+            officeQueue.unshift(newReq);
+            localStorage.setItem('atr_office_approvals', JSON.stringify(officeQueue));
+            localStorage.setItem('approve_office_requests', JSON.stringify(officeQueue));
+            localStorage.setItem('ApproveOffice_requests', JSON.stringify(officeQueue));
+
+            // Log in Daily Work
+            const workLogs = JSON.parse(localStorage.getItem('atr_office_daily_work')) || [];
+            const todayStr = new Date().toISOString().split('T')[0];
+            const nowTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+            workLogs.unshift({
+                id: "WRK-" + Date.now().toString().slice(-5),
+                userId: loggedUserId, userName: loggedUserName, date: todayStr, time: nowTime,
+                module: "Company Loan Management",
+                refNo: newReq.reqId,
+                desc: `${pendingOfficePayload.actionLabel}: ${pendingOfficePayload.summary}`,
+                status: "Sent for Approval"
+            });
+            localStorage.setItem('atr_office_daily_work', JSON.stringify(workLogs));
+
+            try { if (window.parent && window.parent !== window && typeof window.parent.refreshNotificationsUI === 'function') { window.parent.refreshNotificationsUI(); } } catch (e) {}
+
+            closeOfficeApprovalModal();
+            renderLoanTable();
+            showToast("📤 Request sent to ApproveOffice.html for Admin Approval!");
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toastPopup');
+            toast.innerText = msg; toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 3500);
+        }
+    </script>
+</body>
+</html>

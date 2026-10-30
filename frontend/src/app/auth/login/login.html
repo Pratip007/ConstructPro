@@ -1,0 +1,100 @@
+<div class="login-container">
+  <div class="login-header">
+    <div class="login-brand-icon">
+      <i class="ri-building-4-fill"></i>
+    </div>
+    <h2>CONSTRUCT<span class="logo-light">PRO</span></h2>
+    <p>System Portal Access</p>
+  </div>
+
+  <form (ngSubmit)="onSubmit()">
+    <!-- Portal Type Selector -->
+    <div class="input-group portal-selector">
+      <label for="portalType">Select Portal</label>
+      <i class="input-icon ri-apps-line"></i>
+      <select
+        id="portalType"
+        [ngModel]="portalType()"
+        (ngModelChange)="onPortalChange($event)"
+        name="portalType"
+      >
+        @for (opt of portalOptions; track opt.value) {
+          <option [value]="opt.value">{{ opt.label }}</option>
+        }
+      </select>
+    </div>
+
+    <!-- Email / ID field -->
+    <div class="input-group">
+      <label for="email">{{ emailLabel() }}</label>
+      <i class="input-icon" [class]="emailIcon()"></i>
+      <input
+        [type]="isEmployeePortal() ? 'text' : 'email'"
+        id="email"
+        [ngModel]="email()"
+        (ngModelChange)="email.set($event)"
+        name="email"
+        [placeholder]="emailPlaceholder()"
+        required
+      />
+    </div>
+
+    <!-- Password / Aadhaar field -->
+    <div class="input-group">
+      <label for="password">{{ passwordLabel() }}</label>
+      <i class="input-icon" [class]="isEmployeePortal() ? 'ri-fingerprint-line' : 'ri-lock-line'"></i>
+      @if (isEmployeePortal()) {
+        <input
+          type="text"
+          id="password"
+          [value]="password()"
+          (input)="formatAadhaar($event)"
+          name="password"
+          [placeholder]="passwordPlaceholder()"
+          maxlength="14"
+          inputmode="numeric"
+          required
+        />
+      } @else {
+        <input
+          [type]="showPassword() ? 'text' : 'password'"
+          id="password"
+          [ngModel]="password()"
+          (ngModelChange)="password.set($event)"
+          name="password"
+          [placeholder]="passwordPlaceholder()"
+          required
+        />
+        <span class="toggle-password" (click)="togglePasswordVisibility()">
+          @if (showPassword()) {
+            <i class="ri-eye-off-line"></i>
+          } @else {
+            <i class="ri-eye-line"></i>
+          }
+        </span>
+      }
+    </div>
+
+    <button type="submit" class="btn-login" [disabled]="loading()">
+      @if (loading()) {
+        <i class="ri-loader-4-line spin"></i> Signing In...
+      } @else {
+        <i class="ri-login-box-line"></i> Secure Login
+      }
+    </button>
+  </form>
+
+  @if (successMessage()) {
+    <div class="message success-message">
+      <i class="ri-checkbox-circle-line"></i> {{ successMessage() }}
+    </div>
+  }
+
+  @if (errorMessage()) {
+    <div class="message error-message">
+      <i class="ri-alert-line"></i> {{ errorMessage() }}
+    </div>
+  }
+
+  <div class="login-footer">&copy; 2026 ConstructPro Industries. All rights reserved.</div>
+</div>

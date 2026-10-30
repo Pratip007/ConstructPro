@@ -1,0 +1,140 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1><i class="ri-file-list-3-line"></i> Document Library</h1>
+  </div>
+
+  <app-summary-cards [cards]="summaryCards" />
+
+  <!-- Site Filter -->
+  <div class="card-container">
+    <div class="table-toolbar">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;">
+        <div class="form-group" style="margin-bottom:0;min-width:180px;">
+          <label>Filter by Site</label>
+          <app-searchable-dropdown [items]="siteItems" placeholder="All Sites"
+            [ngModel]="siteFilter()" (ngModelChange)="onSiteFilterChange($event)" name="sf" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Folder Panel -->
+  <div class="card-container" style="margin-top:16px;">
+    <h2 style="margin:0 0 12px;"><i class="ri-folder-line"></i> Folders</h2>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;">
+      <div class="form-group" style="margin-bottom:0;min-width:180px;">
+        <input type="text" [ngModel]="newFolderName()" (ngModelChange)="newFolderName.set($event)" placeholder="New folder name" />
+      </div>
+      <div class="form-group" style="margin-bottom:0;min-width:160px;">
+        <app-searchable-dropdown [items]="siteItems" placeholder="Site (optional)"
+          [ngModel]="newFolderSiteId()" (ngModelChange)="newFolderSiteId.set($event)" name="nfs" />
+      </div>
+      <button class="btn-primary" (click)="createFolder()" style="height:38px;"><i class="ri-add-line"></i> Create</button>
+    </div>
+    <div style="margin-top:16px;">
+      @if (foldersLoading()) {
+        <p style="color:var(--text-muted);">Loading folders...</p>
+      } @else if (folders().length === 0) {
+        <p class="empty-state">No folders yet. Create one above.</p>
+      } @else {
+        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+          @for (folder of folders(); track folder.id) {
+            <div class="folder-chip" [class.selected]="selectedFolder()?.id === folder.id" (click)="selectFolder(folder)">
+              <i class="ri-folder-fill"></i>
+              <span>{{ folder.name }}</span>
+              <button class="btn-chip-delete" (click)="$event.stopPropagation(); deleteFolder(folder)">
+                <i class="ri-close-line"></i>
+              </button>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Documents Panel -->
+  @if (selectedFolder()) {
+    <div class="card-container" style="margin-top:16px;">
+      <h2 style="margin:0 0 12px;"><i class="ri-file-text-line"></i> Documents in "{{ selectedFolder()!.name }}"</h2>
+
+      <!-- Upload form -->
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:12px;">
+        <div class="form-group" style="margin-bottom:0;min-width:160px;">
+          <input type="text" [ngModel]="newDocName()" (ngModelChange)="newDocName.set($event)" placeholder="Document name *" />
+        </div>
+        <div class="form-group" style="margin-bottom:0;min-width:140px;">
+          <input type="text" [ngModel]="newDocDescription()" (ngModelChange)="newDocDescription.set($event)" placeholder="Description" />
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <input type="file" (change)="onFileSelected($event)" style="padding:6px;background:var(--input-bg);border:1px solid var(--border-color);border-radius:6px;color:var(--text-main);" />
+        </div>
+        <button class="btn-primary" (click)="uploadDocument()" [disabled]="uploading()" style="height:38px;">
+          @if (uploading()) { Uploading... } @else { <i class="ri-upload-2-line"></i> Upload }
+        </button>
+      </div>
+
+      <!-- Search docs -->
+      <div class="form-group" style="margin-bottom:12px;">
+        <input type="text" [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" placeholder="Search documents..." />
+      </div>
+
+      <!-- Documents table -->
+      <div class="table-responsive">
+        <table>
+          <thead><tr><th></th><th>Name</th><th>Description</th><th>Type</th><th>Size</th><th>Date</th><th>Actions</th></tr></thead>
+          <tbody>
+            @if (docsLoading()) {
+              <tr><td colspan="7" class="empty-state">Loading documents...</td></tr>
+            } @else if (filteredDocuments.length === 0) {
+              <tr><td colspan="7" class="empty-state">No documents found.</td></tr>
+            } @else {
+              @for (doc of filteredDocuments; track doc.id) {
+                <tr>
+                  <td style="font-size:20px;color:var(--accent);"><i [class]="fileIcon(doc.file_type)"></i></td>
+                  <td style="font-weight:600;">{{ doc.name }}</td>
+                  <td>{{ doc.description ?? '-' }}</td>
+                  <td style="font-size:12px;">{{ doc.file_type ?? '-' }}</td>
+                  <td>{{ formatSize(doc.file_size) }}</td>
+                  <td style="font-size:12px;">{{ doc.created_at ?? '-' }}</td>
+                  <td>
+                    <div style="display:flex;gap:6px;">
+                      @if (doc.file_type && (isImageType(doc.file_type) || isPdfType(doc.file_type))) {
+                        <button class="btn-secondary" style="padding:4px 10px;font-size:12px;" (click)="previewDocument(doc)">
+                          <i class="ri-eye-line"></i>
+                        </button>
+                      }
+                      <button class="btn-secondary" style="padding:4px 10px;font-size:12px;" (click)="downloadDocument(doc)">
+                        <i class="ri-download-line"></i>
+                      </button>
+                      <button class="btn-secondary" style="padding:4px 10px;font-size:12px;color:var(--danger);" (click)="deleteDocument(doc)">
+                        <i class="ri-delete-bin-line"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+</div>
+
+<!-- Preview Modal -->
+<app-modal-dialog [isOpen]="showPreviewModal()" (closed)="showPreviewModal.set(false)" [title]="previewName()" size="xl">
+  @if (previewUrl()) {
+    <div style="text-align:center;">
+      @if (isImageType(previewType())) {
+        <img [src]="previewUrl()" style="max-width:100%;max-height:600px;border-radius:8px;" [alt]="previewName()" />
+      } @else if (isPdfType(previewType())) {
+        <iframe [src]="previewUrl()" style="width:100%;height:600px;border:none;border-radius:8px;"></iframe>
+      } @else {
+        <p>Preview not available for this file type.</p>
+      }
+    </div>
+  }
+  <div modal-footer>
+    <button class="btn-secondary" (click)="showPreviewModal.set(false)">Close</button>
+  </div>
+</app-modal-dialog>

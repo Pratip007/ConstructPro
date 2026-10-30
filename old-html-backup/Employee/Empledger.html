@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Profile & Full Ledger</title>
+    
+    <script>
+        const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        window.addEventListener('storage', function(e) {
+            if(e.key === 'atr_theme') { document.documentElement.setAttribute('data-theme', e.newValue); }
+        });
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
+
+        :root {
+            --bg-body: #121212;
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --hover-bg: rgba(255, 255, 255, 0.08);
+            --shadow: 0 4px 15px rgba(0,0,0,0.3);
+            --accent: #ffc107;
+            --success: #28a745;
+            --danger: #dc3545;
+            --info: #17a2b8;
+        }
+
+        [data-theme="light"] {
+            --bg-body: #f0f2f5;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #666666;
+            --border-color: rgba(0, 0, 0, 0.1);
+            --glass-bg: rgba(0, 0, 0, 0.02);
+            --hover-bg: rgba(0, 0, 0, 0.05);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; }
+        body { background-color: var(--bg-body); color: var(--text-main); padding: 20px; transition: 0.4s ease; }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(136, 136, 136, 0.3); border-radius: 10px; }
+
+        .web-container { max-width: 1250px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+        /* Profile Card */
+        .profile-card {
+            background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px;
+            padding: 25px; display: flex; align-items: center; justify-content: space-between; gap: 25px; box-shadow: var(--shadow);
+            flex-wrap: wrap;
+        }
+        .profile-left { display: flex; align-items: center; gap: 25px; flex-wrap: wrap; }
+        .profile-avatar { width: 120px; height: 120px; border-radius: 50%; border: 4px solid var(--accent); padding: 4px; object-fit: cover; }
+        .profile-info h1 { font-size: 24px; margin-bottom: 5px; color: var(--text-main); }
+        .profile-info h3 { font-size: 14px; color: var(--accent); margin-bottom: 15px; }
+        .info-grid { display: grid; grid-template-columns: repeat(4, auto); gap: 15px 25px; }
+        @media (max-width: 768px) { .info-grid { grid-template-columns: repeat(2, 1fr); } }
+        .info-item { font-size: 13px; }
+        .info-item span { color: var(--text-muted); display: block; margin-bottom: 3px; }
+        .info-item strong { color: var(--text-main); }
+
+        .portal-top-actions { display: flex; align-items: center; gap: 10px; align-self: flex-start; }
+        .btn-theme-toggle {
+            background: var(--glass-bg); border: 1px solid var(--border-color); color: var(--text-main);
+            width: 38px; height: 38px; border-radius: 8px; cursor: pointer; font-size: 16px;
+            display: flex; align-items: center; justify-content: center; transition: 0.3s;
+        }
+        .btn-theme-toggle:hover { background: var(--hover-bg); transform: translateY(-2px); }
+        .btn-logout {
+            background: rgba(220, 53, 69, 0.12); color: #ff6b6b; border: 1px solid rgba(220, 53, 69, 0.35);
+            text-decoration: none; padding: 9px 16px; border-radius: 8px; font-size: 12.5px; font-weight: 700;
+            transition: 0.3s; display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn-logout:hover { background: #dc3545; color: #ffffff; transform: translateY(-2px); }
+
+        /* Summary Cards (Synced with EmployeeLedger) */
+        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+        .summary-card { background: var(--bg-card); padding: 18px 20px; border-radius: 10px; border: 1px solid var(--border-color); border-left: 5px solid; text-align: center; box-shadow: var(--shadow); }
+        .summary-card.credit { border-left-color: var(--success); }
+        .summary-card.debit { border-left-color: var(--danger); }
+        .summary-card.balance { border-left-color: var(--accent); }
+        .summary-title { font-size: 11.5px; color: var(--text-muted); text-transform: uppercase; font-weight: 600; margin-bottom: 8px; }
+        .summary-amount { font-size: 22px; font-weight: 700; color: var(--text-main); }
+        .summary-card.credit .summary-amount { color: var(--success); }
+        .summary-card.debit .summary-amount { color: var(--danger); }
+        .summary-card.balance .summary-amount { color: var(--accent); }
+
+        /* Data Section & Filter */
+        .data-section { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; box-shadow: var(--shadow); }
+        .header-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; flex-wrap: wrap; gap: 15px; }
+        .filter-group { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+        .filter-group label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+        select { background: var(--bg-body); color: var(--text-main); border: 1px solid var(--border-color); padding: 8px 15px; border-radius: 6px; font-size: 13px; outline: none; cursor: pointer; }
+        
+        .action-btn { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.3s; }
+        .action-btn:hover { background: #0056b3; transform: translateY(-2px); }
+
+        /* Table Styles */
+        .table-responsive { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: center; }
+        thead { background: var(--glass-bg); border-bottom: 2px solid var(--accent); }
+        th, td { padding: 12px 10px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+        th { color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 11px;}
+        tr:hover { background: var(--hover-bg); }
+
+        .highlight { color: var(--accent); font-weight: bold; font-size: 13px;}
+        .due { color: var(--danger); font-weight: bold; font-size: 13px;}
+        .sub-id-label { background: var(--glass-bg); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border-color); font-size: 11px; color: var(--info); }
+
+        .payment-box { text-align: left; background: var(--glass-bg); padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); min-width: 140px; margin: 0 auto; }
+        .payment-list { list-style: none; margin: 0; padding: 0; }
+        .payment-list li { display: flex; justify-content: space-between; font-size: 11px; padding: 3px 0; border-bottom: 1px dashed var(--border-color); }
+        .payment-list li:last-child { border-bottom: none; }
+        .payment-total { margin-top: 5px; padding-top: 5px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; font-weight: bold; font-size: 12px; color: var(--accent); }
+
+        /* ================= PRINT LAYOUT (A4, 2 COPIES) ================= */
+        #printContainer { display: none; }
+        
+        @media print {
+            @page { size: A4 portrait; margin: 10mm; }
+            body { background: white !important; color: black !important; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+            * { -webkit-print-color-adjust: exact !important; color-adjust: exact !important; }
+            .web-container { display: none !important; }
+            #printContainer { display: flex !important; flex-direction: column; height: 100vh; width: 100%; justify-content: space-between; }
+            
+            .print-copy { height: 48%; padding: 10px; display: flex; flex-direction: column; page-break-inside: avoid; }
+            
+            .print-header { text-align: center; margin-bottom: 12px; border-bottom: 2px solid #000; padding-bottom: 8px; }
+            .print-header h2 { margin: 0; font-size: 18px; text-transform: uppercase; }
+            .print-header p { margin: 3px 0; font-size: 12px; font-weight: bold; }
+            .copy-badge { display: inline-block; background: #000; color: #fff; padding: 3px 10px; border-radius: 12px; font-size: 10px; margin-top: 5px; text-transform: uppercase; }
+
+            .print-emp-details { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 10px; }
+            .print-emp-details div { width: 48%; }
+
+            table { font-size: 10px; border: 1px solid #000; width: 100%; margin-bottom: auto; }
+            th, td { border: 1px solid #000; padding: 6px 4px; background: transparent !important; color: black !important; }
+            th { background: #f2f2f2 !important; font-weight: bold; }
+
+            .payment-box { border: none; padding: 0; min-width: auto; background: transparent; }
+            .payment-list li { border-bottom: 1px dashed #ccc; padding: 2px 0; font-size: 10px; }
+            .payment-total { color: black !important; font-size: 10px; border-top: 1px solid #000; }
+
+            .print-footer { display: flex; justify-content: space-between; margin-top: 20px; font-size: 11px; font-weight: bold; }
+            .print-footer div { border-top: 1px solid #000; padding-top: 5px; width: 30%; text-align: center; }
+
+            /* SCISSOR CUT LINE */
+            .cut-line { text-align: center; border-top: 1px dashed #000; position: relative; margin: 10px 0; }
+            .cut-line span { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: white; padding: 0 10px; font-size: 16px; color: #000; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ================= WEB VIEW CONTAINER ================= -->
+    <div class="web-container">
+        <!-- Profile Header -->
+        <div class="profile-card">
+            <div class="profile-left">
+                <img src="https://ui-avatars.com/api/?name=Rahul+Sk&background=2b2b2b&color=ffc107&size=150" id="empAvatar" alt="Employee Photo" class="profile-avatar">
+                <div class="profile-info">
+                    <h1 id="empName">Rahul Sk</h1>
+                    <h3>EMP ID: <span id="empId">ATR-1025</span> | <span id="empDesignation">Master Supervisor</span></h3>
+                    <div class="info-grid">
+                        <div class="info-item"><span>Assigned Site:</span><strong id="empSite">Dum Dum Project</strong></div>
+                        <div class="info-item"><span>Phone:</span><strong id="empPhone">+91 98765 43210</strong></div>
+                        <div class="info-item"><span>Joining Date:</span><strong id="empJoining">15-Apr-2023</strong></div>
+                        <div class="info-item"><span>Bank A/C:</span><strong id="empBank">XXXX-XXXX-1234</strong></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="portal-top-actions">
+                <button class="btn-theme-toggle" onclick="toggleTheme()" id="themeBtn" title="Switch Theme">🌓</button>
+                <a href="../index.html" class="btn-logout" onclick="handleEmployeeLogout()">🚪 Logout</a>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="summary-grid">
+            <div class="summary-card credit">
+                <div class="summary-title">Total Earned</div>
+                <div class="summary-amount" id="sumTotalEarned">₹ 0.00</div>
+            </div>
+            <div class="summary-card debit">
+                <div class="summary-title">Total Payments (Adv + Office)</div>
+                <div class="summary-amount" id="sumTotalPayments">₹ 0.00</div>
+            </div>
+            <div class="summary-card balance">
+                <div class="summary-title">Net Due Balance</div>
+                <div class="summary-amount" id="sumTotalDue">₹ 0.00</div>
+            </div>
+        </div>
+
+        <!-- Ledger Table -->
+        <div class="data-section">
+            <div class="header-actions">
+                <div class="filter-group">
+                    <label>Select My Sub-ID:</label>
+                    <select id="subIdSelector" onchange="loadTableData()">
+                        <option value="ALL">📋 All Sub-IDs (Full Ledger)</option>
+                    </select>
+                </div>
+                <button class="action-btn" onclick="printReport()">📥 Download / Print A4 Report</button>
+            </div>
+
+            <div class="table-responsive">
+                <table id="mainTable">
+                    <thead>
+                        <tr>
+                            <th>Month / Year</th>
+                            <th>Sub-ID</th>
+                            <th>Present Days</th>
+                            <th>OT (Hrs)</th>
+                            <th>OT Amt (₹)</th>
+                            <th>Total Earning (₹)</th>
+                            <th>Site Advance (₹)</th>
+                            <th>Office Pymt (Date & Amt)</th>
+                            <th>Due Balance (₹)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ledgerBody"></tbody>
+                    <tfoot>
+                        <tr style="background: var(--glass-bg); font-weight: bold; font-size: 14px;">
+                            <td colspan="8" style="text-align: right; color: var(--accent);">Total Due Balance:</td>
+                            <td id="totalDueFooter" class="due">₹ 0.00</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= PRINT VIEW CONTAINER (A4) ================= -->
+    <div id="printContainer"></div>
+
+    <script>
+        // ================= SHARED MASTER EMPLOYEE & LEDGER DATABASE (SYNCED WITH EmployeeLedger.html) =================
+        const defaultEmployees = [
+            { id: "ATR-1025", name: "Rahul Sk", designation: "Master Supervisor", site: "Dum Dum Project", phone: "+91 98765 43210", joiningDate: "15-Apr-2023", bankAc: "XXXX-XXXX-1234", subIds: ["SUB-001", "SUB-002"] },
+            { id: "ATR-1026", name: "Sumi Khatun", designation: "Site Engineer", site: "Dum Dum Project", phone: "+91 98765 11223", joiningDate: "10-Jan-2024", bankAc: "XXXX-XXXX-5678", subIds: ["SUB-003"] },
+            { id: "EMP-005", name: "Bikash Roy", designation: "Head Mason", site: "Salt Lake Sector V", phone: "+91 98301 44556", joiningDate: "05-Mar-2024", bankAc: "XXXX-XXXX-9012", subIds: ["SUB-SL-01", "SUB-SL-05"] },
+            { id: "EMP-008", name: "Ratan Das", designation: "Site Helper", site: "Salt Lake Sector V", phone: "+91 98302 77889", joiningDate: "12-Jun-2024", bankAc: "XXXX-XXXX-3456", subIds: ["SUB-SL-02"] },
+            { id: "EMP-012", name: "Sujoy Halder", designation: "Senior Mason", site: "Salt Lake Sector V", phone: "+91 90071 22334", joiningDate: "20-Jul-2024", bankAc: "XXXX-XXXX-7890", subIds: ["SUB-SL-03"] },
+            { id: "EMP-019", name: "Koushik Mondal", designation: "Steel Fitter", site: "Salt Lake Sector V", phone: "+91 90072 55667", joiningDate: "01-Aug-2024", bankAc: "XXXX-XXXX-4321", subIds: ["SUB-SL-04"] },
+            { id: "EMP-014", name: "Tarun Debnath", designation: "Roller Operator", site: "Barasat Highway", phone: "+91 91234 88990", joiningDate: "18-May-2024", bankAc: "XXXX-XXXX-8765", subIds: ["SUB-BH-01"] }
+        ];
+
+        // Merge with localStorage employees added from Admin Portal
+        const storedEmployees = JSON.parse(localStorage.getItem('atr_employees')) || [];
+        const employeesDB = [...defaultEmployees];
+        storedEmployees.forEach(stEmp => {
+            const existingIndex = employeesDB.findIndex(e => e.id.toUpperCase() === stEmp.id.toUpperCase());
+            if (existingIndex > -1) {
+                employeesDB[existingIndex] = { ...employeesDB[existingIndex], ...stEmp };
+            } else {
+                employeesDB.push({
+                    id: stEmp.id,
+                    name: stEmp.name,
+                    designation: stEmp.designation || "Site Staff",
+                    site: stEmp.site || "Assigned Site",
+                    phone: stEmp.phone || "+91 XXXXX XXXXX",
+                    joiningDate: stEmp.joiningDate || "01-Jan-2025",
+                    bankAc: stEmp.bankAc || "XXXX-XXXX-0000",
+                    subIds: stEmp.subIds || []
+                });
+            }
+        });
+
+        // Master Sub-ID Ledger Database (Synced with EmployeeLedger.html)
+        const defaultSubIdDataDB = {
+            "SUB-001": {
+                name: "Main Shift", type: "Per Day", rate: 850, empId: "ATR-1025", site: "Dum Dum Project",
+                records: [
+                    { month: "September 2026", present: 26, otHrs: 12, advance: 4000, officePayments: [ { date: "10-Sep", amount: 8000 }, { date: "25-Sep", amount: 6000 } ] },
+                    { month: "May 2026", present: 26, otHrs: 12, advance: 2000, officePayments: [ { date: "10-May", amount: 5000 }, { date: "25-May", amount: 10000 } ] },
+                    { month: "April 2026", present: 24, otHrs: 8, advance: 1500, officePayments: [ { date: "05-Apr", amount: 18000 } ] }
+                ]
+            },
+            "SUB-002": {
+                name: "Night Guard", type: "Monthly", rate: 18000, empId: "ATR-1025", site: "Dum Dum Project",
+                records: [
+                    { month: "May 2026", present: 31, otHrs: 20, advance: 1000, officePayments: [ { date: "12-May", amount: 6000 }, { date: "28-May", amount: 6000 } ] },
+                    { month: "April 2026", present: 30, otHrs: 15, advance: 0, officePayments: [ { date: "10-Apr", amount: 18000 } ] }
+                ]
+            },
+            "SUB-003": {
+                name: "Engineer Monthly Scale", type: "Monthly", rate: 28000, empId: "ATR-1026", site: "Dum Dum Project",
+                records: [
+                    { month: "September 2026", present: 27, otHrs: 6, advance: 5000, officePayments: [ { date: "15-Sep", amount: 15000 } ] },
+                    { month: "August 2026", present: 28, otHrs: 4, advance: 3000, officePayments: [ { date: "07-Aug", amount: 25000 } ] }
+                ]
+            },
+            "SUB-SL-01": {
+                name: "Day Mason Shift", type: "Per Day", rate: 800, empId: "EMP-005", site: "Salt Lake Sector V",
+                records: [
+                    { month: "September 2026", present: 24, otHrs: 10, advance: 4500, officePayments: [ { date: "12-Sep", amount: 5000 }, { date: "25-Sep", amount: 3000 } ] },
+                    { month: "August 2026", present: 26, otHrs: 16, advance: 6000, officePayments: [ { date: "10-Aug", amount: 8000 }, { date: "28-Aug", amount: 6400 } ] },
+                    { month: "July 2026", present: 25, otHrs: 8, advance: 3000, officePayments: [ { date: "15-Jul", amount: 15000 } ] }
+                ]
+            },
+            "SUB-SL-05": {
+                name: "Night Concrete Shift", type: "Per Day", rate: 900, empId: "EMP-005", site: "Salt Lake Sector V",
+                records: [
+                    { month: "September 2026", present: 6, otHrs: 4, advance: 1500, officePayments: [ { date: "20-Sep", amount: 2000 } ] }
+                ]
+            },
+            "SUB-SL-02": {
+                name: "Helper Regular Shift", type: "Per Day", rate: 550, empId: "EMP-008", site: "Salt Lake Sector V",
+                records: [
+                    { month: "September 2026", present: 25, otHrs: 8, advance: 3500, officePayments: [ { date: "14-Sep", amount: 4000 }, { date: "26-Sep", amount: 2600 } ] },
+                    { month: "August 2026", present: 27, otHrs: 12, advance: 4000, officePayments: [ { date: "11-Aug", amount: 6000 }, { date: "29-Aug", amount: 5675 } ] }
+                ]
+            },
+            "SUB-SL-03": {
+                name: "Plaster & Brickwork", type: "Per Day", rate: 850, empId: "EMP-012", site: "Salt Lake Sector V",
+                records: [
+                    { month: "September 2026", present: 22, otHrs: 8, advance: 5000, officePayments: [ { date: "18-Sep", amount: 8450 } ] },
+                    { month: "August 2026", present: 24, otHrs: 6, advance: 4500, officePayments: [ { date: "10-Aug", amount: 10000 }, { date: "27-Aug", amount: 6538 } ] }
+                ]
+            },
+            "SUB-SL-04": {
+                name: "Structural Fitter Monthly", type: "Monthly", rate: 22000, empId: "EMP-019", site: "Salt Lake Sector V",
+                records: [
+                    { month: "September 2026", present: 26, otHrs: 12, advance: 3200, officePayments: [ { date: "15-Sep", amount: 9000 } ] },
+                    { month: "August 2026", present: 28, otHrs: 10, advance: 2000, officePayments: [ { date: "10-Aug", amount: 10000 }, { date: "30-Aug", amount: 10000 } ] }
+                ]
+            },
+            "SUB-BH-01": {
+                name: "Heavy Machine Shift", type: "Per Day", rate: 950, empId: "EMP-014", site: "Barasat Highway",
+                records: [
+                    { month: "September 2026", present: 24, otHrs: 15, advance: 6000, officePayments: [ { date: "16-Sep", amount: 10000 } ] }
+                ]
+            }
+        };
+
+        const storedLedgerDB = JSON.parse(localStorage.getItem('atr_sub_id_ledger')) || {};
+        const subIdDataDB = { ...defaultSubIdDataDB, ...storedLedgerDB };
+
+        // Active Logged-in Employee State
+        let currentEmployee = null;
+        let activeEmpSubIdData = {};
+
+        // ================= INITIALIZE LOGGED-IN EMPLOYEE FROM INDEX.HTML =================
+        function initEmployeePortal() {
+            const urlParams = new URLSearchParams(window.location.search);
+            // Support ?empId=, ?id=, or sessionStorage/localStorage set during index.html login
+            let loginEmpId = urlParams.get('empId') || urlParams.get('id') || sessionStorage.getItem('atr_logged_emp_id') || localStorage.getItem('atr_logged_emp_id') || "ATR-1025";
+            loginEmpId = loginEmpId.trim().toUpperCase();
+
+            // Persist in sessionStorage so page reloads keep the same employee logged in
+            sessionStorage.setItem('atr_logged_emp_id', loginEmpId);
+
+            // Find the employee in master database
+            currentEmployee = employeesDB.find(e => e.id.toUpperCase() === loginEmpId);
+
+            if (!currentEmployee) {
+                alert(`⚠️ Employee ID "${loginEmpId}" not found! Loading default profile.`);
+                currentEmployee = employeesDB[0];
+            }
+
+            // 1. Populate Employee Profile Header
+            document.getElementById('empName').innerText = currentEmployee.name;
+            document.getElementById('empId').innerText = currentEmployee.id;
+            document.getElementById('empDesignation').innerText = currentEmployee.designation || "Employee";
+            document.getElementById('empSite').innerText = currentEmployee.site || "Assigned Site";
+            document.getElementById('empPhone').innerText = currentEmployee.phone || "+91 98765 43210";
+            document.getElementById('empJoining').innerText = currentEmployee.joiningDate || "15-Apr-2023";
+            document.getElementById('empBank').innerText = currentEmployee.bankAc || "XXXX-XXXX-1234";
+            document.getElementById('empAvatar').src = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentEmployee.name)}&background=2b2b2b&color=ffc107&size=150`;
+
+            // 2. Filter Sub-IDs belonging strictly to this logged-in employee
+            activeEmpSubIdData = {};
+            const selector = document.getElementById('subIdSelector');
+            selector.innerHTML = `<option value="ALL">📋 All Sub-IDs (Full Ledger)</option>`;
+
+            for (let subKey in subIdDataDB) {
+                if (subIdDataDB[subKey].empId && subIdDataDB[subKey].empId.toUpperCase() === currentEmployee.id.toUpperCase()) {
+                    activeEmpSubIdData[subKey] = subIdDataDB[subKey];
+                    const unitLabel = subIdDataDB[subKey].type === "Per Day" ? "Day" : "Month";
+                    const opt = document.createElement('option');
+                    opt.value = subKey;
+                    opt.innerText = `${subKey} (${subIdDataDB[subKey].name}) - ₹${subIdDataDB[subKey].rate.toLocaleString('en-IN')} / ${unitLabel}`;
+                    selector.appendChild(opt);
+                }
+            }
+
+            // 3. Render Ledger Table
+            loadTableData();
+        }
+
+        function calculateData() {
+            const selectedId = document.getElementById('subIdSelector').value;
+            let displayRecords = [];
+            let grandTotalEarned = 0;
+            let grandTotalPayments = 0;
+            let grandTotalDue = 0;
+
+            if (selectedId === "ALL") {
+                for (let key in activeEmpSubIdData) {
+                    activeEmpSubIdData[key].records.forEach(rec => {
+                        displayRecords.push({ subId: key, type: activeEmpSubIdData[key].type, rate: activeEmpSubIdData[key].rate, ...rec });
+                    });
+                }
+            } else if (activeEmpSubIdData[selectedId]) {
+                let data = activeEmpSubIdData[selectedId];
+                data.records.forEach(rec => {
+                    displayRecords.push({ subId: selectedId, type: data.type, rate: data.rate, ...rec });
+                });
+            }
+
+            let calculatedRows = displayRecords.map(row => {
+                let baseEarning = 0;
+                let otAmount = 0;
+                let totalOfficePay = 0;
+                let paymentList = [];
+
+                if (row.officePayments && row.officePayments.length > 0) {
+                    row.officePayments.forEach(pay => {
+                        totalOfficePay += pay.amount;
+                        paymentList.push({ date: pay.date, amount: pay.amount });
+                    });
+                }
+
+                if(row.type === "Per Day") {
+                    baseEarning = row.present * row.rate;
+                    let otRatePerHour = row.rate / 8; 
+                    otAmount = Math.round(row.otHrs * otRatePerHour);
+                } else if(row.type === "Monthly") {
+                    baseEarning = row.rate; 
+                    otAmount = 0;
+                }
+
+                let totalEarning = baseEarning + otAmount;
+                let totalDeductions = row.advance + totalOfficePay;
+                let dueBalance = totalEarning - totalDeductions;
+                
+                grandTotalEarned += totalEarning;
+                grandTotalPayments += totalDeductions;
+                grandTotalDue += dueBalance;
+
+                return {
+                    ...row,
+                    otAmount: otAmount,
+                    totalEarning: totalEarning,
+                    totalOfficePay: totalOfficePay,
+                    paymentList: paymentList,
+                    dueBalance: dueBalance
+                };
+            });
+
+            return {
+                rows: calculatedRows,
+                grandTotalEarned: grandTotalEarned,
+                grandTotalPayments: grandTotalPayments,
+                grandTotalDue: grandTotalDue
+            };
+        }
+
+        function loadTableData() {
+            const tbody = document.getElementById('ledgerBody');
+            const totalDueFooter = document.getElementById('totalDueFooter');
+            tbody.innerHTML = '';
+            
+            const data = calculateData();
+
+            // Update Summary Cards
+            document.getElementById('sumTotalEarned').innerText = `₹ ${data.grandTotalEarned.toLocaleString('en-IN')}`;
+            document.getElementById('sumTotalPayments').innerText = `₹ ${data.grandTotalPayments.toLocaleString('en-IN')}`;
+            document.getElementById('sumTotalDue').innerText = `₹ ${data.grandTotalDue.toLocaleString('en-IN')}`;
+
+            if (data.rows.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" style="padding: 30px; color: var(--text-muted);">No ledger records found for your Employee ID.</td></tr>`;
+                totalDueFooter.innerHTML = `₹ 0.00`;
+                return;
+            }
+
+            data.rows.forEach(row => {
+                let paymentHTML = `<div class="payment-box"><ul class="payment-list">`;
+                if (row.paymentList.length > 0) {
+                    row.paymentList.forEach(pay => {
+                        paymentHTML += `<li><span>${pay.date}</span> <span>₹${pay.amount.toLocaleString('en-IN')}</span></li>`;
+                    });
+                } else {
+                    paymentHTML += `<li><span>No Payment</span> <span>₹0</span></li>`;
+                }
+                paymentHTML += `</ul><div class="payment-total"><span>Total:</span> <span>₹${row.totalOfficePay.toLocaleString('en-IN')}</span></div></div>`;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${row.month}</strong></td>
+                    <td><span class="sub-id-label">${row.subId}</span></td>
+                    <td>${row.present}</td>
+                    <td>${row.otHrs > 0 ? row.otHrs + ' Hrs' : '-'}</td>
+                    <td>${row.type === "Monthly" ? "N/A" : '₹' + row.otAmount.toLocaleString('en-IN')}</td>
+                    <td class="highlight">₹ ${row.totalEarning.toLocaleString('en-IN')}</td>
+                    <td>₹ ${row.advance.toLocaleString('en-IN')}</td>
+                    <td>${paymentHTML}</td>
+                    <td class="due">₹ ${row.dueBalance.toLocaleString('en-IN')}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            totalDueFooter.innerHTML = `₹ ${data.grandTotalDue.toLocaleString('en-IN')}`;
+        }
+
+        function printReport() {
+            const data = calculateData();
+            if (!data.rows || data.rows.length === 0) {
+                alert("⚠️ No ledger data available to print.");
+                return;
+            }
+
+            const empName = document.getElementById('empName').innerText;
+            const empId = document.getElementById('empId').innerText;
+            const empDesignation = document.getElementById('empDesignation').innerText;
+            const selectedSub = document.getElementById('subIdSelector').options[document.getElementById('subIdSelector').selectedIndex].text;
+            const printDate = new Date().toLocaleDateString('en-IN');
+
+            let tableRows = data.rows.map(row => {
+                let pList = row.paymentList.map(p => `<li><span>${p.date}</span><span>₹${p.amount}</span></li>`).join('');
+                if(pList === '') pList = `<li><span>No Payment</span><span>₹0</span></li>`;
+                
+                return `
+                <tr>
+                    <td>${row.month}</td>
+                    <td>${row.subId}</td>
+                    <td>${row.present}</td>
+                    <td>${row.otHrs}</td>
+                    <td>${row.type === "Monthly" ? "N/A" : row.otAmount}</td>
+                    <td><strong>${row.totalEarning}</strong></td>
+                    <td>${row.advance}</td>
+                    <td>
+                        <div class="payment-box">
+                            <ul class="payment-list">${pList}</ul>
+                            <div class="payment-total"><span>Total:</span> <span>₹${row.totalOfficePay}</span></div>
+                        </div>
+                    </td>
+                    <td><strong>${row.dueBalance}</strong></td>
+                </tr>`;
+            }).join('');
+
+            const template = (copyType) => `
+                <div class="print-copy">
+                    <div class="print-header">
+                        <h2>ATR Construction</h2>
+                        <p>Employee Ledger & Payment Statement</p>
+                        <span class="copy-badge">${copyType}</span>
+                    </div>
+                    <div class="print-emp-details">
+                        <div>
+                            <strong>Employee Name:</strong> ${empName}<br>
+                            <strong>Employee ID:</strong> ${empId} (${empDesignation})
+                        </div>
+                        <div style="text-align: right;">
+                            <strong>Report Date:</strong> ${printDate}<br>
+                            <strong>Filter:</strong> ${selectedSub}
+                        </div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Month</th>
+                                <th>Sub-ID</th>
+                                <th>Present</th>
+                                <th>OT (Hrs)</th>
+                                <th>OT Amt (₹)</th>
+                                <th>Total Earning (₹)</th>
+                                <th>Advance (₹)</th>
+                                <th>Office Pymt (₹)</th>
+                                <th>Due Balance (₹)</th>
+                            </tr>
+                        </thead>
+                        <tbody>${tableRows}</tbody>
+                        <tfoot>
+                            <tr>
+                                <th colspan="8" style="text-align: right;">Total Outstanding Due:</th>
+                                <th>₹ ${data.grandTotalDue.toLocaleString('en-IN')}</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                    <div class="print-footer">
+                        <div>Employee Signature</div>
+                        <div>Authorized Signatory</div>
+                    </div>
+                </div>
+            `;
+
+            const printContainer = document.getElementById('printContainer');
+            printContainer.innerHTML = template('Office Copy') + 
+                                       `<div class="cut-line"><span>✂</span></div>` + 
+                                       template('Employee Copy');
+            
+            window.print();
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            localStorage.setItem('atr_theme', newTheme);
+            document.documentElement.setAttribute('data-theme', newTheme);
+        }
+
+        function handleEmployeeLogout() {
+            sessionStorage.removeItem('atr_logged_emp_id');
+            localStorage.removeItem('atr_logged_emp_id');
+        }
+
+        window.onload = initEmployeePortal;
+    </script>
+</body>
+</html>

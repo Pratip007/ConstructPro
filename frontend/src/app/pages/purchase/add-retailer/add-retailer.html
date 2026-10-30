@@ -1,0 +1,182 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Retailer Management</h1>
+    <div style="display:flex;gap:10px;">
+      <button class="btn-primary" (click)="openAddModal()">+ Add Retailer</button>
+      <button class="btn-export" (click)="exportRetailers()"><i class="ri-file-excel-2-line"></i> Export XLSX</button>
+    </div>
+  </div>
+
+  <app-summary-cards [cards]="summaryCards()"></app-summary-cards>
+
+  <!-- Filter Section -->
+  <div class="card-container" style="margin-top:20px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+      <i class="ri-filter-3-line" style="color:var(--accent);"></i>
+      <strong style="color:var(--accent);font-size:13px;text-transform:uppercase;">Advanced Filter</strong>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Category</label>
+        <select [ngModel]="filterCategory()" (ngModelChange)="filterCategory.set($event)" name="filterCat">
+          <option value="">All Categories</option>
+          @for (c of categories(); track c.id) {
+            <option [value]="c.name">{{ c.name }}</option>
+          }
+        </select>
+      </div>
+      <div class="form-group">
+        <label>GST Status</label>
+        <select [ngModel]="filterGstStatus()" (ngModelChange)="filterGstStatus.set($event)" name="filterGst">
+          <option value="">All GST Status</option>
+          <option value="yes">GST Applicable (Yes)</option>
+          <option value="no">Non-GST (No)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Search</label>
+        <input type="text" [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" name="search" placeholder="Search name, phone, GST..." />
+      </div>
+    </div>
+  </div>
+
+  <!-- Active / Inactive Tabs -->
+  <div style="display:flex;gap:10px;margin:20px 0 15px;">
+    <button class="btn-primary" [class.btn-secondary]="activeTab() !== 'active'" (click)="switchTab('active')" style="padding:8px 18px;font-size:13px;">
+      Active Retailers ({{ activeCount() }})
+    </button>
+    <button [class.btn-primary]="activeTab() === 'inactive'" [class.btn-secondary]="activeTab() !== 'inactive'" (click)="switchTab('inactive')" style="padding:8px 18px;font-size:13px;">
+      Deactivated ({{ inactiveCount() }})
+    </button>
+  </div>
+
+  <!-- Data Table -->
+  @if (loading()) {
+    <div class="skeleton" style="height:300px;"></div>
+  } @else {
+    <div class="card-container" style="padding:0;overflow:hidden;">
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Retailer Name</th>
+              <th>Shop</th>
+              <th>Address</th>
+              <th>Phone</th>
+              <th>GST Status</th>
+              <th>GSTIN</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of filteredRetailers(); track r.id) {
+              <tr>
+                <td style="font-weight:600;">{{ r.category_name ?? '-' }}</td>
+                <td style="color:var(--accent);font-weight:700;">{{ r.name }}</td>
+                <td>{{ r.shop_name ?? r.shop ?? '-' }}</td>
+                <td>{{ r.address ?? '-' }}</td>
+                <td>{{ r.phone ?? r.contact }}</td>
+                <td>
+                  @if (r.gst_status === true || r.gst_status === 'GST YES') {
+                    <span class="badge badge-success">GST YES</span>
+                  } @else {
+                    <span class="badge badge-danger">GST NO</span>
+                  }
+                </td>
+                <td>{{ r.gst_number ?? r.gst ?? 'N/A' }}</td>
+                <td>
+                  @if (r.status === 'inactive') {
+                    <span class="badge badge-warning">Inactive</span>
+                  } @else {
+                    <span class="badge badge-success">Active</span>
+                  }
+                  @if (r.pending_label) {
+                    <br><span class="badge badge-info" style="font-size:10px;margin-top:4px;">{{ r.pending_label }}</span>
+                  }
+                </td>
+                <td>
+                  <div style="display:flex;gap:6px;flex-wrap:nowrap;">
+                    <button class="btn-primary" style="padding:4px 10px;font-size:11px;" (click)="editRetailer(r)">Edit</button>
+                    <button class="btn-danger" style="padding:4px 10px;font-size:11px;" (click)="deleteRetailer(r)">Delete</button>
+                    @if (r.status === 'inactive') {
+                      <button style="padding:4px 10px;font-size:11px;background:rgba(40,167,69,0.15);color:#28a745;border:1px solid rgba(40,167,69,0.3);border-radius:4px;cursor:pointer;font-weight:700;" (click)="toggleStatus(r)">Activate</button>
+                    } @else {
+                      <button style="padding:4px 10px;font-size:11px;background:rgba(108,117,125,0.15);color:#6c757d;border:1px solid rgba(108,117,125,0.3);border-radius:4px;cursor:pointer;font-weight:700;" (click)="toggleStatus(r)">Deactivate</button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="9" class="empty-state">No retailers found.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- Add/Edit Modal -->
+  <app-modal-dialog [isOpen]="showModal()" [title]="editingId() ? 'Edit Retailer' : 'Add New Retailer'" size="lg" (closed)="cancelEdit()">
+    <form (ngSubmit)="onSubmit()">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Category *</label>
+          <app-searchable-dropdown
+            [items]="categoryItems()"
+            placeholder="Search or select category..."
+            [allowAdd]="true"
+            [ngModel]="selectedCategory()"
+            (ngModelChange)="selectedCategory.set($event)"
+            (addNew)="onAddCategory()"
+            name="category"
+          ></app-searchable-dropdown>
+        </div>
+        <div class="form-group">
+          <label>Retailer Name *</label>
+          <input type="text" [ngModel]="retailerName()" (ngModelChange)="retailerName.set($event)" name="name" required minlength="2" />
+        </div>
+        <div class="form-group">
+          <label>Shop Name</label>
+          <input type="text" [ngModel]="shopName()" (ngModelChange)="shopName.set($event)" name="shop" />
+        </div>
+        <div class="form-group">
+          <label>Phone Number *</label>
+          <input type="tel" [ngModel]="contact()" (ngModelChange)="contact.set($event)" name="contact" required pattern="[6-9]\d{9}" maxlength="10" placeholder="10 digit number" />
+        </div>
+        <div class="form-group" style="grid-column:1/-1;">
+          <label>Address</label>
+          <textarea [ngModel]="address()" (ngModelChange)="address.set($event)" name="address" rows="2" placeholder="Full address..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>GST Applicable? *</label>
+          <select [ngModel]="gstApplicable()" (ngModelChange)="gstApplicable.set($event); onGstToggle()" name="gstApplicable">
+            <option value="NO">No</option>
+            <option value="YES">Yes</option>
+          </select>
+        </div>
+        @if (gstApplicable() === 'YES') {
+          <div class="form-group">
+            <label>GST Number *</label>
+            <input type="text" [ngModel]="gstNo()" (ngModelChange)="gstNo.set($event)" name="gstNo" required style="text-transform:uppercase;" placeholder="Enter GSTIN" />
+          </div>
+        }
+        <div class="form-group">
+          <label>Site</label>
+          <app-searchable-dropdown
+            [items]="siteItems()"
+            placeholder="Select site..."
+            [ngModel]="selectedSite()"
+            (ngModelChange)="selectedSite.set($event)"
+            name="site"
+          ></app-searchable-dropdown>
+        </div>
+      </div>
+      <div modal-footer>
+        <button type="submit" class="btn-primary" style="padding:10px 24px;">{{ editingId() ? 'Update Retailer' : 'Save Retailer' }}</button>
+        <button type="button" class="btn-secondary" style="padding:10px 24px;margin-left:10px;" (click)="cancelEdit()">Cancel</button>
+      </div>
+    </form>
+  </app-modal-dialog>
+</div>

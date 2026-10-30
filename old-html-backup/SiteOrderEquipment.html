@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Invoice & Party Entry</title>
+    
+    <!-- JSZip, FileSaver & SheetJS (Excel) Libraries for ZIP Download -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <!-- Sync theme with Master Dashboard -->
+    <script>
+        const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        window.addEventListener('storage', function(e) {
+            if(e.key === 'atr_theme') { document.documentElement.setAttribute('data-theme', e.newValue); }
+        });
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap');
+
+        :root {
+            --bg-body: transparent; 
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.1);
+            
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(0, 0, 0, 0.2);
+            --input-focus-bg: rgba(0, 0, 0, 0.4);
+            
+            --shadow: 0 4px 15px rgba(0,0,0,0.3);
+            
+            /* Theme Color (Cyan for Purchase/Invoice Section) */
+            --theme-color: #00bcd4;
+            --theme-glow: rgba(0, 188, 212, 0.4);
+            --theme-transition: all 0.4s ease;
+        }
+
+        [data-theme="light"] {
+            --bg-body: transparent;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #555555;
+            --border-color: rgba(0, 0, 0, 0.1);
+            
+            --glass-bg: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --input-bg: rgba(255, 255, 255, 0.5);
+            --input-focus-bg: #ffffff;
+            
+            --shadow: 0 8px 25px rgba(0,0,0,0.05);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; scroll-behavior: smooth; }
+        body { background-color: var(--bg-body); color: var(--text-main); display: flex; min-height: 100vh; transition: var(--theme-transition); }
+        
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(136, 136, 136, 0.3); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(136, 136, 136, 0.6); }
+
+        .main-content { flex: 1; padding: 40px; overflow-y: auto; max-width: 1400px; margin: 0 auto; width: 100%; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid var(--border-color); padding-bottom: 20px; transition: var(--theme-transition); flex-wrap: wrap; gap: 15px; }
+        .header h1 { font-size: 26px; color: var(--text-main); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+        .role-mode-badge {
+            display: none;
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 700;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-back { background-color: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color); text-decoration: none; padding: 9px 16px; border-radius: 6px; font-weight: bold; font-size: 13px; transition: all 0.3s; cursor: pointer; }
+        .btn-back:hover { background-color: var(--theme-color); color: #fff; border-color: var(--theme-color); transform: translateY(-2px); box-shadow: 0 4px 10px var(--theme-glow); }
+
+        .btn-new-entry { background-color: var(--theme-color); color: #fff; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 8px; }
+        .btn-new-entry:hover { transform: translateY(-2px); box-shadow: 0 6px 15px var(--theme-glow); }
+
+        .box-container { background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--glass-border); border-top: 4px solid var(--theme-color); border-radius: 12px; padding: 30px; box-shadow: var(--shadow); margin-bottom: 30px; transition: var(--theme-transition); }
+        .box-container-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px dashed var(--border-color); padding-bottom: 10px; flex-wrap: wrap; gap: 12px; }
+        .box-container-header h2 { font-size: 18px; color: var(--theme-color); text-transform: uppercase; letter-spacing: 0.5px; margin: 0;}
+
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+        .form-group { display: flex; flex-direction: column; gap: 8px; position: relative; }
+        .form-group label { font-size: 12px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; transition: color 0.3s; }
+        .form-group input, .form-group select, .form-group textarea { background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 12px 15px; border-radius: 6px; font-size: 14px; transition: all 0.3s; width: 100%; outline: none; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); color-scheme: dark; }
+        [data-theme="light"] input[type="date"] { color-scheme: light; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--theme-color); background-color: var(--input-focus-bg); box-shadow: 0 0 10px var(--theme-glow); }
+        select option { background: var(--bg-card); color: var(--text-main); }
+        
+        .file-input { padding: 8px 10px !important; background-color: var(--input-bg) !important; border: 1px dashed var(--theme-color) !important; cursor: pointer; }
+        .file-input::file-selector-button { background-color: var(--theme-color); color: #fff; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; margin-right: 10px; transition: background 0.3s; }
+        
+        .party-profile-card { grid-column: 1 / -1; background: var(--input-bg); border: 1px solid var(--glass-border); border-left: 4px solid var(--theme-color); padding: 15px 20px; border-radius: 6px; display: none; animation: fadeIn 0.3s ease; }
+        .party-profile-card h4 { color: var(--theme-color); margin-bottom: 8px; font-size: 14px; text-transform: uppercase; }
+        .party-profile-card p { font-size: 13px; color: var(--text-muted); margin-bottom: 5px; line-height: 1.4; }
+        .party-profile-card .highlight { color: var(--text-main); font-weight: bold; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .gst-global-box { background: var(--input-bg); border: 1px solid var(--border-color); padding: 12px 15px; border-radius: 6px; }
+        .radio-group { display: flex; gap: 15px; align-items: center; margin-top: 5px; }
+        .radio-group label { font-size: 14px; color: var(--text-main); display: flex; align-items: center; gap: 5px; cursor: pointer; text-transform: none;}
+        .radio-group input[type="radio"] { accent-color: var(--theme-color); width: 16px; height: 16px; cursor: pointer;}
+
+        .search-dropdown { position: relative; width: 100%; }
+        .dropdown-list { position: absolute; top: 100%; left: 0; right: 0; background-color: var(--bg-card); border: 1px solid var(--theme-color); border-top: none; border-radius: 0 0 6px 6px; max-height: 220px; overflow-y: auto; z-index: 1000; display: none; box-shadow: var(--shadow); list-style: none; }
+        .dropdown-list li { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid var(--border-color); font-size: 13px; color: var(--text-main); }
+        .dropdown-list li:hover { background-color: var(--theme-color); color: #fff; font-weight: bold; }
+        .search-dropdown.active .dropdown-list { display: block; }
+
+        .item-entry-box { background: var(--input-bg); padding: 25px; border-radius: 10px; border: 1px solid var(--border-color); margin-top: 25px; }
+        .item-grid { display: flex; flex-wrap: wrap; gap: 15px; align-items: end; }
+        .item-grid > .form-group { flex: 1; min-width: 100px; }
+        .item-grid > .form-group.large { flex: 2; min-width: 200px; }
+        
+        .btn-add-cart { background-color: #28a745; color: white; border: none; padding: 12px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.3s; height: 43px; display: flex; align-items: center; gap: 5px; font-size: 14px; }
+        .btn-add-cart:hover { background-color: #218838; transform: translateY(-2px);}
+
+        .table-responsive { overflow-x: auto; width: 100%; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 12px 15px; border-bottom: 1px solid var(--border-color); font-size: 13px; color: var(--text-main); transition: var(--theme-transition); vertical-align: middle; }
+        th { color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 11px; background: var(--input-bg); }
+        tbody tr:hover { background: var(--glass-bg); }
+        .cart-remove-btn { color: #dc3545; background: none; border: none; cursor: pointer; font-weight: bold; font-size: 20px;}
+        .cart-remove-btn:hover { color: #ff6b6b; }
+
+        .pending-status-pill {
+            display: inline-block;
+            background: rgba(255, 193, 7, 0.16);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.45);
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            margin-top: 4px;
+            text-transform: uppercase;
+        }
+
+        .calc-area { margin-top: 25px; padding-top: 20px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; align-items: flex-start; }
+        .totals-box { background: var(--input-bg); padding: 25px; border-radius: 8px; min-width: 320px; border: 1px solid var(--border-color); box-shadow: var(--shadow);}
+        .total-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px; color: var(--text-main);}
+        .total-row.tds-row { color: #dc3545; border-bottom: 1px dashed var(--border-color); padding-bottom: 10px; }
+        .total-row.gross-row { color: var(--text-main); font-weight: 600; }
+        .total-row.grand { font-size: 18px; font-weight: bold; color: #28a745; padding-top: 10px; margin-top: 5px;}
+
+        .btn-submit-order { background-color: var(--theme-color); color: #fff; border: none; padding: 15px 30px; border-radius: 6px; font-weight: 700; font-size: 15px; cursor: pointer; text-transform: uppercase; transition: all 0.3s; width: 100%; margin-top: 25px; letter-spacing: 1px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .btn-submit-order:hover { transform: translateY(-2px); box-shadow: 0 8px 20px var(--theme-glow); }
+
+        .action-btns { display: inline-flex; gap: 6px; align-items: center; flex-wrap: nowrap; white-space: nowrap; }
+        .btn-edit { background: var(--glass-bg); color: var(--theme-color); border: 1px solid var(--theme-color); padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; transition: 0.2s;}
+        .btn-delete { background: rgba(220, 53, 69, 0.1); color: #dc3545; border: 1px solid #dc3545; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; transition: 0.2s;}
+        
+        .btn-edit:hover { background: var(--theme-color); color: #fff; }
+        .btn-delete:hover { background: #dc3545; color: white; }
+
+        .btn-download-all { background-color: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 8px;}
+        .btn-download-all:hover { background-color: #218838; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(40,167,69,0.4); }
+
+        #entryView { display: none; }
+        .gst-col { display: none; }
+        .gst-col.active { display: flex; }
+
+        /* ================= OFFICE / SUPERVISOR APPROVAL MODAL ================= */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.68); backdrop-filter: blur(5px); z-index: 2000;
+            justify-content: center; align-items: center; padding: 20px;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-card {
+            background: var(--bg-card); border: 1px solid var(--border-color); border-top: 4px solid #ffc107;
+            border-radius: 12px; width: 100%; max-width: 480px; padding: 28px; box-shadow: var(--shadow);
+        }
+        .modal-card h3 { font-size: 18px; color: #ffc107; margin-bottom: 10px; }
+        .modal-card p { font-size: 12.5px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5; }
+        .modal-btn-row { display: flex; gap: 10px; margin-top: 18px; }
+        .btn-modal { flex: 1; padding: 11px 16px; border-radius: 6px; font-weight: 700; font-size: 12.5px; border: none; cursor: pointer; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+
+    <div class="main-content">
+        <div class="header">
+            <h1>
+                🧾 Party Invoice Entry Master
+                <span id="roleModeBadge" class="role-mode-badge">🏢 Office Mode</span>
+            </h1>
+            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                <button class="btn-new-entry" id="btnToggleView" onclick="toggleView()">➕ New Invoice Entry</button>
+                <a href="dashboard_home.html" id="btnBackDashboard" class="btn-back" onclick="handleBackToDashboard(event)">← Back to Dashboard</a>
+            </div>
+        </div>
+
+        <!-- LIST VIEW -->
+        <div id="listView" class="box-container">
+            <div class="box-container-header">
+                <h2>📋 Received Invoices List</h2>
+                <button class="btn-download-all" onclick="downloadAllInvoices()">📥 Download All as ZIP</button>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Invoice No</th>
+                            <th>Date</th>
+                            <th>Site / Project</th>
+                            <th>Contractor Name</th>
+                            <th>Gross Amt</th>
+                            <th>TDS Deducted</th>
+                            <th>Net Payable (₹)</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="invoiceListBody">
+                        <!-- Data will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ENTRY VIEW -->
+        <div id="entryView">
+            <div class="box-container">
+                <div class="box-container-header" style="margin-bottom: 20px;">
+                    <h2 id="entrySectionHeading">📝 1. Contractor & Invoice Details</h2>
+                </div>
+                <div class="form-grid">
+                    <input type="hidden" id="internalId">
+                    
+                    <div class="form-group">
+                        <label>Select Contractor / Party *</label>
+                        <div class="search-dropdown" id="contractorDropdown">
+                            <input type="text" id="contractorInput" placeholder="Type & Search Party..." onkeyup="filterDropdown('contractorDropdown')" onclick="toggleDropdown('contractorDropdown')">
+                            <ul class="dropdown-list" id="partyListHtml"></ul>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Invoice Number *</label>
+                        <input type="text" id="invoiceId" placeholder="Enter Party Invoice No" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Invoice Date *</label>
+                        <input type="date" id="invoiceDate" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Select Site / Project *</label>
+                        <div class="search-dropdown" id="siteDropdown">
+                            <input type="text" id="siteInput" placeholder="Search Site..." onkeyup="filterDropdown('siteDropdown')" onclick="toggleDropdown('siteDropdown')">
+                            <ul class="dropdown-list">
+                                <li onclick="selectDropdownOption('siteDropdown', 'Commercial Complex B3')">Commercial Complex B3</li>
+                                <li onclick="selectDropdownOption('siteDropdown', 'Residential Villa')">Residential Villa</li>
+                                <li onclick="selectDropdownOption('siteDropdown', 'Apartment Phase 2')">Apartment Phase 2</li>
+                                <li onclick="selectDropdownOption('siteDropdown', 'Salt Lake Sector V')">Salt Lake Sector V</li>
+                                <li onclick="selectDropdownOption('siteDropdown', 'Kolkata Metro Project - Line 6')">Kolkata Metro Project - Line 6</li>
+                                <li onclick="selectDropdownOption('siteDropdown', 'Dum Dum Warehouse Construction')">Dum Dum Warehouse Construction</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- File Upload Input -->
+                    <div class="form-group">
+                        <label>Upload Invoice Copy (PDF / Image) *</label>
+                        <input type="file" id="invoiceUpload" accept=".pdf, image/png, image/jpeg" class="file-input">
+                    </div>
+
+                    <!-- Party Profile Card -->
+                    <div class="party-profile-card" id="partyProfileCard">
+                        <h4>👤 Party Profile & Agreement Details</h4>
+                        <p><strong>Agreement Name:</strong> <span class="highlight" id="lblAgreement">N/A</span></p>
+                        <p><strong>TDS Deduction:</strong> <span class="highlight" id="lblTdsStatus">N/A</span></p>
+                    </div>
+
+                    <!-- GST Toggle -->
+                    <div class="form-group gst-global-box" style="grid-column: 1 / -1;">
+                        <label>🧾 Will this invoice include GST?</label>
+                        <div class="radio-group">
+                            <label><input type="radio" name="globalGst" value="no" checked onchange="toggleItemGst()"> No GST</label>
+                            <label><input type="radio" name="globalGst" value="yes" onchange="toggleItemGst()"> Yes, GST Applicable</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add Items Section -->
+                <div class="item-entry-box">
+                    <h2 style="font-size:16px; margin-bottom: 20px; color:var(--text-main); border:none; padding:0;">➕ 2. Add Invoice Particulars / Items</h2>
+                    
+                    <div class="item-grid">
+                        <div class="form-group large">
+                            <label>Particular / Product Details</label>
+                            <input type="text" id="productInput" placeholder="E.g. Civil Construction Work - Phase 1">
+                        </div>
+                        <div class="form-group"><label>HSN / SAC</label><input type="text" id="itemHsn"></div>
+                        <div class="form-group" style="max-width: 95px;">
+                            <label>Unit</label>
+                            <input type="text" id="itemUnit" list="invoiceUnitOptions" placeholder="SqFt / %" oninput="liveCalculatePreview()" onkeyup="liveCalculatePreview()" onchange="liveCalculatePreview()">
+                            <datalist id="invoiceUnitOptions">
+                                <option value="%">Percentage (%)</option>
+                                <option value="Percentage">Percentage</option>
+                                <option value="SqFt">SqFt</option>
+                                <option value="Pcs">Pcs</option>
+                                <option value="Bag">Bag</option>
+                                <option value="Kg">Kg</option>
+                                <option value="Cft">Cft</option>
+                                <option value="Days">Days</option>
+                                <option value="Hrs">Hrs</option>
+                                <option value="Nos">Nos</option>
+                            </datalist>
+                        </div>
+                        
+                        <div class="form-group"><label>Rate (₹)</label><input type="number" id="itemPrice" step="any" oninput="liveCalculatePreview()" onkeyup="liveCalculatePreview()" onchange="liveCalculatePreview()"></div>
+                        <div class="form-group" style="max-width: 90px;"><label id="itemQtyLabel">Qty</label><input type="number" id="itemQty" step="any" oninput="liveCalculatePreview()" onkeyup="liveCalculatePreview()" onchange="liveCalculatePreview()"></div>
+                        
+                        <div class="form-group gst-col" id="itemGstCol">
+                            <label>GST %</label>
+                            <select id="itemGstPercent" onchange="liveCalculatePreview()">
+                                <option value="0">0%</option>
+                                <option value="5">5%</option>
+                                <option value="12">12%</option>
+                                <option value="18" selected>18%</option>
+                                <option value="28">28%</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group"><label>Total (₹)</label><input type="text" id="itemTotalPreview" readonly style="font-weight:bold; color:var(--theme-color);"></div>
+                        
+                        <button type="button" class="btn-add-cart" onclick="addToCart()">🛒 Add Entry</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cart Details & Checkout -->
+            <div class="box-container">
+                <div class="box-container-header" style="margin-bottom: 20px;">
+                    <h2>🛒 3. Invoice Summary & Deduction</h2>
+                </div>
+                <div class="table-responsive">
+                    <table id="cartTable">
+                        <thead>
+                            <tr>
+                                <th>Particulars</th>
+                                <th>HSN/SAC</th>
+                                <th>Qty x Unit</th>
+                                <th>Rate</th>
+                                <th class="cart-gst-header" style="display:none;">GST %</th>
+                                <th class="cart-gst-header" style="display:none;">GST Amt</th>
+                                <th>Sub Total</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cartBody"></tbody>
+                    </table>
+                </div>
+
+                <div class="calc-area">
+                    <div class="totals-box">
+                        <div class="total-row"><span>Total Base Amount:</span> <span id="lblBaseTotal">₹0.00</span></div>
+                        <div class="total-row" id="gstSummaryRow" style="display:none;"><span>Total GST Amount:</span> <span id="lblGstTotal">₹0.00</span></div>
+                        <div class="total-row gross-row"><span>Gross Invoice Amount:</span> <span id="lblGrossTotal">₹0.00</span></div>
+                        <div class="total-row tds-row" id="tdsSummaryRow" style="display:none;">
+                            <span>TDS Deducted <span id="lblTdsPercentLabel"></span>:</span> 
+                            <span id="lblTdsAmount">- ₹0.00</span>
+                        </div>
+                        <div class="total-row grand"><span>Net Payable to Party:</span> <span id="lblGrandTotal">₹0.00</span></div>
+                    </div>
+                </div>
+
+                <button type="button" class="btn-submit-order" id="submitActionBtn" onclick="processInvoiceSave()">✅ Save Invoice Entry</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= OFFICE / SUPERVISOR APPROVAL MODAL (ROUTES TO ApproveOffice.html) ================= -->
+    <div class="modal-overlay" id="roleApprovalModal">
+        <div class="modal-card">
+            <h3 id="roleApprovalTitle">🏢 Send Request to ApproveOffice.html</h3>
+            <p id="roleApprovalDesc">
+                অফিস পোর্টাল থেকে নতুন পার্টি ইনভয়েস এন্ট্রি, এডিট বা ডিলিট করলে তা অ্যাডমিনের <strong>ApproveOffice.html</strong>-এ পাঠানো হবে। অ্যাডমিন অ্যাপ্রুভ করলেই এটি চূড়ান্ত হবে।
+            </p>
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label>Invoice Action Summary</label>
+                <input type="text" id="roleApprovalSummary" readonly style="color: #ffc107; font-weight: 700;">
+            </div>
+            <div class="form-group">
+                <label>Reason / Remarks for Admin Approval <span style="color: #ff4d4d;">*</span></label>
+                <textarea id="roleApprovalReason" rows="3" placeholder="Write a short note or reason for this party invoice entry, update, or deletion..." style="resize: none;"></textarea>
+            </div>
+            <div class="modal-btn-row">
+                <button type="button" class="btn-modal" style="background: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color);" onclick="closeRoleApprovalModal()">Cancel</button>
+                <button type="button" class="btn-modal" style="background: #ffc107; color: #121212;" onclick="confirmRoleApprovalRequest()">📤 Send for Approval</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================================================
+        // 1. PORTAL ROLE DETECTION & LOCALSTORAGE PERSISTENCE ENGINE
+        // =========================================================================================
+        let currentPortalMode = "admin"; // 'admin', 'office', or 'supervisor'
+        let loggedUserId = "ADMIN";
+        let loggedUserName = "Super Admin";
+        let assignedSite = "";
+        let pendingRolePayload = null;
+
+        const defaultPartiesDB = [
+            { name: 'Amitabha Roy (Civil)', agreement: 'Civil Construction Contract 2026 - Building B', tdsApplicable: true, tdsPerc: 2 },
+            { name: 'Sayan Karmakar (Electrical)', agreement: 'Electrical Maintenance & Wiring (Annual)', tdsApplicable: true, tdsPerc: 1 },
+            { name: 'Rajat Dutta (Plumbing)', agreement: 'Plumbing Works - Phase 1', tdsApplicable: true, tdsPerc: 2 },
+            { name: 'Maa Tara Traders (Material)', agreement: 'General Material Supply Vendor', tdsApplicable: false, tdsPerc: 0 }
+        ];
+
+        let partiesDB = [];
+        let invoicesDB = []; 
+        let isEntryView = false;
+        let cart = [];
+        let isGstActive = false;
+        let activePartyTdsPerc = 0; 
+        let currentEditRowId = null;
+
+        let curBaseTotal = 0, curGstTotal = 0, curGrossTotal = 0, curTdsAmount = 0, curNetPayable = 0;
+
+        // =========================================================================================
+        // SMART PERCENTAGE UNIT (%) vs NORMAL QUANTITY CALCULATION ENGINE
+        // =========================================================================================
+        function isPercentageUnit(unitVal) {
+            if (!unitVal) return false;
+            const u = String(unitVal).trim().toLowerCase();
+            return u === '%' || u === 'percent' || u === 'percentage' || u === 'pct' || u.includes('%');
+        }
+
+        function calculateParticularBaseTotal(rate, qty, unit) {
+            const r = parseFloat(rate) || 0;
+            const q = parseFloat(qty) || 0;
+            if (isPercentageUnit(unit)) {
+                return (r * q) / 100;
+            }
+            return r * q;
+        }
+
+        function syncPartiesAndInvoices() {
+            partiesDB = [...defaultPartiesDB];
+
+            // Sync with AddContractor.html (atr_contractors)
+            const storedContractors = JSON.parse(localStorage.getItem('atr_contractors')) || [];
+            storedContractors.forEach(c => {
+                const formattedName = `${c.name} (${(c.category || 'Contractor').replace(' Work', '')})`;
+                const exists = partiesDB.some(p =>
+                    p.name.toLowerCase() === formattedName.toLowerCase() ||
+                    p.name.toLowerCase().startsWith((c.name || '').toLowerCase())
+                );
+                if (!exists && c.name) {
+                    partiesDB.push({
+                        name: formattedName,
+                        agreement: `${c.category || 'Contract'} Agreement - PAN: ${c.pan || 'N/A'}`,
+                        tdsApplicable: Boolean(c.tdsApplicable),
+                        tdsPerc: parseFloat(c.tdsPercent) || 0
+                    });
+                }
+            });
+
+            // Sync with AddEquipment.html (atr_equipment_parties)
+            const storedEqpParties = JSON.parse(localStorage.getItem('atr_equipment_parties')) || [];
+            storedEqpParties.forEach(ep => {
+                const formattedName = `${ep.name} (${ep.category || 'Party'})`;
+                const exists = partiesDB.some(p =>
+                    p.name.toLowerCase() === formattedName.toLowerCase() ||
+                    p.name.toLowerCase().startsWith((ep.name || '').toLowerCase())
+                );
+                if (!exists && ep.name) {
+                    partiesDB.push({
+                        name: formattedName,
+                        agreement: `${ep.category || 'Equipment'} Agreement - Site: ${ep.site || 'Assigned'}`,
+                        tdsApplicable: ep.tdsApp === 'Yes',
+                        tdsPerc: ep.tdsApp === 'Yes' ? (parseFloat(ep.tdsPerc) || 0) : 0
+                    });
+                }
+            });
+
+            const partyHtml = partiesDB.map(p =>
+                `<li onclick="selectParty('${p.name.replace(/'/g, "\\'")}')">${p.name}</li>`
+            ).join('');
+            document.getElementById('partyListHtml').innerHTML = partyHtml;
+
+            // Load saved invoices from localStorage
+            const storedInvoices = JSON.parse(localStorage.getItem('atr_party_invoices'));
+            if (Array.isArray(storedInvoices)) {
+                invoicesDB = storedInvoices;
+            } else {
+                invoicesDB = [];
+            }
+        }
+
+        function saveInvoicesToStorage() {
+            try {
+                localStorage.setItem('atr_party_invoices', JSON.stringify(invoicesDB));
+            } catch (err) {
+                // If large base64 attachment exceeds localStorage quota, store metadata safely without dropping the invoice
+                const lightInvoices = invoicesDB.map(inv => ({
+                    ...inv,
+                    fileBase64: inv.fileBase64 && inv.fileBase64.length > 250000 ? "" : inv.fileBase64
+                }));
+                localStorage.setItem('atr_party_invoices', JSON.stringify(lightInvoices));
+            }
+        }
+
+        function checkPortalPermissions() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewParam = (urlParams.get('view') || '').toLowerCase();
+            const badge = document.getElementById('roleModeBadge');
+            const backBtn = document.getElementById('btnBackDashboard');
+            const submitBtn = document.getElementById('submitActionBtn');
+            const modalTitle = document.getElementById('roleApprovalTitle');
+            const modalDesc = document.getElementById('roleApprovalDesc');
+
+            let parentPath = "";
+            try {
+                if (window.parent && window.parent !== window) {
+                    parentPath = (window.parent.location.pathname || '').toLowerCase();
+                }
+            } catch (e) {}
+
+            if (viewParam === 'office' || parentPath.includes('officedashboard')) {
+                currentPortalMode = 'office';
+                loggedUserId = urlParams.get('userId') || sessionStorage.getItem('atr_logged_office_id') || localStorage.getItem('atr_logged_office_id') || "OFF-101";
+                loggedUserName = urlParams.get('userName') || "Office Staff";
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🏢 Office Mode (${loggedUserName}) — Synced with ApproveOffice.html`;
+                }
+                if (backBtn) {
+                    backBtn.href = "office/office_dashboard_home.html";
+                }
+                if (submitBtn) {
+                    submitBtn.innerHTML = "📤 Submit Invoice Entry for Approval";
+                }
+                if (modalTitle) modalTitle.innerText = "🏢 Send Request to ApproveOffice.html";
+                if (modalDesc) modalDesc.innerHTML = "অফিস পোর্টাল থেকে নতুন পার্টি ইনভয়েস এন্ট্রি, এডিট বা ডিলিট করলে তা অ্যাডমিনের <strong>ApproveOffice.html</strong>-এ পাঠানো হবে। অ্যাডমিন অ্যাপ্রুভ করলেই এটি চূড়ান্ত হবে।";
+
+            } else if (viewParam === 'supervisor' || parentPath.includes('supervisordashboard')) {
+                currentPortalMode = 'supervisor';
+                assignedSite = (urlParams.get('site') || sessionStorage.getItem('atr_supervisor_site') || "Salt Lake Sector V").trim();
+                loggedUserId = urlParams.get('supId') || "SUP-003";
+                loggedUserName = urlParams.get('supName') || "Supervisor";
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🛡️ Supervisor Mode (🔒 Site: ${assignedSite})`;
+                }
+                if (backBtn) {
+                    backBtn.href = "supervisor/supervisor_dashboard_home.html";
+                }
+                if (submitBtn) {
+                    submitBtn.innerHTML = "📤 Submit Invoice Entry for Approval";
+                }
+            } else {
+                currentPortalMode = 'admin';
+                if (backBtn) {
+                    backBtn.href = "dashboard_home.html";
+                }
+            }
+        }
+
+        function handleBackToDashboard(event) {
+            if (currentPortalMode === 'office') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.loadOfficeWorkspaceHome === 'function') {
+                        window.parent.loadOfficeWorkspaceHome();
+                        return;
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "office_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "office/office_dashboard_home.html";
+            } else if (currentPortalMode === 'supervisor') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window) {
+                        const parentHomeLink = window.parent.document.querySelector('.dashboard-home-link');
+                        if (parentHomeLink) {
+                            window.location.href = parentHomeLink.href;
+                            return;
+                        }
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "supervisor_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "supervisor/supervisor_dashboard_home.html";
+            }
+        }
+
+        window.onload = () => {
+            checkPortalPermissions();
+            syncPartiesAndInvoices();
+            renderInvoicesTable(); 
+        };
+
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'atr_party_invoices' || e.key === 'atr_contractors' || e.key === 'atr_equipment_parties') {
+                syncPartiesAndInvoices();
+                renderInvoicesTable();
+            }
+        });
+
+        // =========================================================================================
+        // 2. VIEW TOGGLE & FORM RESET
+        // =========================================================================================
+        function toggleView() {
+            const listView = document.getElementById('listView');
+            const entryView = document.getElementById('entryView');
+            const btn = document.getElementById('btnToggleView');
+
+            if(isEntryView) {
+                listView.style.display = 'block';
+                entryView.style.display = 'none';
+                btn.innerHTML = '➕ New Invoice Entry';
+                resetForm(); 
+            } else {
+                listView.style.display = 'none';
+                entryView.style.display = 'block';
+                btn.innerHTML = '⬅️ Back to List';
+                if(!currentEditRowId) {
+                    document.getElementById('invoiceDate').value = new Date().toISOString().split('T')[0];
+                }
+                toggleItemGst();
+            }
+            isEntryView = !isEntryView;
+        }
+
+        function resetForm() {
+            cart = [];
+            activePartyTdsPerc = 0;
+            document.getElementById('internalId').value = '';
+            document.getElementById('contractorInput').value = '';
+            document.getElementById('siteInput').value = '';
+            document.getElementById('invoiceId').value = '';
+            document.getElementById('invoiceUpload').value = ''; 
+            document.getElementById('partyProfileCard').style.display = 'none';
+            document.querySelector('input[name="globalGst"][value="no"]').checked = true;
+            document.getElementById('entrySectionHeading').innerText = "📝 1. Contractor & Invoice Details";
+            clearItemInputs();
+            renderCart();
+            currentEditRowId = null;
+            document.getElementById('submitActionBtn').innerHTML = currentPortalMode === 'admin'
+                ? "✅ Save Invoice Entry"
+                : "📤 Submit Invoice Entry for Approval";
+        }
+
+        function selectParty(partyName) {
+            document.getElementById('contractorInput').value = partyName;
+            document.getElementById('contractorDropdown').classList.remove('active');
+            const party = partiesDB.find(p => p.name === partyName);
+            if(party) {
+                document.getElementById('partyProfileCard').style.display = 'block';
+                document.getElementById('lblAgreement').innerText = party.agreement;
+                if(party.tdsApplicable) {
+                    document.getElementById('lblTdsStatus').innerText = `Yes, ${party.tdsPerc}% Applicable`;
+                    activePartyTdsPerc = party.tdsPerc;
+                } else {
+                    document.getElementById('lblTdsStatus').innerText = `No (TDS Exempted)`;
+                    activePartyTdsPerc = 0;
+                }
+            }
+            renderCart(); 
+        }
+
+        function toggleDropdown(id) { document.getElementById(id).classList.toggle('active'); }
+        function filterDropdown(id) {
+            const input = document.querySelector(`#${id} input`);
+            const filter = input.value.toUpperCase();
+            const li = document.querySelectorAll(`#${id} .dropdown-list li`);
+            document.getElementById(id).classList.add('active');
+            for (let i = 0; i < li.length; i++) {
+                let txtValue = li[i].textContent || li[i].innerText;
+                li[i].style.display = txtValue.toUpperCase().indexOf(filter) > -1 ? "" : "none";
+            }
+        }
+        function selectDropdownOption(id, value) {
+            document.querySelector(`#${id} input`).value = value;
+            document.getElementById(id).classList.remove('active');
+        }
+        window.onclick = function(event) {
+            if (!event.target.matches('.search-dropdown input')) {
+                let dropdowns = document.getElementsByClassName("search-dropdown");
+                for (let i = 0; i < dropdowns.length; i++) { dropdowns[i].classList.remove('active'); }
+            }
+        };
+
+        // =========================================================================================
+        // 3. LIVE PREVIEW & CART ENGINE (WITH PERCENTAGE UNIT LOGIC)
+        // =========================================================================================
+        function toggleItemGst() {
+            isGstActive = document.querySelector('input[name="globalGst"]:checked').value === 'yes';
+            document.getElementById('itemGstCol').classList.toggle('active', isGstActive);
+            document.querySelectorAll('.cart-gst-header').forEach(th => th.style.display = isGstActive ? 'table-cell' : 'none');
+            document.getElementById('gstSummaryRow').style.display = isGstActive ? 'flex' : 'none';
+            liveCalculatePreview();
+            renderCart();
+        }
+
+        function liveCalculatePreview() {
+            const unit = document.getElementById('itemUnit').value;
+            const price = parseFloat(document.getElementById('itemPrice').value) || 0;
+            const qty = parseFloat(document.getElementById('itemQty').value) || 0;
+
+            const qtyLbl = document.getElementById('itemQtyLabel');
+            if (qtyLbl) {
+                qtyLbl.innerText = isPercentageUnit(unit) ? "Qty (%)" : "Qty";
+            }
+
+            let baseTotal = calculateParticularBaseTotal(price, qty, unit);
+            let netTotal = baseTotal;
+            if(isGstActive) {
+                const gstPercent = parseFloat(document.getElementById('itemGstPercent').value) || 0;
+                netTotal = baseTotal + ((baseTotal * gstPercent) / 100);
+            }
+            document.getElementById('itemTotalPreview').value = netTotal.toFixed(2);
+        }
+
+        function addToCart() {
+            const name = document.getElementById('productInput').value.trim();
+            const hsn = document.getElementById('itemHsn').value.trim() || "-";
+            const unit = document.getElementById('itemUnit').value.trim() || "Unit";
+            const price = parseFloat(document.getElementById('itemPrice').value) || 0;
+            const qty = parseFloat(document.getElementById('itemQty').value) || 0;
+
+            if(!name || qty <= 0 || price <= 0) { alert("Please enter particulars and valid rate/qty."); return; }
+
+            let baseTotal = calculateParticularBaseTotal(price, qty, unit);
+            let gstPercent = parseFloat(document.getElementById('itemGstPercent').value) || 18;
+            let gstAmount = isGstActive ? (baseTotal * gstPercent) / 100 : 0;
+            let itemGross = baseTotal + gstAmount;
+
+            cart.push({ id: Date.now(), name, hsn, unit, price, qty, baseTotal, gstPercent, gstAmount, itemGross });
+            renderCart();
+            clearItemInputs();
+        }
+
+        function clearItemInputs() {
+            document.getElementById('productInput').value = '';
+            document.getElementById('itemHsn').value = '';
+            document.getElementById('itemUnit').value = '';
+            document.getElementById('itemPrice').value = '';
+            document.getElementById('itemQty').value = '';
+            document.getElementById('itemTotalPreview').value = '';
+            const qtyLbl = document.getElementById('itemQtyLabel');
+            if (qtyLbl) qtyLbl.innerText = "Qty";
+        }
+
+        function renderCart() {
+            const tbody = document.getElementById('cartBody');
+            tbody.innerHTML = '';
+            curBaseTotal = 0; curGstTotal = 0; curGrossTotal = 0; curTdsAmount = 0; curNetPayable = 0;
+
+            cart.forEach((item, index) => {
+                // Dynamically recalculate using Percentage Unit rule ((Rate * Qty) / 100) vs Normal (Rate * Qty)
+                item.baseTotal = calculateParticularBaseTotal(item.price, item.qty, item.unit);
+                const effectiveGstPerc = isGstActive ? (parseFloat(item.gstPercent) || 18) : 0;
+                item.gstAmount = isGstActive ? (item.baseTotal * effectiveGstPerc) / 100 : 0;
+                item.itemGross = item.baseTotal + item.gstAmount;
+
+                curBaseTotal += item.baseTotal;
+                curGstTotal += item.gstAmount;
+                curGrossTotal += item.itemGross;
+
+                const isPct = isPercentageUnit(item.unit);
+                const qtyUnitCell = isPct
+                    ? `${item.qty}% <small style="color:var(--text-muted);">(of ₹${Number(item.price).toFixed(2)})</small>`
+                    : `${item.qty} ${item.unit}`;
+
+                let rowHtml = `<tr><td><strong>${item.name}</strong></td><td>${item.hsn}</td><td>${qtyUnitCell}</td><td>₹${Number(item.price).toFixed(2)}</td>`;
+                if(isGstActive) { rowHtml += `<td>${effectiveGstPerc}%</td><td style="color:#28a745;">₹${item.gstAmount.toFixed(2)}</td>`; }
+                rowHtml += `<td><strong style="color:var(--text-main);">₹${(isGstActive ? item.itemGross : item.baseTotal).toFixed(2)}</strong></td>
+                        <td><button type="button" class="cart-remove-btn" onclick="removeFromCart(${index})">×</button></td></tr>`;
+                tbody.innerHTML += rowHtml;
+            });
+
+            document.getElementById('lblBaseTotal').innerText = "₹" + curBaseTotal.toFixed(2);
+            if(isGstActive) { document.getElementById('lblGstTotal').innerText = "₹" + curGstTotal.toFixed(2); }
+            document.getElementById('lblGrossTotal').innerText = "₹" + curGrossTotal.toFixed(2);
+
+            let tdsRow = document.getElementById('tdsSummaryRow');
+            if(activePartyTdsPerc > 0 && curBaseTotal > 0) {
+                curTdsAmount = (curBaseTotal * activePartyTdsPerc) / 100;
+                tdsRow.style.display = 'flex';
+                document.getElementById('lblTdsPercentLabel').innerText = `(@ ${activePartyTdsPerc}%)`;
+                document.getElementById('lblTdsAmount').innerText = "- ₹" + curTdsAmount.toFixed(2);
+            } else {
+                tdsRow.style.display = 'none';
+            }
+
+            curNetPayable = curGrossTotal - curTdsAmount;
+            document.getElementById('lblGrandTotal').innerText = "₹" + curNetPayable.toFixed(2);
+        }
+
+        function removeFromCart(index) { cart.splice(index, 1); renderCart(); }
+
+        // =========================================================================================
+        // 4. SAVE, EDIT, DELETE & OFFICE APPROVAL WORKFLOW
+        // =========================================================================================
+        function processInvoiceSave() {
+            if(cart.length === 0) { alert("Invoice is empty! Please add particulars."); return; }
+            const pName = document.getElementById('contractorInput').value.trim();
+            const invNo = document.getElementById('invoiceId').value.trim();
+            const invDate = document.getElementById('invoiceDate').value;
+            const site = document.getElementById('siteInput').value.trim();
+            const fileInput = document.getElementById('invoiceUpload');
+
+            if(!pName || !invNo || !site) { alert("Please select a contractor, Site, and enter Invoice Number."); return; }
+            
+            let file = fileInput.files[0];
+            if(!file && !currentEditRowId) { 
+                alert("⚠️ Please upload the Invoice copy (PDF or Image) before saving."); 
+                return; 
+            }
+
+            let internalId = document.getElementById('internalId').value || Date.now();
+            
+            let invoiceData = {
+                id: internalId, partyName: pName, invoiceNo: invNo, date: invDate, site: site,
+                isGstActive: isGstActive, tdsPerc: activePartyTdsPerc,
+                baseTotal: curBaseTotal, gstTotal: curGstTotal, grossTotal: curGrossTotal,
+                tdsAmount: curTdsAmount, netPayable: curNetPayable, items: cart.map(it => ({ ...it })),
+                pendingStatus: null
+            };
+
+            if(file) {
+                let reader = new FileReader();
+                reader.onload = function(e) {
+                    invoiceData.fileName = file.name;
+                    invoiceData.fileBase64 = e.target.result; 
+                    finalizeSave(invoiceData);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                let existing = invoicesDB.find(i => String(i.id) === String(currentEditRowId));
+                if(existing) {
+                    invoiceData.fileName = existing.fileName;
+                    invoiceData.fileBase64 = existing.fileBase64;
+                }
+                finalizeSave(invoiceData);
+            }
+        }
+
+        function finalizeSave(data) {
+            if(currentEditRowId) {
+                let index = invoicesDB.findIndex(i => String(i.id) === String(currentEditRowId));
+                if (index === -1) return;
+                const oldRec = { ...invoicesDB[index] };
+
+                // OFFICE / SUPERVISOR PORTAL: Route Update to Approval Modal
+                if (currentPortalMode !== 'admin') {
+                    openRoleApprovalModal({
+                        type: 'EDIT',
+                        targetId: currentEditRowId,
+                        actionLabel: "EDIT PARTY INVOICE",
+                        summary: `Invoice ${data.invoiceNo} (${data.partyName} | ${data.site}) — Net Payable: ₹${Number(oldRec.netPayable).toFixed(2)} → ₹${data.netPayable.toFixed(2)}`,
+                        oldData: oldRec,
+                        newData: data
+                    });
+                    return;
+                }
+
+                // ADMIN DIRECT UPDATE
+                invoicesDB[index] = data;
+                saveInvoicesToStorage();
+                alert("✅ Invoice Successfully Updated!");
+            } else {
+                // OFFICE / SUPERVISOR PORTAL: Route New Invoice Entry to Approval Modal
+                if (currentPortalMode !== 'admin') {
+                    openRoleApprovalModal({
+                        type: 'CREATE',
+                        targetId: data.id,
+                        actionLabel: "NEW PARTY INVOICE ENTRY",
+                        summary: `Invoice ${data.invoiceNo} from ${data.partyName} (${data.site}) | Net Payable: ₹${data.netPayable.toFixed(2)}`,
+                        oldData: null,
+                        newData: data
+                    });
+                    return;
+                }
+
+                // ADMIN DIRECT SAVE
+                invoicesDB.push(data);
+                saveInvoicesToStorage();
+                alert(`✅ Invoice ${data.invoiceNo} from ${data.partyName} Successfully Saved!`);
+            }
+            renderInvoicesTable();
+            toggleView();
+        }
+
+        function renderInvoicesTable() {
+            const tbody = document.getElementById('invoiceListBody');
+            tbody.innerHTML = '';
+            
+            invoicesDB.slice().reverse().forEach(inv => {
+                let attachmentIcon = (inv.fileBase64 || inv.fileName) ? `<span title="Document Uploaded (${inv.fileName || 'Attached'})" style="font-size:16px;">📎</span>` : '';
+                let tdsText = inv.tdsAmount > 0 ? `- ₹${Number(inv.tdsAmount).toFixed(2)} (${inv.tdsPerc}%)` : 'N/A';
+                let pendingBadge = inv.pendingStatus
+                    ? `<br><span class="pending-status-pill">⏳ ${inv.pendingStatus}</span>`
+                    : '';
+                
+                let rowHtml = `
+                    <tr id="row_${inv.id}">
+                        <td>
+                            <strong>${inv.invoiceNo}</strong> ${attachmentIcon}
+                            ${pendingBadge}
+                        </td>
+                        <td>${inv.date}</td>
+                        <td>${inv.site}</td>
+                        <td>${inv.partyName}</td>
+                        <td>₹${Number(inv.grossTotal || 0).toFixed(2)}</td>
+                        <td style="color:#dc3545;">${tdsText}</td>
+                        <td style="color:#28a745; font-weight:bold;">₹${Number(inv.netPayable || 0).toFixed(2)}</td>
+                        <td>
+                            <div class="action-btns">
+                                <button class="btn-edit" onclick="editOrder('${inv.id}')">Edit</button>
+                                <button class="btn-delete" onclick="deleteOrder('${inv.id}')">Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += rowHtml;
+            });
+
+            if(invoicesDB.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:20px;">No invoices registered yet. Add a new entry to get started.</td></tr>`;
+            }
+        }
+
+        function editOrder(id) {
+            let inv = invoicesDB.find(i => String(i.id) === String(id));
+            if(!inv) return;
+
+            if(!isEntryView) toggleView();
+
+            currentEditRowId = inv.id;
+            document.getElementById('internalId').value = inv.id;
+            document.getElementById('invoiceId').value = inv.invoiceNo;
+            document.getElementById('invoiceDate').value = inv.date;
+            document.getElementById('siteInput').value = inv.site;
+            document.getElementById('entrySectionHeading').innerText = currentPortalMode === 'admin'
+                ? `✏ Edit Invoice: ${inv.invoiceNo}`
+                : `✏ Edit Invoice (Requires Approval): ${inv.invoiceNo}`;
+            
+            document.querySelector(`input[name="globalGst"][value="${inv.isGstActive ? 'yes' : 'no'}"]`).checked = true;
+            
+            cart = Array.isArray(inv.items) ? inv.items.map(it => ({ ...it })) : [];
+            selectParty(inv.partyName); 
+            toggleItemGst();
+
+            document.getElementById('submitActionBtn').innerHTML = currentPortalMode === 'admin'
+                ? "🔄 Update Invoice"
+                : "📤 Send Invoice Update for Approval";
+            window.scrollTo(0, 0); 
+        }
+
+        function deleteOrder(id) {
+            let inv = invoicesDB.find(i => String(i.id) === String(id));
+            if (!inv) return;
+
+            // OFFICE / SUPERVISOR PORTAL: Route Delete to Approval Modal
+            if (currentPortalMode !== 'admin') {
+                openRoleApprovalModal({
+                    type: 'DELETE',
+                    targetId: inv.id,
+                    actionLabel: "DELETE PARTY INVOICE",
+                    summary: `Delete Invoice ${inv.invoiceNo} (${inv.partyName} | ${inv.site} | Net: ₹${Number(inv.netPayable).toFixed(2)})`,
+                    oldData: { ...inv, fileBase64: "" },
+                    newData: null
+                });
+                return;
+            }
+
+            // ADMIN DIRECT DELETE WITH PASSWORD
+            const pwd = prompt("Security Check: Enter Admin Password to delete this Invoice:");
+            if(pwd === "admin123") {
+                const row = document.getElementById("row_" + id);
+                if (row) {
+                    row.style.background = "rgba(220, 53, 69, 0.3)";
+                    row.style.transition = "all 0.4s";
+                }
+                
+                setTimeout(() => { 
+                    invoicesDB = invoicesDB.filter(i => String(i.id) !== String(id));
+                    saveInvoicesToStorage();
+                    renderInvoicesTable(); 
+                    alert("Invoice deleted successfully."); 
+                }, 400);
+            } else if (pwd !== null) {
+                alert("Incorrect Password! Access Denied.");
+            }
+        }
+
+        // =========================================================================================
+        // 5. OFFICE & SUPERVISOR APPROVAL MODAL ENGINE (ROUTES TO ApproveOffice.html)
+        // =========================================================================================
+        function openRoleApprovalModal(payload) {
+            pendingRolePayload = payload;
+            document.getElementById('roleApprovalSummary').value = `${payload.actionLabel}: ${payload.summary}`;
+            document.getElementById('roleApprovalReason').value = '';
+            document.getElementById('roleApprovalModal').classList.add('active');
+            setTimeout(() => document.getElementById('roleApprovalReason').focus(), 50);
+        }
+
+        function closeRoleApprovalModal() {
+            document.getElementById('roleApprovalModal').classList.remove('active');
+            pendingRolePayload = null;
+        }
+
+        function confirmRoleApprovalRequest() {
+            const reason = document.getElementById('roleApprovalReason').value.trim();
+            if (!reason) {
+                alert("⚠️ Please enter a reason/remark for Admin Approval.");
+                return;
+            }
+            if (!pendingRolePayload) return;
+
+            const targetApprovalPage = currentPortalMode === 'supervisor' ? 'ApproveSupervisor.html' : 'ApproveOffice.html';
+
+            if (pendingRolePayload.type === 'CREATE') {
+                invoicesDB.push({
+                    ...pendingRolePayload.newData,
+                    pendingStatus: `Pending in ${targetApprovalPage}`
+                });
+                saveInvoicesToStorage();
+            } else if (pendingRolePayload.type === 'EDIT') {
+                const idx = invoicesDB.findIndex(i => String(i.id) === String(pendingRolePayload.targetId));
+                if (idx > -1) {
+                    invoicesDB[idx].pendingStatus = "Edit Pending";
+                    saveInvoicesToStorage();
+                }
+            } else if (pendingRolePayload.type === 'DELETE') {
+                const idx = invoicesDB.findIndex(i => String(i.id) === String(pendingRolePayload.targetId));
+                if (idx > -1) {
+                    invoicesDB[idx].pendingStatus = "Delete Pending";
+                    saveInvoicesToStorage();
+                }
+            }
+
+            // Prepare clean copies without heavy base64 strings for the approval queue
+            const cleanOldData = pendingRolePayload.oldData ? { ...pendingRolePayload.oldData, fileBase64: undefined } : null;
+            const cleanNewData = pendingRolePayload.newData ? { ...pendingRolePayload.newData, fileBase64: undefined } : null;
+
+            if (currentPortalMode === 'supervisor') {
+                const supQueue = JSON.parse(localStorage.getItem('atr_supervisor_approvals')) || [];
+                supQueue.unshift({
+                    id: "SUP-INV-" + Date.now().toString().slice(-5),
+                    module: "SiteOrderEquipment.html",
+                    action: pendingRolePayload.actionLabel,
+                    site: assignedSite,
+                    requestedBy: loggedUserName,
+                    reason: reason,
+                    summary: pendingRolePayload.summary,
+                    requestedAt: new Date().toISOString(),
+                    status: "Pending",
+                    oldData: cleanOldData,
+                    newData: cleanNewData
+                });
+                localStorage.setItem('atr_supervisor_approvals', JSON.stringify(supQueue));
+            } else {
+                const newReq = {
+                    reqId: "OFF-INV-" + Date.now().toString().slice(-5),
+                    userId: loggedUserId,
+                    userName: loggedUserName,
+                    designation: "Office Staff",
+                    module: "SiteOrderEquipment.html",
+                    action: pendingRolePayload.actionLabel,
+                    summary: pendingRolePayload.summary,
+                    oldData: cleanOldData,
+                    newData: cleanNewData,
+                    reason: reason,
+                    timestamp: new Date().toLocaleString('en-IN'),
+                    status: "Pending"
+                };
+
+                const officeQueue = JSON.parse(localStorage.getItem('atr_office_approvals')) || [];
+                officeQueue.unshift(newReq);
+                localStorage.setItem('atr_office_approvals', JSON.stringify(officeQueue));
+                localStorage.setItem('approve_office_requests', JSON.stringify(officeQueue));
+                localStorage.setItem('ApproveOffice_requests', JSON.stringify(officeQueue));
+
+                // Log in Office Daily Work Report (office_dashboard_home.html)
+                const workLogs = JSON.parse(localStorage.getItem('atr_office_daily_work')) || [];
+                const todayStr = new Date().toISOString().split('T')[0];
+                const nowTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+                workLogs.unshift({
+                    id: "WRK-" + Date.now().toString().slice(-5),
+                    userId: loggedUserId,
+                    userName: loggedUserName,
+                    date: todayStr,
+                    time: nowTime,
+                    module: "Party Invoice Entry (SiteOrderEquipment.html)",
+                    refNo: cleanNewData && cleanNewData.invoiceNo ? cleanNewData.invoiceNo : newReq.reqId,
+                    desc: `${pendingRolePayload.actionLabel}: ${pendingRolePayload.summary}`,
+                    status: "Sent for Approval"
+                });
+                localStorage.setItem('atr_office_daily_work', JSON.stringify(workLogs));
+
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.refreshNotificationsUI === 'function') {
+                        window.parent.refreshNotificationsUI();
+                    }
+                } catch (e) {}
+            }
+
+            const actionType = pendingRolePayload.type;
+            closeRoleApprovalModal();
+            renderInvoicesTable();
+
+            if (actionType === 'CREATE' || actionType === 'EDIT') {
+                alert(`📤 Invoice Request sent to ${targetApprovalPage} for Admin Approval!`);
+                toggleView();
+            } else {
+                alert(`📤 Deletion Request sent to ${targetApprovalPage} for Admin Approval!`);
+            }
+        }
+
+        // =========================================================================================
+        // 6. DOWNLOAD ALL INVOICES AS ZIP (EXCEL SUMMARY + ATTACHMENTS)
+        // =========================================================================================
+        function downloadAllInvoices() {
+            if(invoicesDB.length === 0) {
+                alert("⚠️ No invoices available to download. Please add entries first.");
+                return;
+            }
+
+            let zip = new JSZip();
+
+            invoicesDB.forEach(inv => {
+                let folderName = inv.partyName.replace(/[^a-zA-Z0-9 ]/g, "").trim() || "Party_Invoices";
+                let folder = zip.folder(folderName); 
+
+                let excelData = [
+                    ["INVOICE RECORD & DETAILS"],
+                    [],
+                    ["Party Name", inv.partyName],
+                    ["Invoice No", inv.invoiceNo],
+                    ["Date", inv.date],
+                    ["Site", inv.site],
+                    [],
+                    ["--- PARTICULARS ---"],
+                    ["Sl No.", "Particulars", "HSN/SAC", "Qty", "Unit", "Rate (Rs)", "Base Total (Rs)", "GST %", "GST Amount (Rs)", "Sub-Total (Rs)"]
+                ];
+
+                (inv.items || []).forEach((item, i) => {
+                    excelData.push([
+                        i + 1, item.name, item.hsn, item.qty, item.unit, item.price,
+                        item.baseTotal, inv.isGstActive ? item.gstPercent : 0,
+                        inv.isGstActive ? item.gstAmount : 0, inv.isGstActive ? item.itemGross : item.baseTotal
+                    ]);
+                });
+
+                excelData.push([]);
+                excelData.push(["--- FINANCIAL SUMMARY ---"]);
+                excelData.push(["Base Amount", inv.baseTotal]);
+                if(inv.isGstActive) { excelData.push(["GST Applied", inv.gstTotal]); }
+                excelData.push(["Gross Invoice", inv.grossTotal]);
+                excelData.push([`TDS Deducted (${inv.tdsPerc}%)`, -inv.tdsAmount]);
+                excelData.push([]);
+                excelData.push(["NET PAYABLE", inv.netPayable]);
+
+                let ws = XLSX.utils.aoa_to_sheet(excelData);
+                let wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Invoice Summary");
+
+                let excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+                folder.file(`Invoice_${inv.invoiceNo}_Summary.xlsx`, excelBuffer);
+
+                if(inv.fileBase64 && inv.fileName && inv.fileBase64.includes(',')) {
+                    let extension = inv.fileName.split('.').pop();
+                    let safeAttachmentName = `Attachment_${inv.invoiceNo}.${extension}`;
+                    let base64Data = inv.fileBase64.split(',')[1];
+                    folder.file(safeAttachmentName, base64Data, {base64: true});
+                }
+            });
+
+            zip.generateAsync({type:"blob"}).then(function(content) {
+                let today = new Date().toISOString().split('T')[0];
+                saveAs(content, `All_Invoices_Backup_${today}.zip`);
+            });
+        }
+    </script>
+</body>
+</html>

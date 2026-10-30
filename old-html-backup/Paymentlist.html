@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Employee Payment List</title>
+    
+    <!-- LIVE THEME SYNC ENGINE (No Refresh Required) -->
+    <script>
+        function applyLiveTheme() {
+            const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        }
+        applyLiveTheme(); // Apply on initial load
+
+        // Listen for real-time changes across windows/iframes
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'atr_theme' || !e.key) {
+                applyLiveTheme();
+            }
+        });
+
+        // Add custom event listener for same-window iframe changes
+        window.addEventListener('message', function(event) {
+            if (event.data && event.data.type === 'THEME_CHANGED') {
+                document.documentElement.setAttribute('data-theme', event.data.theme);
+            }
+        });
+    </script>
+
+    <!-- HTML2PDF CDN for Auto PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- SheetJS (XLSX) Library for Excel Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
+
+        :root {
+            --bg-body: #121212;
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --hover-bg: rgba(255, 255, 255, 0.08);
+            --shadow: 0 4px 15px rgba(0,0,0,0.3);
+            
+            --theme-color: #0dcaf0; 
+            --theme-glow: rgba(13, 202, 240, 0.4);
+            
+            --accent: #ffc107;
+            --success: #28a745;
+            --danger: #dc3545;
+            --info: #17a2b8;
+            --theme-transition: all 0.4s ease;
+        }
+
+        [data-theme="light"] {
+            --bg-body: #f0f2f5;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #666666;
+            --border-color: rgba(0, 0, 0, 0.1);
+            --glass-bg: rgba(0, 0, 0, 0.02);
+            --hover-bg: rgba(0, 0, 0, 0.05);
+            --shadow: 0 8px 25px rgba(0,0,0,0.05);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; scroll-behavior: smooth; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(136, 136, 136, 0.3); border-radius: 10px; }
+
+        body { background-color: var(--bg-body); color: var(--text-main); display: flex; flex-direction: column; min-height: 100vh; transition: var(--theme-transition); }
+        .web-container { flex: 1; padding: 30px 40px; overflow-y: auto; max-width: 1500px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; gap: 20px; }
+
+        /* Header styling */
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; flex-wrap: wrap; gap: 15px; }
+        .header h1 { font-size: 22px; color: var(--text-main); }
+        
+        .header-btns { display: flex; gap: 10px; }
+        .btn-back { background-color: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color); text-decoration: none; padding: 8px 15px; border-radius: 6px; font-weight: bold; font-size: 12px; transition: all 0.3s; cursor: pointer; }
+        .btn-back:hover { background-color: var(--theme-color); color: #000; border-color: var(--theme-color); transform: translateY(-2px); box-shadow: 0 4px 10px var(--theme-glow); }
+        
+        .btn-excel { background-color: rgba(40, 167, 69, 0.15); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.4); text-decoration: none; padding: 8px 15px; border-radius: 6px; font-weight: bold; font-size: 12px; transition: all 0.3s; cursor: pointer;}
+        .btn-excel:hover { background-color: #28a745; color: #fff; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(40,167,69,0.3); }
+
+        .section-box { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 20px; box-shadow: var(--shadow); transition: var(--theme-transition); }
+
+        /* Filter Section */
+        .filter-grid { display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; justify-content: space-between;}
+        .filter-left { display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end;}
+        .form-group { display: flex; flex-direction: column; gap: 6px; position: relative; min-width: 180px;}
+        .form-group label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        select, input[type="month"], input[type="date"] {
+            background-color: var(--bg-body); border: 1px solid var(--border-color); padding: 10px 15px; border-radius: 6px; color: var(--text-main); font-size: 13px; width: 100%; outline: none; cursor: pointer; color-scheme: dark; transition: var(--theme-transition);
+        }
+        [data-theme="light"] select, [data-theme="light"] input[type="month"], [data-theme="light"] input[type="date"] { color-scheme: light; }
+        select:focus, input:focus { border-color: var(--theme-color); box-shadow: 0 0 8px var(--theme-glow); }
+
+        /* Buttons Styling */
+        .action-buttons-group { display: flex; gap: 10px; align-items: flex-end; }
+        .btn-generate { 
+            background-color: var(--theme-color); color: #000; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 700; font-size: 12px; cursor: pointer; text-transform: uppercase; transition: all 0.3s; height: 40px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; box-shadow: 0 4px 10px rgba(13, 202, 240, 0.2); 
+        }
+        .btn-generate:hover { transform: translateY(-2px); filter: brightness(1.1); }
+        .btn-hold { background-color: var(--accent); color: #000; box-shadow: 0 4px 10px rgba(255, 193, 7, 0.2); }
+        .btn-submit { background-color: var(--success); color: white; box-shadow: 0 4px 10px rgba(40, 167, 69, 0.2); }
+        .btn-print { background-color: #6f42c1; color: white; box-shadow: 0 4px 10px rgba(111, 66, 193, 0.2); }
+        .btn-history { background-color: #fd7e14; color: white; box-shadow: 0 4px 10px rgba(253, 126, 20, 0.2); }
+
+        /* Column Visibility Dropdown */
+        .col-toggle-wrapper { position: relative; }
+        .btn-toggle-cols { background: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color); padding: 10px 15px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px; transition: var(--theme-transition);}
+        .col-menu {
+            position: absolute; top: 100%; right: 0; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; width: 220px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 100; margin-top: 5px; display: none; transition: var(--theme-transition);
+        }
+        .col-menu.show { display: block; }
+        .col-menu label { display: flex; align-items: center; gap: 10px; padding: 8px; font-size: 12px; color: var(--text-main); cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05); text-transform: none; transition: var(--theme-transition);}
+        .col-menu label:hover { background: var(--hover-bg); border-radius: 4px; }
+        .col-menu input[type="checkbox"] { accent-color: var(--theme-color); width: 15px; height: 15px; cursor: pointer;}
+
+        /* Table Design (Web View) */
+        .table-responsive { overflow-x: auto; width: 100%; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); margin-top: 15px; transition: var(--theme-transition);}
+        table { width: 100%; border-collapse: collapse; text-align: center; font-size: 12px; }
+        thead { background: var(--glass-bg); border-bottom: 2px solid var(--theme-color); transition: var(--theme-transition);}
+        th, td { padding: 12px 10px; border-bottom: 1px solid var(--border-color); vertical-align: middle; transition: var(--theme-transition);}
+        th { color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 11px; white-space: nowrap; }
+        tr:hover { background: var(--hover-bg); }
+        tfoot th { font-size: 13px; font-weight: 700; color: var(--accent); background: var(--glass-bg); border-top: 2px solid var(--theme-color); transition: var(--theme-transition);}
+
+        .pay-input {
+            width: 100%; max-width: 120px; padding: 8px; border: 1px solid var(--theme-color); border-radius: 4px; background: var(--bg-body); color: var(--theme-color); font-weight: bold; text-align: center; outline: none; transition: var(--theme-transition);
+        }
+        
+        /* Hide Spinners for inputs */
+        .pay-input::-webkit-outer-spin-button, .pay-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .pay-input[type=number] { -moz-appearance: textfield; }
+        .pay-input:focus { box-shadow: 0 0 8px var(--theme-glow); }
+        
+        .val-payable { color: var(--success); font-weight: bold; font-size: 13px; }
+        .sub-id-badge { display: block; font-size: 10px; font-weight: bold; color: var(--accent); margin-top: 3px; letter-spacing: 0.5px; }
+        .village-badge { display: block; font-size: 10px; color: var(--text-muted); margin-top: 3px; font-weight: 500; }
+
+        /* Action Bar Below Table */
+        .action-bar-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; flex-wrap: wrap; gap: 15px; background: var(--glass-bg); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); transition: var(--theme-transition);}
+        .draft-status { font-size: 12px; font-weight: bold; color: var(--accent); display: flex; align-items: center; gap: 5px;}
+        .loading-spinner { font-size: 14px; animation: spin 1s linear infinite; display: none; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        .report-header { text-align: center; margin-bottom: 20px; display: none; }
+
+        /* History Modal Styling */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 2000; backdrop-filter: blur(5px); }
+        .modal-content { background: var(--bg-card); width: 550px; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 10px 40px rgba(0,0,0,0.5); padding: 25px; transition: var(--theme-transition);}
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; transition: var(--theme-transition);}
+        .modal-header h3 { color: var(--theme-color); font-size: 18px; }
+        .close-btn { background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; }
+        .close-btn:hover { color: var(--danger); }
+        .history-list { list-style: none; max-height: 350px; overflow-y: auto; padding-right: 5px; }
+        .history-list::-webkit-scrollbar { width: 4px; }
+        .history-list li { background: var(--glass-bg); border: 1px solid var(--border-color); margin-bottom: 10px; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; transition: var(--theme-transition);}
+        .history-list li:hover { background: var(--hover-bg); }
+        .hist-info span { display: block; font-size: 12px; color: var(--text-muted); }
+        .hist-info strong { font-size: 14px; color: var(--text-main); }
+
+        /* ================= UNIFIED COLORFUL PDF & PRINT LAYOUT ================= */
+        .pdf-mode .header, .pdf-mode .filter-grid, .pdf-mode .btn-toggle-cols, .pdf-mode .col-menu, .pdf-mode .action-bar-bottom, .pdf-mode .no-print { display: none !important; }
+        .pdf-mode #printableArea { width: 1050px !important; margin: 0 auto; background: #ffffff !important; padding: 15px; }
+        
+        @media print, .pdf-mode {
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            body { background: white !important; margin: 0; padding: 0; }
+            
+            .web-container { padding: 0 !important; max-width: none !important; border: none; background: transparent !important; }
+            .section-box { border: none !important; box-shadow: none !important; padding: 0 !important; background: transparent !important; }
+            
+            /* Report Header */
+            .report-header { display: block !important; border-bottom: 2px solid #17a2b8; padding-bottom: 10px; margin-bottom: 15px;}
+            .report-header h2 { color: #17a2b8 !important; font-size: 22px; font-weight: 800; text-transform: uppercase; margin-bottom: 5px;}
+            .report-header p { color: #444444 !important; font-size: 13px; font-weight: 700; }
+
+            /* Fixed Table Layout for Uniform Row/Column widths */
+            .table-responsive { border: none; overflow: visible; background: transparent !important;}
+            table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 40px; table-layout: fixed; }
+            
+            /* Fixed Column Widths exactly total 100% to prevent squeezing */
+            .col-empid { width: 10%; }
+            .col-name { width: 17%; }
+            .col-site { width: 14%; }
+            .col-present { width: 9%; }
+            .col-ot { width: 8%; }
+            .col-off-adv { width: 10%; }
+            .col-site-adv { width: 10%; }
+            .col-payable { width: 11%; }
+            .col-blank { width: 11%; }
+
+            th, td { border: 1px solid #ced4da !important; padding: 10px 5px !important; color: #212529 !important; height: 40px; vertical-align: middle; word-wrap: break-word; overflow-wrap: break-word; }
+            
+            thead th { background: #17a2b8 !important; color: #ffffff !important; font-weight: bold; border-bottom: 2px solid #117a8b !important; border: 1px solid #117a8b !important; }
+            tfoot th { background: #fff3cd !important; color: #856404 !important; font-weight: 800; border-top: 2px solid #ffeeba !important; border: 1px solid #ffeeba !important; }
+            tbody tr:nth-child(even) { background-color: #f8f9fa !important; }
+            tbody tr:nth-child(odd) { background-color: #ffffff !important; }
+            tr { page-break-inside: avoid !important; }
+
+            /* Hide elements not meant for print */
+            .sub-id-badge { display: none !important; }
+            .village-badge { display: block !important; color: #555555 !important; font-size: 9px !important; font-weight: bold; }
+        }
+
+        /* Fixed Footer styling for Traditional Print */
+        @media print {
+            @page { size: A4 landscape; margin: 10mm; }
+            .header, .filter-grid, .btn-toggle-cols, .col-menu, .action-bar-bottom, .no-print { display: none !important; }
+            .print-footer { position: fixed !important; bottom: 0; left: 10mm; right: 10mm; display: flex !important; justify-content: space-between; font-weight: bold; font-size: 11px; color: #444; padding-top: 10px; background: white; }
+            .print-footer div { border-top: 2px solid #17a2b8; padding-top: 5px; width: 25%; text-align: center; }
+        }
+        .print-footer { display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="web-container">
+        <div class="header no-print">
+            <h1>Batch Payment Processor & List</h1>
+            <div class="header-btns">
+                <button class="btn-excel" onclick="exportToExcel()">📊 Export Excel</button>
+                <a class="btn-back" onclick="handleBackToDashboard(event)">← Back to Dashboard</a>
+            </div>
+        </div>
+
+        <div class="section-box">
+            
+            <!-- Filters & Controls -->
+            <div class="filter-grid no-print">
+                <div class="filter-left">
+                    <div class="form-group">
+                        <label>Select Site</label>
+                        <select id="siteSelect">
+                            <option value="ALL">🌍 All Sites (Consolidated)</option>
+                            <option value="Dum Dum Project">Dum Dum Project</option>
+                            <option value="Salt Lake IT Park">Salt Lake IT Park</option>
+                            <option value="Office">Office Stock</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Select Month / Year</label>
+                        <input type="month" id="monthSelect">
+                    </div>
+                    
+                    <!-- Buttons aligned Side-by-Side strictly -->
+                    <div class="action-buttons-group">
+                        <button class="btn-generate" onclick="generateReport()">📊 Generate List</button>
+                        <button class="btn-generate btn-history" onclick="openHistoryModal()">🕒 Edit Past Submissions</button>
+                    </div>
+                </div>
+
+                <div class="col-toggle-wrapper" id="colToggleWrapper">
+                    <button class="btn-toggle-cols" onclick="toggleMenu()">👁️ Show / Hide Columns</button>
+                    <div class="col-menu" id="colMenu">
+                        <label><input type="checkbox" class="col-check" value="col-empid" checked onchange="updateCols()"> Employee ID</label>
+                        <label><input type="checkbox" class="col-check" value="col-name" checked onchange="updateCols()"> Employee Name</label>
+                        <label><input type="checkbox" class="col-check" value="col-present" checked onchange="updateCols()"> Total Present</label>
+                        <label><input type="checkbox" class="col-check" value="col-ot" checked onchange="updateCols()"> Total OT</label>
+                        <label><input type="checkbox" class="col-check" value="col-off-adv" checked onchange="updateCols()"> Office Advance</label>
+                        <label><input type="checkbox" class="col-check" value="col-site-adv" checked onchange="updateCols()"> Site Advance</label>
+                        <label><input type="checkbox" class="col-check" value="col-payable" checked onchange="updateCols()"> Total Payable</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Printable Wrapper Container -->
+            <div id="printableArea">
+                <div class="report-header" id="reportHeader">
+                    <h2>ATR Construction</h2>
+                    <p id="reportTitleText">Employee Final Payment Statement</p>
+                    <p id="reportMeta" style="margin-top: 5px; font-weight: bold; color: #666;"></p>
+                </div>
+
+                <div class="table-responsive" style="display: none;" id="reportTableContainer">
+                    <table id="paymentTable">
+                        <thead>
+                            <tr>
+                                <th class="col-empid">Emp ID</th>
+                                <th class="col-name" style="text-align: left;">Employee Name</th>
+                                <th class="col-site">Site Name</th>
+                                <th class="col-present">Total Present</th>
+                                <th class="col-ot">Total OT (Hrs)</th>
+                                <th class="col-off-adv">Office Adv (₹)</th>
+                                <th class="col-site-adv">Site Adv (₹)</th>
+                                <th class="col-payable">Total Payable (₹)</th>
+                                <th class="col-blank">Final Payment (Manual)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="paymentTbody">
+                            <!-- Data populated via JS -->
+                        </tbody>
+                        <tfoot id="paymentTfoot">
+                            <tr>
+                                <th colspan="7" style="text-align: right; letter-spacing: 1px;">TOTAL SUM:</th>
+                                <th class="col-payable" id="sumPayableFooter">₹ 0</th>
+                                <th class="col-blank" id="sumManualFooter" style="text-align: center;">₹ 0</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <div class="print-footer" id="printFooterHTML">
+                    <div>Prepared By</div>
+                    <div>Checked By</div>
+                    <div>Authorized Signatory</div>
+                </div>
+            </div>
+
+            <!-- Action Bar -->
+            <div class="action-bar-bottom no-print" id="actionBarBottom" style="display: none;">
+                <div class="draft-status" id="draftStatusText"></div>
+                <span class="loading-spinner" id="loadingSpinner">⏳ Syncing with Cloud...</span>
+                
+                <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                    <button class="btn-generate btn-hold" id="btnHold" onclick="saveToCloudDB()">⏸️ Save to Hold</button>
+                    
+                    <div style="display: flex; align-items: center; gap: 10px; border-left: 1px solid var(--border-color); padding-left: 15px;">
+                        <input type="date" id="finalPaymentDate" style="height: 40px; min-width: 150px;">
+                        <button class="btn-generate btn-submit" id="btnSubmit" onclick="handleSubmission()">✅ Finalize & Submit</button>
+                    </div>
+                    
+                    <button class="btn-generate btn-print" onclick="window.print()">🖨️ Print List</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- History Modal -->
+    <div class="modal-overlay" id="historyModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>☁️ Cloud Database Submissions</h3>
+                <button class="close-btn" onclick="closeHistoryModal()">✖</button>
+            </div>
+            <ul class="history-list" id="historyList">
+                <!-- Populated via Cloud Async Fetch -->
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // ================= NAVIGATION LOGIC =================
+        function handleBackToDashboard(event) {
+            event.preventDefault();
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewParam = (urlParams.get('view') || '').toLowerCase();
+            
+            let parentPath = "";
+            try {
+                if (window.parent && window.parent !== window) {
+                    parentPath = (window.parent.location.pathname || '').toLowerCase();
+                }
+            } catch (e) {}
+
+            if (viewParam === 'office' || parentPath.includes('officedashboard')) {
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.loadOfficeWorkspaceHome === 'function') {
+                        window.parent.loadOfficeWorkspaceHome();
+                        return;
+                    }
+                } catch (e) {}
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "office_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "office/office_dashboard_home.html";
+            } else if (viewParam === 'supervisor' || parentPath.includes('supervisordashboard')) {
+                try {
+                    if (window.parent && window.parent !== window) {
+                        const parentHomeLink = window.parent.document.querySelector('.dashboard-home-link');
+                        if (parentHomeLink) {
+                            window.location.href = parentHomeLink.href;
+                            return;
+                        }
+                    }
+                } catch (e) {}
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "supervisor_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "supervisor/supervisor_dashboard_home.html";
+            } else {
+                window.location.href = "dashboard_home.html";
+            }
+        }
+
+        // ================= MOCK DATABASE =================
+        const mockDatabase = [
+            { empId: "ATR-101", latestSubId: "SUB-002", name: "Rahul Sk", village: "Palasi", site: "Dum Dum Project", month: "2026-08", present: 26, ot: 12, offAdv: 2000, siteAdv: 500, payable: 15400, bankName: "SBI", accHolder: "Rahul Sk", accNo: "1234567890123", ifsc: "SBIN0001234" },
+            { empId: "ATR-102", latestSubId: "SUB-003", name: "Sumi Khatun", village: "Murshidabad", site: "Salt Lake IT Park", month: "2026-08", present: 24, ot: 8, offAdv: 0, siteAdv: 1000, payable: 18200, bankName: "HDFC Bank", accHolder: "Sumi Khatun", accNo: "50100123456789", ifsc: "HDFC0001234" },
+            { empId: "ATR-103", latestSubId: "SUB-001", name: "Amitabha Roy", village: "Kolkata", site: "Dum Dum Project", month: "2026-07", present: 30, ot: 20, offAdv: 5000, siteAdv: 0, payable: 22000, bankName: "ICICI", accHolder: "Amitabha Roy", accNo: "000123456789", ifsc: "ICIC0001234" },
+            { empId: "ATR-104", latestSubId: "SUB-004", name: "Sayan Karmakar", village: "North Dumdum", site: "Office", month: "2026-08", present: 28, ot: 0, offAdv: 1000, siteAdv: 0, payable: 14000, bankName: "Axis Bank", accHolder: "Sayan Karmakar", accNo: "912345678901234", ifsc: "UTIB0001234" },
+            { empId: "ATR-105", latestSubId: "SUB-005", name: "Bikash Saha", village: "Agartala", site: "Dum Dum Project", month: "2026-08", present: 20, ot: 5, offAdv: 500, siteAdv: 200, payable: 12000, bankName: "PNB", accHolder: "Bikash Saha", accNo: "1234001234567890", ifsc: "PUNB0123400" }
+        ];
+
+        let currentActiveData = []; // To hold generated report data for Excel Export
+        let isEditMode = false;
+        let editingBatchId = null;
+
+        function toggleMenu() { document.getElementById('colMenu').classList.toggle('show'); }
+        document.addEventListener('click', function(e) {
+            if (!document.getElementById('colToggleWrapper').contains(e.target)) {
+                document.getElementById('colMenu').classList.remove('show');
+            }
+        });
+
+        document.getElementById('finalPaymentDate').value = "";
+
+        // ================= CLOUD SYNC SIMULATION (API READY) =================
+        async function fetchDraftFromCloud() { 
+            return JSON.parse(localStorage.getItem('atr_cloud_payment_draft')) || {}; 
+        }
+        
+        async function saveToCloudDB() {
+            if(isEditMode) return; 
+            const inputs = document.querySelectorAll('.emp-pay-val');
+            let draftData = await fetchDraftFromCloud();
+            let count = 0;
+            
+            document.getElementById('loadingSpinner').style.display = 'inline-block';
+            document.getElementById('draftStatusText').innerHTML = "";
+
+            inputs.forEach(input => {
+                const empId = input.getAttribute('data-emp');
+                const val = input.value;
+                if(val && val.trim() !== "") { draftData[empId] = val; count++; } 
+                else { delete draftData[empId]; }
+            });
+
+            setTimeout(() => {
+                localStorage.setItem('atr_cloud_payment_draft', JSON.stringify(draftData));
+                document.getElementById('loadingSpinner').style.display = 'none';
+                document.getElementById('draftStatusText').innerHTML = `☁️ Successfully synced ${count} records to Cloud.`;
+                document.getElementById('draftStatusText').style.color = "var(--success)";
+                setTimeout(() => { document.getElementById('draftStatusText').style.color = "var(--accent)"; }, 4000);
+            }, 800); 
+        }
+
+        async function clearCloudDraft() { localStorage.removeItem('atr_cloud_payment_draft'); }
+        async function fetchHistoryFromCloud() { return JSON.parse(localStorage.getItem('atr_cloud_submitted_batches')) || []; }
+        async function saveHistoryToCloudDB(batches) { localStorage.setItem('atr_cloud_submitted_batches', JSON.stringify(batches)); }
+
+        // ================= GENERATE REPORT LOGIC =================
+        async function generateReport() {
+            isEditMode = false;
+            editingBatchId = null;
+            document.getElementById('btnSubmit').innerHTML = "✅ Finalize & Submit";
+            document.getElementById('btnSubmit').style.backgroundColor = "var(--success)";
+            document.getElementById('btnHold').style.display = "inline-flex";
+            document.getElementById('reportTitleText').innerText = "Employee Final Payment Statement";
+
+            const siteFilter = document.getElementById('siteSelect').value;
+            const monthFilter = document.getElementById('monthSelect').value;
+            
+            currentActiveData = mockDatabase.filter(row => {
+                let matchSite = siteFilter === "ALL" || row.site === siteFilter;
+                let matchMonth = monthFilter === "" || row.month === monthFilter;
+                return matchSite && matchMonth;
+            });
+
+            let metaText = `Site: ${siteFilter === 'ALL' ? 'All Sites' : siteFilter}`;
+            if(monthFilter !== "") {
+                const [year, month] = monthFilter.split('-');
+                const monthName = new Date(year, month - 1).toLocaleString('default', { month: 'long' });
+                metaText += ` | Period: ${monthName} ${year}`;
+            } else { metaText += ` | Period: All Time`; }
+            document.getElementById('reportMeta').innerText = metaText;
+
+            const siteColCheckbox = document.querySelector('input[value="col-site"]');
+            if(siteFilter !== "ALL") {
+                if(siteColCheckbox) { siteColCheckbox.checked = false; siteColCheckbox.parentElement.style.display = 'none'; }
+            } else {
+                if(siteColCheckbox) { siteColCheckbox.checked = true; siteColCheckbox.parentElement.style.display = 'flex'; }
+            }
+
+            const draftData = await fetchDraftFromCloud();
+            renderTable(currentActiveData, draftData, "⚠️ Cloud Draft Loaded: Restored previously saved entries.");
+        }
+
+        // Reusable Table Renderer
+        function renderTable(dataArray, valueMap, statusMsg) {
+            const tbody = document.getElementById('paymentTbody');
+            tbody.innerHTML = "";
+
+            if(dataArray.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:30px; color:var(--text-muted);">No payment records found.</td></tr>`;
+                document.getElementById('actionBarBottom').style.display = 'none';
+                document.getElementById('paymentTfoot').style.display = 'none';
+            } else {
+                dataArray.forEach(row => {
+                    let savedVal = valueMap[row.empId] || "";
+                    let tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="col-empid">
+                            <strong>${row.empId}</strong>
+                            <span class="sub-id-badge">[${row.latestSubId}]</span>
+                        </td>
+                        <td class="col-name" style="text-align: left;">
+                            <strong>${row.name}</strong><br>
+                            <span class="village-badge">📍 ${row.village}</span>
+                        </td>
+                        <td class="col-site">${row.site}</td>
+                        <td class="col-present">${row.present}</td>
+                        <td class="col-ot">${row.ot > 0 ? row.ot : '-'}</td>
+                        <td class="col-off-adv">${row.offAdv > 0 ? row.offAdv : '-'}</td>
+                        <td class="col-site-adv">${row.siteAdv > 0 ? row.siteAdv : '-'}</td>
+                        <td class="col-payable" data-val="${row.payable}">₹ ${row.payable.toLocaleString('en-IN')}</td>
+                        <td class="col-blank blank-cell">
+                            <input type="number" class="pay-input emp-pay-val" id="manual_input_${row.empId}" data-emp="${row.empId}" data-subid="${row.latestSubId}" data-name="${row.name}" data-site="${row.site}" data-village="${row.village}" data-month="${row.month}" data-present="${row.present}" data-ot="${row.ot}" data-offadv="${row.offAdv}" data-siteadv="${row.siteAdv}" data-payable="${row.payable}" value="${savedVal}" placeholder="Enter Amt" oninput="calculateRealtimeTotals()">
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                
+                document.getElementById('actionBarBottom').style.display = 'flex';
+                document.getElementById('paymentTfoot').style.display = 'table-footer-group';
+                
+                if(Object.keys(valueMap).length > 0 && statusMsg) {
+                    document.getElementById('draftStatusText').innerHTML = statusMsg;
+                } else { document.getElementById('draftStatusText').innerHTML = ""; }
+            }
+
+            document.getElementById('reportTableContainer').style.display = 'block';
+            updateCols(); 
+            calculateRealtimeTotals(); 
+        }
+
+        // ================= REAL-TIME TOTALS =================
+        function calculateRealtimeTotals() {
+            let totalPayable = 0;
+            let totalManual = 0;
+            document.querySelectorAll('#paymentTbody tr').forEach(tr => {
+                const payCell = tr.querySelector('.col-payable');
+                if (payCell && payCell.style.display !== 'none') { totalPayable += parseFloat(payCell.getAttribute('data-val')) || 0; }
+                const input = tr.querySelector('.emp-pay-val');
+                if (input && input.value) { totalManual += parseFloat(input.value) || 0; }
+            });
+            document.getElementById('sumPayableFooter').innerText = '₹ ' + totalPayable.toLocaleString('en-IN');
+            document.getElementById('sumManualFooter').innerText = '₹ ' + totalManual.toLocaleString('en-IN');
+        }
+
+        // ================= EXPORT TO EXCEL LOGIC (MULTI-SHEET + MANUAL VALUES) =================
+        function exportToExcel() {
+            if (currentActiveData.length === 0) {
+                alert("Please generate a report first before exporting to Excel.");
+                return;
+            }
+
+            // Create new Workbook
+            const wb = XLSX.utils.book_new();
+
+            // SHEET 1: Payment Details (Includes 'Final Payment (Manual)')
+            let sheet1Data = [['Employee ID', 'Employee Name', 'Village', 'Site Name', 'Total Present', 'Total OT', 'Site Advance', 'Office Advance', 'Total Payable', 'Final Payment (Manual)']];
+            
+            currentActiveData.forEach(row => {
+                let manualInputEl = document.getElementById(`manual_input_${row.empId}`);
+                let manualVal = manualInputEl && manualInputEl.value ? manualInputEl.value : "";
+
+                sheet1Data.push([
+                    row.empId, row.name, row.village, row.site, row.present, row.ot, row.siteAdv, row.offAdv, row.payable, manualVal
+                ]);
+            });
+            const ws1 = XLSX.utils.aoa_to_sheet(sheet1Data);
+            XLSX.utils.book_append_sheet(wb, ws1, "Payment Details");
+
+            // SHEET 2: Bank Details (Now includes 'Final Payment (Manual)')
+            let sheet2Data = [['Employee ID', 'Employee Name', 'Bank Name', 'Account Holder Name', 'Account Number', 'IFSC Code', 'Total Payable Amount', 'Final Payment (Manual)']];
+            currentActiveData.forEach(row => {
+                let manualInputEl = document.getElementById(`manual_input_${row.empId}`);
+                let manualVal = manualInputEl && manualInputEl.value ? manualInputEl.value : "";
+
+                // Using String() to ensure text format, prevent scientific notation (e.g. 1.23E+11)
+                sheet2Data.push([
+                    row.empId, row.name, row.bankName || "N/A", row.accHolder || "N/A", String(row.accNo || "N/A"), String(row.ifsc || "N/A"), row.payable, manualVal
+                ]);
+            });
+            const ws2 = XLSX.utils.aoa_to_sheet(sheet2Data);
+            
+            // Explicitly force text formatting for the Account Number and IFSC columns in Sheet 2
+            const range = XLSX.utils.decode_range(ws2['!ref']);
+            for(let C = range.s.c; C <= range.e.c; ++C) {
+                for(let R = range.s.r; R <= range.e.r; ++R) {
+                    let cell_address = {c:C, r:R};
+                    let cell_ref = XLSX.utils.encode_cell(cell_address);
+                    if(ws2[cell_ref]) {
+                        if(C === 4 || C === 5) { // Column E (Acc No) and Column F (IFSC)
+                            ws2[cell_ref].z = '@'; // Force text format
+                        }
+                    }
+                }
+            }
+
+            XLSX.utils.book_append_sheet(wb, ws2, "Bank Details");
+
+            // Save File
+            XLSX.writeFile(wb, `ATR_Payment_List_${document.getElementById('siteSelect').value}.xlsx`);
+        }
+
+        // ================= EDIT PAST SUBMISSIONS =================
+        async function openHistoryModal() {
+            const historyList = document.getElementById('historyList');
+            historyList.innerHTML = `<li style="justify-content:center; color:var(--info);">⏳ Fetching from Cloud Database...</li>`;
+            document.getElementById('historyModal').style.display = 'flex';
+
+            await new Promise(resolve => setTimeout(resolve, 600));
+            let batches = await fetchHistoryFromCloud();
+            
+            historyList.innerHTML = "";
+            if(batches.length === 0) {
+                historyList.innerHTML = `<li style="justify-content:center; color:var(--text-muted);">No past submissions found in Cloud.</li>`;
+            } else {
+                batches.reverse().forEach(batch => {
+                    let li = document.createElement('li');
+                    li.innerHTML = `
+                        <div class="hist-info">
+                            <strong>Batch ID: ${batch.id}</strong>
+                            <span>Date: ${batch.date} | Processed: ${batch.count} Emp.</span>
+                        </div>
+                        <button class="btn-generate" style="height: 30px; font-size: 10px; background: var(--info);" onclick="loadPastBatch('${batch.id}')">✏️ Edit</button>
+                    `;
+                    historyList.appendChild(li);
+                });
+            }
+        }
+
+        function closeHistoryModal() { document.getElementById('historyModal').style.display = 'none'; }
+
+        async function loadPastBatch(batchId) {
+            closeHistoryModal();
+            let batches = await fetchHistoryFromCloud();
+            const targetBatch = batches.find(b => b.id === batchId);
+            if(!targetBatch) return;
+
+            isEditMode = true;
+            editingBatchId = batchId;
+            
+            let editDataArray = [];
+            let editValueMap = {};
+            targetBatch.data.forEach(item => {
+                editDataArray.push({
+                    empId: item.empId, latestSubId: item.subIdTarget, name: item.name, village: item.village, site: item.site, month: item.month, present: item.present, ot: item.ot, offAdv: item.offAdv, siteAdv: item.siteAdv, payable: item.payable, bankName: item.bankName, accHolder: item.accHolder, accNo: item.accNo, ifsc: item.ifsc
+                });
+                editValueMap[item.empId] = item.amount;
+            });
+
+            currentActiveData = editDataArray; // Set active data for Excel export
+
+            document.getElementById('finalPaymentDate').value = targetBatch.date;
+            document.getElementById('reportMeta').innerText = `Editing Batch: ${batchId} | Orig. Date: ${targetBatch.date}`;
+            document.getElementById('reportTitleText').innerText = "Payment Correction Statement (Revised)";
+            
+            document.getElementById('btnHold').style.display = "none"; 
+            const btnSubmit = document.getElementById('btnSubmit');
+            btnSubmit.innerHTML = "🔄 Update Cloud Ledger";
+            btnSubmit.style.backgroundColor = "#fd7e14"; 
+
+            renderTable(editDataArray, editValueMap, `📝 Correction Mode Active: Modifying Batch ${batchId} from Database`);
+        }
+
+        // ================= FIX INPUTS FOR PDF AND PHYSICAL PRINT =================
+        // This logic swaps input boxes with bold text seamlessly right before print/pdf
+        function prepareInputsForPrint() {
+            const printArea = document.getElementById('printableArea');
+            const inputs = printArea.querySelectorAll('.emp-pay-val');
+            inputs.forEach(inp => {
+                if (!inp.nextElementSibling || !inp.nextElementSibling.classList.contains('temp-print-span')) {
+                    const span = document.createElement('span');
+                    span.className = 'temp-print-span';
+                    span.innerText = inp.value ? `₹ ${parseFloat(inp.value).toLocaleString('en-IN')}` : '';
+                    span.style.fontWeight = 'bold';
+                    span.style.color = '#000';
+                    span.style.display = 'block';
+                    span.style.textAlign = 'center';
+                    inp.style.display = 'none';
+                    inp.parentNode.appendChild(span);
+                }
+            });
+        }
+
+        function restoreInputsAfterPrint() {
+            const inputs = document.querySelectorAll('.emp-pay-val');
+            inputs.forEach(inp => { inp.style.display = 'inline-block'; });
+            document.querySelectorAll('.temp-print-span').forEach(s => s.remove());
+        }
+
+        // Browser Print Listeners
+        window.addEventListener('beforeprint', prepareInputsForPrint);
+        window.addEventListener('afterprint', restoreInputsAfterPrint);
+
+
+        // ================= FINALIZE / UPDATE BATCH =================
+        async function handleSubmission() {
+            const dateStr = document.getElementById('finalPaymentDate').value;
+            if(!dateStr) { alert("⚠️ Please select a Payment Date manually!"); return; }
+
+            let processCount = 0;
+            let paymentsToProcess = [];
+            
+            document.querySelectorAll('.emp-pay-val').forEach(inp => { 
+                const val = parseFloat(inp.value);
+                if(val && val > 0) {
+                    processCount++;
+                    const rowData = currentActiveData.find(row => row.empId === inp.getAttribute('data-emp'));
+
+                    paymentsToProcess.push({
+                        empId: inp.getAttribute('data-emp'),
+                        subIdTarget: inp.getAttribute('data-subid'),
+                        name: inp.getAttribute('data-name'),
+                        village: inp.getAttribute('data-village'),
+                        site: inp.getAttribute('data-site'),
+                        month: inp.getAttribute('data-month'),
+                        present: parseInt(inp.getAttribute('data-present')),
+                        ot: parseInt(inp.getAttribute('data-ot')),
+                        offAdv: parseInt(inp.getAttribute('data-offadv')),
+                        siteAdv: parseInt(inp.getAttribute('data-siteadv')),
+                        payable: parseFloat(inp.getAttribute('data-payable')),
+                        bankName: rowData.bankName,
+                        accHolder: rowData.accHolder,
+                        accNo: rowData.accNo,
+                        ifsc: rowData.ifsc,
+                        amount: val
+                    });
+                } 
+            });
+
+            if(processCount === 0) { alert("⚠️ No payment amounts entered to process."); return; }
+
+            let confirmMsg = isEditMode 
+                ? `You are UPDATING a finalized batch (${editingBatchId}).\n\nThis will overwrite their previous ledger entries in the Cloud and generate a Revised PDF. Proceed?` 
+                : `Are you sure you want to Finalize payments for ${processCount} employees?\n\nThis will map payments to their Latest Sub-IDs, save to Cloud Database, and generate a PDF.`;
+
+            if(confirm(confirmMsg)) {
+                
+                document.getElementById('loadingSpinner').innerText = "⏳ Committing to Cloud DB...";
+                document.getElementById('loadingSpinner').style.display = "inline-block";
+
+                let batches = await fetchHistoryFromCloud();
+                let batchId = isEditMode ? editingBatchId : "BATCH-" + Math.floor(Math.random() * 100000);
+                const batchRecord = { id: batchId, date: dateStr, count: processCount, data: paymentsToProcess };
+                
+                if(isEditMode) {
+                    const idx = batches.findIndex(b => b.id === batchId);
+                    if(idx !== -1) batches[idx] = batchRecord;
+                } else {
+                    batches.push(batchRecord);
+                }
+                
+                await saveHistoryToCloudDB(batches);
+                document.getElementById('loadingSpinner').style.display = "none";
+
+                exportAutoPDF(dateStr, processCount, isEditMode);
+            }
+        }
+
+        // ================= UNIFIED PDF GENERATION =================
+        function exportAutoPDF(dateStr, processCount, isCorrection) {
+            document.body.classList.add('pdf-mode'); 
+            prepareInputsForPrint(); // Prepares inputs to perfectly aligned text
+
+            const printArea = document.getElementById('printableArea');
+            const fileName = isCorrection ? `ATR_Payment_Correction_${dateStr}.pdf` : `ATR_Payment_Batch_${dateStr}.pdf`;
+
+            const opt = {
+                margin:       [10, 10, 25, 10],
+                filename:     fileName,
+                image:        { type: 'jpeg', quality: 1 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+            };
+
+            html2pdf().set(opt).from(printArea).toPdf().get('pdf').then(function(pdf) {
+                const totalPages = pdf.internal.getNumberOfPages();
+                for (let i = 1; i <= totalPages; i++) {
+                    pdf.setPage(i);
+                    pdf.setFontSize(10);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setTextColor(80, 80, 80);
+                    
+                    const pageHeight = pdf.internal.pageSize.getHeight();
+                    const pageWidth = pdf.internal.pageSize.getWidth();
+                    
+                    pdf.setDrawColor(23, 162, 184);
+                    pdf.setLineWidth(0.5);
+                    
+                    pdf.line(15, pageHeight - 15, 65, pageHeight - 15); 
+                    pdf.text('Prepared By', 25, pageHeight - 10);
+                    
+                    pdf.line(pageWidth/2 - 25, pageHeight - 15, pageWidth/2 + 25, pageHeight - 15); 
+                    pdf.text('Checked By', pageWidth / 2, pageHeight - 10, { align: 'center' });
+                    
+                    pdf.line(pageWidth - 65, pageHeight - 15, pageWidth - 15, pageHeight - 15); 
+                    pdf.text('Authorized Signatory', pageWidth - 15, pageHeight - 10, { align: 'right' });
+                }
+            }).save().then(() => {
+                document.body.classList.remove('pdf-mode');
+                restoreInputsAfterPrint(); // Brings inputs back to normal Web View
+
+                // Clear values
+                const inputs = document.querySelectorAll('.emp-pay-val');
+                inputs.forEach(inp => { inp.value = ""; });
+                
+                if(!isCorrection) clearCloudDraft(); 
+                
+                document.getElementById('draftStatusText').innerHTML = "";
+                document.getElementById('finalPaymentDate').value = ""; 
+                
+                if(isCorrection) {
+                    isEditMode = false;
+                    editingBatchId = null;
+                    document.getElementById('btnSubmit').innerHTML = "✅ Finalize & Submit";
+                    document.getElementById('btnSubmit').style.backgroundColor = "var(--success)";
+                    document.getElementById('btnHold').style.display = "inline-flex";
+                    document.getElementById('reportTitleText').innerText = "Employee Final Payment Statement";
+                    document.getElementById('paymentTbody').innerHTML = `<tr><td colspan="9" style="text-align:center; padding:30px; color:var(--text-muted);">Correction completed. Please generate list again.</td></tr>`;
+                    document.getElementById('paymentTfoot').style.display = 'none';
+                    currentActiveData = []; // Clear active data
+                }
+
+                calculateRealtimeTotals(); 
+                alert(`✅ Ledger ${isCorrection ? 'Correction' : 'Submission'} Successful!\n\n📄 PDF Report has been downloaded.\n💼 ${processCount} Payments are now logged safely.`);
+            });
+        }
+
+        function updateCols() {
+            const checks = document.querySelectorAll('.col-check');
+            checks.forEach(check => {
+                const colClass = check.value;
+                const isVisible = check.checked;
+                const elements = document.querySelectorAll(`.${colClass}`);
+                elements.forEach(el => { el.style.display = isVisible ? 'table-cell' : 'none'; });
+            });
+            calculateRealtimeTotals(); 
+        }
+    </script>
+</body>
+</html>

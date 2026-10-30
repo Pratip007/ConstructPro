@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Master Company Ledger</title>
+    
+    <!-- Sync theme with Master Dashboard -->
+    <script>
+        const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        window.addEventListener('storage', function(e) {
+            if(e.key === 'atr_theme') { document.documentElement.setAttribute('data-theme', e.newValue); }
+        });
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
+
+        :root {
+            --bg-body: transparent; 
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.1);
+            
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(0, 0, 0, 0.2);
+            --input-focus-bg: rgba(0, 0, 0, 0.4);
+            
+            --shadow: 0 4px 15px rgba(0,0,0,0.3);
+            
+            --theme-color: #28a745;
+            --theme-glow: rgba(40, 167, 69, 0.4);
+            --theme-transition: all 0.4s ease;
+
+            --color-debit: #00bcd4;
+            --color-credit: #28a745;
+            --color-tds: #fd7e14;
+            --color-balance: #ffc107;
+        }
+
+        [data-theme="light"] {
+            --bg-body: transparent;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #555555;
+            --border-color: rgba(0, 0, 0, 0.1);
+            
+            --glass-bg: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --input-bg: rgba(255, 255, 255, 0.5);
+            --input-focus-bg: #ffffff;
+            
+            --shadow: 0 8px 25px rgba(0,0,0,0.05);
+
+            --color-debit: #008c9e;
+            --color-credit: #1e7e34;
+            --color-tds: #d96400;
+            --color-balance: #d39e00;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; scroll-behavior: smooth; }
+        body { background-color: var(--bg-body); color: var(--text-main); display: flex; min-height: 100vh; overflow-x: hidden; transition: var(--theme-transition); }
+           
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(136, 136, 136, 0.3); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(136, 136, 136, 0.6); }
+
+        .main-content { flex: 1; padding: 40px; overflow-y: auto; max-width: 1400px; margin: 0 auto; width: 100%; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid var(--border-color); padding-bottom: 20px; transition: var(--theme-transition); flex-wrap: wrap; gap: 15px; }
+        .header h1 { font-size: 24px; color: var(--text-main); display: flex; align-items: center; gap: 10px; }
+        
+        .header-actions { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+
+        .btn-primary { background-color: var(--theme-color); color: #ffffff; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 700; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 10px var(--theme-glow); }
+        .btn-primary:hover { transform: translateY(-2px); filter: brightness(1.1); box-shadow: 0 6px 15px var(--theme-glow); }
+        
+        .btn-full-ledger { background-color: #6f42c1; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 700; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 10px rgba(111, 66, 193, 0.3); }
+        .btn-full-ledger:hover { background-color: #59339d; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(111, 66, 193, 0.4); }
+        
+        .btn-print { background-color: var(--glass-bg); color: #0dcaf0; border: 1px solid #0dcaf0; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 8px;}
+        .btn-print:hover { background-color: #0dcaf0; color: #000; transform: translateY(-2px); }
+
+        .btn-back-dash { background-color: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color); text-decoration: none; padding: 9px 16px; border-radius: 6px; font-weight: bold; font-size: 13px; transition: all 0.3s; display: flex; align-items: center; cursor: pointer; }
+        .btn-back-dash:hover { background-color: var(--theme-color); color: #fff; border-color: var(--theme-color); transform: translateY(-2px); box-shadow: 0 4px 10px var(--theme-glow); }
+
+        /* Z-INDEX FIX: default card container gets low z-index, explicitly target the filter card */
+        .card-container { background: var(--glass-bg); backdrop-filter: blur(12px); border: 1px solid var(--glass-border); padding: 30px; border-radius: 12px; box-shadow: var(--shadow); border-top: 4px solid var(--theme-color); margin-bottom: 30px; transition: var(--theme-transition); position: relative; z-index: 1; }
+        
+        /* Master layer for filters so dropdowns are NEVER cut off */
+        .filter-card { z-index: 100 !important; }
+
+        .filter-grid { display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; }
+        .form-group { display: flex; flex-direction: column; position: relative; min-width: 180px; flex: 1;}
+        .form-group label { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; transition: color 0.3s;}
+        .form-group input, .form-group select { background: var(--input-bg); border: 1px solid var(--border-color); padding: 12px; border-radius: 6px; color: var(--text-main); outline: none; font-size: 14px; transition: 0.3s; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); color-scheme: dark;}
+        [data-theme="light"] .form-group input[type="date"] { color-scheme: light; }
+        .form-group input:focus { border-color: var(--theme-color); background: var(--input-focus-bg); box-shadow: 0 0 10px var(--theme-glow); }
+        .form-group:focus-within label { color: var(--theme-color); }
+        
+        .action-buttons { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+
+        /* Dropdown System */
+        .dropdown-container { position: relative; width: 100%; }
+        .dropdown-search { width: 100%; cursor: text;}
+        .dropdown-list { display: none; position: absolute; top: 100%; left: 0; width: 100%; max-height: 200px; overflow-y: auto; background: var(--bg-card); border: 1px solid var(--theme-color); border-top: none; border-radius: 0 0 6px 6px; z-index: 1000; box-shadow: var(--shadow);}
+        .dropdown-list div { padding: 12px 15px; font-size: 13px; color: var(--text-main); cursor: pointer; border-bottom: 1px solid var(--border-color); transition: 0.2s;}
+        .dropdown-list div:hover { background-color: var(--theme-color); color: #ffffff; font-weight: 600;}
+
+        /* Summary Cards */
+        .summary-grid { display: none; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 25px; animation: fadeIn 0.5s ease; }
+        .summary-card { background: var(--input-bg); border: 1px solid var(--border-color); padding: 25px; border-radius: 10px; position: relative; overflow: hidden; transition: transform 0.2s, background 0.3s; }
+        .summary-card:hover { transform: translateY(-3px); background: var(--glass-bg); }
+        .summary-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; }
+        .card-debit::before { background-color: var(--color-debit); } 
+        .card-credit::before { background-color: var(--color-credit); } 
+        .card-tds::before { background-color: var(--color-tds); } 
+        .card-balance::before { background-color: var(--color-balance); } 
+        
+        .summary-card h4 { font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px; font-weight: 700; letter-spacing: 0.5px;}
+        .summary-card .val { font-size: 24px; font-weight: 700; }
+        .val.text-cyan { color: var(--color-debit); }
+        .val.text-green { color: var(--color-credit); }
+        .val.text-orange { color: var(--color-tds); }
+        .val.text-yellow { color: var(--color-balance); }
+
+        /* ================= MODERN TABLE (WEB VIEW) ================= */
+        .ledger-container { display: none; animation: slideUp 0.4s ease; position: relative; z-index: 10; }
+        
+        .table-wrapper {
+            background-color: var(--bg-card); border-radius: 12px; box-shadow: var(--shadow); border: 1px solid var(--border-color); max-height: 55vh; overflow-y: auto; position: relative; transition: var(--theme-transition);
+        }
+
+        .table-wrapper::-webkit-scrollbar { width: 8px; height: 8px; }
+        .table-wrapper::-webkit-scrollbar-track { background: transparent; border-radius: 0 12px 12px 0; }
+        .table-wrapper::-webkit-scrollbar-thumb { background: rgba(40, 167, 69, 0.3); border-radius: 10px; }
+        .table-wrapper::-webkit-scrollbar-thumb:hover { background: var(--theme-color); }
+
+        .web-table { width: 100%; border-collapse: collapse; text-align: left; }
+        .web-table th, .web-table td { padding: 15px 10px; border-bottom: 1px solid var(--border-color); font-size: 13px; color: var(--text-main); transition: var(--theme-transition);}
+        
+        .web-table th { 
+            color: var(--theme-color); font-weight: 600; text-transform: uppercase; font-size: 11px; background: var(--input-bg); letter-spacing: 0.5px; position: sticky; top: 0; z-index: 10; backdrop-filter: blur(10px);
+        }
+        
+        .web-table tbody tr:hover { background: var(--glass-bg); }
+        
+        .inv-highlight { color: var(--color-balance); font-weight: 700; background: rgba(255,193,7,0.1); padding: 3px 6px; border-radius: 4px; font-size: 12px;}
+        .site-badge { background: var(--input-bg); padding: 4px 8px; border-radius: 4px; font-size: 11px; color: var(--text-muted); display: inline-block; margin-top: 4px; border: 1px solid var(--border-color); }
+        .comp-highlight { color: var(--color-debit); font-size: 11px; font-weight: 700; display: block; margin-bottom: 4px; letter-spacing: 0.3px;}
+        
+        .mode-badge { float: right; background: rgba(40, 167, 69, 0.1); color: var(--theme-color); padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; border: 1px solid rgba(40, 167, 69, 0.3); }
+        .mode-master { background: rgba(111, 66, 193, 0.1); color: #c49eff; border-color: rgba(111, 66, 193, 0.3); }
+        [data-theme="light"] .mode-master { color: #6f42c1; }
+
+        .td-debit { color: var(--color-debit); font-weight: 600; }
+        .td-credit { color: var(--color-credit); font-weight: 600; }
+        .td-tds { color: var(--color-tds); font-weight: 600; }
+        .td-balance { color: var(--color-balance); font-weight: 700; }
+
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+        .empty-state h2 { font-size: 20px; margin-bottom: 10px; color: var(--text-main); }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ================= TALLY PRINT FORMAT (HIDDEN ON WEB) ================= */
+        #tallyPrintContainer { display: none; }
+
+        @media print {
+            @page { size: A4 portrait; margin: 10mm; }
+            body { background: #fff !important; color: #000 !important; font-family: "Courier New", Courier, monospace !important; margin: 0; padding: 0; }
+            
+            /* Hide entire Web UI */
+            .main-content, .header, .card-container, .summary-grid, .table-wrapper, #reportModeBadge, #reportSubtitle, #reportTitle { display: none !important; }
+            
+            /* Show Tally Print Container */
+            #tallyPrintContainer { display: block !important; width: 100%; }
+            
+            .tally-header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px;}
+            .tally-header h2 { font-size: 22px; font-weight: bold; margin: 0 0 5px 0; text-transform: uppercase; letter-spacing: 1px;}
+            .tally-header p { font-size: 12px; margin: 2px 0; font-weight: bold;}
+            
+            .tally-meta { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 15px; font-weight: bold; border-bottom: 1px dashed #000; padding-bottom: 5px;}
+            
+            .tally-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+            
+            /* Classic Tally Border-less look with subtle lines */
+            .tally-table th, .tally-table td { padding: 6px 4px; vertical-align: top; border-bottom: 1px dotted #ccc;}
+            .tally-table th { border-top: 1px solid #000; border-bottom: 1px solid #000 !important; text-align: left; font-weight: bold; text-transform: uppercase; }
+            .tally-table .text-right { text-align: right; }
+            
+            /* Details formatting inside Tally Print */
+            .tally-table td small, .tally-table td .tds-note { display: block; font-size: 9px; color: #444; margin-top: 2px; }
+            
+            /* Totals Row */
+            .tally-totals { border-top: 1px solid #000 !important; border-bottom: 2px double #000 !important; font-weight: bold; }
+            .tally-totals td { padding: 8px 4px; }
+            
+            .tally-footer { display: flex; justify-content: space-between; margin-top: 40px; font-size: 11px; font-weight: bold; }
+            .tally-footer div { border-top: 1px solid #000; padding-top: 5px; width: 30%; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-content">
+        
+        <div class="header no-print">
+            <h1>📊 Master Ledger Dashboard</h1>
+            <a href="dashboard_home.html" id="btnBackDashboard" class="btn-back-dash" onclick="handleBackToDashboard(event)">← Back to Dashboard</a>
+        </div>
+
+        <!-- ================= FILTER ENGINE ================= -->
+        <div class="card-container filter-card no-print">
+            <div class="filter-grid">
+                
+                <div class="form-group">
+                    <label>Select Company *</label>
+                    <div class="dropdown-container">
+                        <input type="text" id="compSearch" class="dropdown-search" value="All Companies" placeholder="Search Company..." onkeyup="filterDropdown('compSearch', 'compList')" onclick="toggleDropdown('compList')" autocomplete="off">
+                        <div id="compList" class="dropdown-list"></div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Site Filter</label>
+                    <div class="dropdown-container">
+                        <input type="text" id="siteSearch" class="dropdown-search" value="All Sites" placeholder="Search Site..." onkeyup="filterDropdown('siteSearch', 'siteList')" onclick="toggleDropdown('siteList')" autocomplete="off">
+                        <div id="siteList" class="dropdown-list"></div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>From Date</label>
+                    <input type="date" id="dateFrom">
+                </div>
+
+                <div class="form-group">
+                    <label>To Date</label>
+                    <input type="date" id="dateTo">
+                </div>
+
+                <!-- Action Buttons Aligned Side-by-Side -->
+                <div class="action-buttons">
+                    <button class="btn-primary" style="height: 44px;" onclick="generateLedger(false)">Generate</button>
+                    <button class="btn-full-ledger" style="height: 44px;" onclick="generateLedger(true)">⚡ Full Ledger</button>
+                    <button class="btn-print" style="height: 44px;" onclick="printTallyLedger()">🖨️ Tally Print</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= EMPTY STATE ================= -->
+        <div id="emptyState" class="card-container empty-state no-print">
+            <div style="font-size: 50px; margin-bottom: 15px;">📂</div>
+            <h2>No Ledger Generated Yet</h2>
+            <p>Click <b>"Full Ledger"</b> to instantly view complete history of All Companies or a specific one!</p>
+        </div>
+
+        <!-- ================= LEDGER REPORT SECTION (WEB VIEW) ================= -->
+        <div id="ledgerReport" class="ledger-container no-print">
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div>
+                    <h2 id="reportTitle" style="color: var(--theme-color); margin-bottom: 5px;">Company Ledger</h2>
+                    <p id="reportSubtitle" style="color: var(--text-muted); font-size: 13px;">Consolidated • All Time</p>
+                </div>
+                <div id="reportModeBadge" class="mode-badge">Total Consolidated Ledger</div>
+            </div>
+
+            <!-- Summary Cards -->
+            <div class="summary-grid" id="summarySection">
+                <div class="summary-card card-debit">
+                    <h4>Total Billed (Debit)</h4>
+                    <div class="val text-cyan" id="sumDebit">₹0</div>
+                </div>
+                <div class="summary-card card-credit">
+                    <h4>Bank Recv (Credit)</h4>
+                    <div class="val text-green" id="sumCredit">₹0</div>
+                </div>
+                <div class="summary-card card-tds">
+                    <h4>TDS Deducted</h4>
+                    <div class="val text-orange" id="sumTDS">₹0</div>
+                </div>
+                <div class="summary-card card-balance">
+                    <h4>Closing Balance</h4>
+                    <div class="val text-yellow" id="sumBalance">₹0</div>
+                </div>
+            </div>
+
+            <!-- Scrollable Transactions Table -->
+            <div class="table-wrapper">
+                <table class="web-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Particulars / Invoice No.</th>
+                            <th id="colSiteHeader">Company & Site Name</th>
+                            <th style="text-align: right;">Debit (₹)<br><span style="font-size:9px; color:var(--text-muted); text-transform:none;">Billed</span></th>
+                            <th style="text-align: right;">Credit (₹)<br><span style="font-size:9px; color:var(--text-muted); text-transform:none;">Recv / TDS</span></th>
+                            <th style="text-align: right;">Running Due (₹)<br><span style="font-size:9px; color:var(--text-muted); text-transform:none;">Balance</span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="ledgerTableBody">
+                        <!-- JS generated rows -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= TALLY PRINT CONTAINER (VISIBLE ONLY ON PRINT) ================= -->
+    <div id="tallyPrintContainer">
+        <div class="tally-header">
+            <h2>ATR CONSTRUCTION</h2>
+            <p>Ledger Account</p>
+            <p id="tallyCompanyName">Company: Rajat Dutta Associates</p>
+        </div>
+        
+        <div class="tally-meta">
+            <div id="tallyPeriod">1-Apr-2026 to 31-Mar-2027</div>
+            <div id="tallySite">Site: All Sites</div>
+        </div>
+
+        <table class="tally-table">
+            <thead id="tallyTableHeader">
+                <!-- Data populated dynamically via JS to handle dynamic SITE column -->
+            </thead>
+            <tbody id="tallyTableBody">
+                <!-- Data populated dynamically -->
+            </tbody>
+        </table>
+
+        <div class="tally-footer">
+            <div>Accountant Signature</div>
+            <div>Authorized Signatory</div>
+        </div>
+    </div>
+
+    <script>
+        // --- Smart Portal Navigation State (Admin vs Office vs Supervisor) ---
+        let currentPortalMode = "admin";
+
+        function checkPortalNavigation() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewParam = (urlParams.get('view') || '').toLowerCase();
+            const backBtn = document.getElementById('btnBackDashboard');
+
+            let parentPath = "";
+            try {
+                if (window.parent && window.parent !== window) {
+                    parentPath = (window.parent.location.pathname || '').toLowerCase();
+                }
+            } catch (e) {}
+
+            if (viewParam === 'office' || parentPath.includes('officedashboard')) {
+                currentPortalMode = 'office';
+                if (backBtn) {
+                    backBtn.href = "office/office_dashboard_home.html";
+                }
+            } else if (viewParam === 'supervisor' || parentPath.includes('supervisordashboard')) {
+                currentPortalMode = 'supervisor';
+                if (backBtn) {
+                    backBtn.href = "supervisor/supervisor_dashboard_home.html";
+                }
+            } else {
+                currentPortalMode = 'admin';
+                if (backBtn) {
+                    backBtn.href = "dashboard_home.html";
+                }
+            }
+        }
+
+        function handleBackToDashboard(event) {
+            if (currentPortalMode === 'office') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.loadOfficeWorkspaceHome === 'function') {
+                        window.parent.loadOfficeWorkspaceHome();
+                        return;
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "office_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "office/office_dashboard_home.html";
+            } else if (currentPortalMode === 'supervisor') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window) {
+                        const parentHomeLink = window.parent.document.querySelector('.dashboard-home-link');
+                        if (parentHomeLink) {
+                            window.location.href = parentHomeLink.href;
+                            return;
+                        }
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "supervisor_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "supervisor/supervisor_dashboard_home.html";
+            }
+        }
+
+        // --- 1. MOCK DATABASE ---
+        const db = {
+            companies: ["Rajat Dutta Associates", "BuildTech India", "Skyline Constructs"],
+            sites: ["All Sites", "Dum Dum Project", "Salt Lake Sector 5", "New Town Phase 2", "Howrah Bridge"],
+            
+            transactions: [
+                { date: "2026-07-01", comp: "Rajat Dutta Associates", site: "Dum Dum Project", type: "invoice", invNo: "INV-2026-001", details: "Civil Construction Work", debit: 100000, credit: 0, tds: 0 },
+                { date: "2026-07-05", comp: "Rajat Dutta Associates", site: "Dum Dum Project", type: "receipt", invNo: "Against INV-2026-001", details: "NEFT / HDFC Bank", debit: 0, credit: 98000, tds: 2000 },
+                
+                { date: "2026-07-15", comp: "BuildTech India", site: "New Town Phase 2", type: "invoice", invNo: "INV-2026-002", details: "Foundation Material", debit: 500000, credit: 0, tds: 0 },
+                { date: "2026-07-20", comp: "BuildTech India", site: "New Town Phase 2", type: "receipt", invNo: "Against INV-2026-002", details: "Cheque / 987654", debit: 0, credit: 200000, tds: 0 },
+                
+                { date: "2026-08-01", comp: "Rajat Dutta Associates", site: "Salt Lake Sector 5", type: "invoice", invNo: "INV-2026-004", details: "Steel Transport", debit: 75000, credit: 0, tds: 0 },
+                { date: "2026-08-05", comp: "Rajat Dutta Associates", site: "Salt Lake Sector 5", type: "receipt", invNo: "Against INV-2026-004", details: "RTGS / SBI Bank", debit: 0, credit: 73500, tds: 1500 },
+                
+                { date: "2026-08-10", comp: "Skyline Constructs", site: "Howrah Bridge", type: "invoice", invNo: "INV-2026-005", details: "Consultation Fee", debit: 150000, credit: 0, tds: 0 },
+                { date: "2026-08-15", comp: "Skyline Constructs", site: "Howrah Bridge", type: "receipt", invNo: "Against INV-2026-005", details: "UPI Transfer", debit: 0, credit: 147000, tds: 3000 }
+            ]
+        };
+
+        // Stores calculated data for printing
+        let globalPrintData = [];
+
+        // --- 2. DROPDOWN ENGINE ---
+        function populateCustomDropdown(listId, searchId, dataArray) {
+            const listDiv = document.getElementById(listId);
+            listDiv.innerHTML = "";
+            dataArray.forEach(item => {
+                let div = document.createElement("div");
+                div.innerText = item;
+                div.onclick = function(e) {
+                    e.stopPropagation();
+                    document.getElementById(searchId).value = item;
+                    listDiv.style.display = "none";
+                };
+                listDiv.appendChild(div);
+            });
+        }
+
+        function initFilters() {
+            populateCustomDropdown('compList', 'compSearch', ["All Companies", ...db.companies]);
+            populateCustomDropdown('siteList', 'siteSearch', db.sites);
+        }
+
+        function filterDropdown(searchId, listId) {
+            let filter = document.getElementById(searchId).value.toUpperCase();
+            let div = document.getElementById(listId);
+            let items = div.getElementsByTagName("div");
+            div.style.display = "block";
+            for (let i = 0; i < items.length; i++) {
+                let txtValue = items[i].textContent || items[i].innerText;
+                items[i].style.display = (txtValue.toUpperCase().indexOf(filter) > -1) ? "" : "none";
+            }
+        }
+
+        function toggleDropdown(listId) {
+            document.querySelectorAll('.dropdown-list').forEach(el => { if(el.id !== listId) el.style.display = 'none'; });
+            let list = document.getElementById(listId);
+            list.style.display = list.style.display === "block" ? "none" : "block";
+        }
+
+        document.addEventListener("click", e => {
+            if (!e.target.closest(".dropdown-container")) { document.querySelectorAll('.dropdown-list').forEach(el => el.style.display = 'none'); }
+        });
+
+        // --- 3. LEDGER GENERATION LOGIC ---
+        function formatMoney(amount) {
+            return new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
+        }
+
+        function formatDate(dateStr) {
+            const [y, m, d] = dateStr.split('-');
+            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            return `${d}-${months[parseInt(m)-1]}-${y}`;
+        }
+
+        function generateLedger(isFullLedger) {
+            const selectedComp = document.getElementById('compSearch').value;
+
+            if(!selectedComp) { alert("Please select 'All Companies' or a specific Company."); return; }
+
+            if(isFullLedger) {
+                document.getElementById('dateFrom').value = '';
+                document.getElementById('dateTo').value = '';
+                document.getElementById('siteSearch').value = 'All Sites';
+            }
+
+            const selectedSite = document.getElementById('siteSearch').value;
+            const dateFrom = document.getElementById('dateFrom').value;
+            const dateTo = document.getElementById('dateTo').value;
+
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('ledgerReport').style.display = 'block';
+            document.getElementById('summarySection').style.display = 'grid';
+
+            let filteredTx = [...db.transactions];
+
+            if (selectedComp !== "All Companies") filteredTx = filteredTx.filter(tx => tx.comp === selectedComp);
+
+            const badgeEl = document.getElementById('reportModeBadge');
+            if (selectedComp === "All Companies") {
+                badgeEl.innerText = "🌍 Master Global Ledger";
+                badgeEl.className = "mode-badge mode-master";
+            } else if(selectedSite && selectedSite !== "All Sites") {
+                filteredTx = filteredTx.filter(tx => tx.site === selectedSite);
+                badgeEl.innerText = "📍 Site-Wise Ledger";
+                badgeEl.className = "mode-badge";
+            } else {
+                badgeEl.innerText = "🏢 Company Consolidated Ledger";
+                badgeEl.className = "mode-badge";
+            }
+
+            // Calculate Opening Balance if DateFrom is provided
+            let openingBalance = 0;
+            if(dateFrom) {
+                const prevTx = filteredTx.filter(tx => new Date(tx.date) < new Date(dateFrom));
+                prevTx.forEach(tx => {
+                    openingBalance += tx.debit;
+                    openingBalance -= (tx.credit + tx.tds);
+                });
+                filteredTx = filteredTx.filter(tx => new Date(tx.date) >= new Date(dateFrom));
+            }
+            if(dateTo) filteredTx = filteredTx.filter(tx => new Date(tx.date) <= new Date(dateTo));
+
+            filteredTx.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            document.getElementById('reportTitle').innerText = selectedComp === "All Companies" ? "🌍 Master Market Ledger" : `${selectedComp} - Ledger`;
+            let dateText = (dateFrom || dateTo) ? `${dateFrom ? formatDate(dateFrom) : 'Start'} to ${dateTo ? formatDate(dateTo) : 'Today'}` : 'All Time History';
+            document.getElementById('reportSubtitle').innerText = `Site: ${selectedSite || 'All Sites'} • Period: ${dateText}`;
+            document.getElementById('colSiteHeader').innerText = (selectedComp === "All Companies") ? "Company & Site Name" : "Site Name";
+
+            const tbody = document.getElementById('ledgerTableBody');
+            tbody.innerHTML = '';
+            
+            let runningDue = openingBalance;
+            let totalBilled = 0;
+            let totalBankRecv = 0;
+            let totalTDS = 0;
+            
+            // Store for Print
+            globalPrintData = { comp: selectedComp, site: selectedSite, period: dateText, openBal: openingBalance, rows: [] };
+
+            if(filteredTx.length === 0 && openingBalance === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:40px; color:var(--text-muted);">No transactions found for the selected criteria.</td></tr>`;
+            } else {
+                if(openingBalance !== 0) {
+                    let balSign = openingBalance > 0 ? " Dr" : " Cr";
+                    tbody.innerHTML += `
+                        <tr style="background: rgba(255,255,255,0.02);">
+                            <td>${dateFrom ? formatDate(dateFrom) : '-'}</td>
+                            <td><strong style="color:var(--text-muted);">Opening Balance</strong></td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td class="td-balance" style="text-align: right;">₹${formatMoney(Math.abs(openingBalance))} <span style="font-size:10px; color:var(--text-muted);">${balSign}</span></td>
+                        </tr>
+                    `;
+                }
+
+                filteredTx.forEach(tx => {
+                    runningDue += tx.debit;
+                    runningDue -= (tx.credit + tx.tds); 
+
+                    totalBilled += tx.debit;
+                    totalBankRecv += tx.credit;
+                    totalTDS += tx.tds;
+
+                    let balanceStr = formatMoney(Math.abs(runningDue));
+                    let balanceSign = runningDue > 0 ? " Dr" : (runningDue < 0 ? " Cr" : "");
+
+                    let totalCreditCol = tx.credit + tx.tds;
+
+                    // ====== Explicitly Handle TDS details for Tally Print ======
+                    let printParticularsText = `<strong>${tx.type === 'invoice' ? 'Bill Raised' : 'Payment Received'}</strong><br>${tx.details}<small>Ref: ${tx.invNo}</small>`;
+                    
+                    if(tx.tds > 0) {
+                        printParticularsText += `<span class="tds-note" style="color: #666; font-size: 10px;">[Breakdown: Bank Recv: ₹${formatMoney(tx.credit)} | <b>TDS Deducted: ₹${formatMoney(tx.tds)}</b>]</span>`;
+                    } else if(tx.credit > 0 && tx.tds === 0) {
+                        printParticularsText += `<span class="tds-note" style="color: #666; font-size: 10px;">[Bank Recv: ₹${formatMoney(tx.credit)}]</span>`;
+                    }
+
+                    // Push to Print Data (Included site name for Tally dynamic column)
+                    globalPrintData.rows.push({
+                        date: formatDate(tx.date),
+                        particulars: printParticularsText,
+                        siteName: (selectedComp === "All Companies") ? `${tx.comp} - ${tx.site}` : tx.site,
+                        debit: tx.debit,
+                        credit: totalCreditCol,
+                        balance: runningDue
+                    });
+
+                    // Web Display
+                    let particularDisplay = `
+                        <div style="margin-bottom:4px; font-weight: 500;">
+                            ${tx.type === 'invoice' ? '📝 Bill Raised' : '💸 Payment / TDS Recv'} 
+                        </div>
+                        <span class="inv-highlight">${tx.invNo}</span>
+                        <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">${tx.details}</div>
+                    `;
+
+                    let siteDisplay = "";
+                    if (selectedComp === "All Companies") siteDisplay = `<span class="comp-highlight">🏢 ${tx.comp}</span>`;
+                    siteDisplay += `<span class="site-badge">${tx.site}</span>`;
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="white-space: nowrap;">${formatDate(tx.date)}</td>
+                        <td>${particularDisplay}</td>
+                        <td>${siteDisplay}</td>
+                        <td class="td-debit" style="text-align: right;">${tx.debit > 0 ? '₹' + formatMoney(tx.debit) : '-'}</td>
+                        <td class="td-credit" style="text-align: right;">
+                            ${tx.credit > 0 ? '₹' + formatMoney(tx.credit) + ' (Bank)<br>' : ''}
+                            ${tx.tds > 0 ? '<span style="color:var(--color-tds)">₹' + formatMoney(tx.tds) + ' (TDS)</span>' : ''}
+                            ${(tx.credit===0 && tx.tds===0) ? '-' : ''}
+                        </td>
+                        <td class="td-balance" style="text-align: right;">₹${balanceStr} <span style="font-size:10px; color:var(--text-muted); font-weight:normal;">${balanceSign}</span></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            // Update Web Summaries
+            document.getElementById('sumDebit').innerText = `₹${formatMoney(totalBilled)}`;
+            document.getElementById('sumCredit').innerText = `₹${formatMoney(totalBankRecv)}`;
+            document.getElementById('sumTDS').innerText = `₹${formatMoney(totalTDS)}`;
+            
+            let finalBalStr = `₹${formatMoney(Math.abs(runningDue))}`;
+            if(runningDue > 0) finalBalStr += " Due (Dr)";
+            else if(runningDue < 0) finalBalStr += " Adv (Cr)";
+            else finalBalStr = "₹0.00 Clear";
+            
+            document.getElementById('sumBalance').innerText = finalBalStr;
+            
+            // Save final data for print
+            globalPrintData.totalDebit = totalBilled;
+            globalPrintData.totalCredit = totalBankRecv + totalTDS;
+            globalPrintData.closeBal = runningDue;
+        }
+
+        // --- 4. TALLY PRINT FORMAT LOGIC (DYNAMIC DUAL-MODE) ---
+        function printTallyLedger() {
+            if(!globalPrintData || !globalPrintData.rows) {
+                alert("Please generate a ledger first to print.");
+                return;
+            }
+
+            document.getElementById('tallyCompanyName').innerText = `Ledger Account: ${globalPrintData.comp}`;
+            document.getElementById('tallyPeriod').innerText = globalPrintData.period;
+            document.getElementById('tallySite').innerText = `Site: ${globalPrintData.site}`;
+
+            // Check if we need the "Site" column in print
+            const isAllSites = globalPrintData.site === "All Sites" || globalPrintData.comp === "All Companies";
+
+            const thead = document.getElementById('tallyTableHeader');
+            thead.innerHTML = `
+                <tr>
+                    <th style="width: 10%;">Date</th>
+                    <th style="${isAllSites ? 'width: 30%;' : 'width: 45%;'}">Particulars / Vch No.</th>
+                    ${isAllSites ? '<th style="width: 15%;">Site / Comp Name</th>' : ''}
+                    <th style="width: 15%; text-align: right;">Debit</th>
+                    <th style="width: 15%; text-align: right;">Credit</th>
+                    <th style="width: 15%; text-align: right;">Balance</th>
+                </tr>
+            `;
+
+            const tbody = document.getElementById('tallyTableBody');
+            tbody.innerHTML = '';
+
+            // Opening Balance Row
+            let openSign = globalPrintData.openBal > 0 ? "Dr" : (globalPrintData.openBal < 0 ? "Cr" : "");
+            tbody.innerHTML += `
+                <tr>
+                    <td>-</td>
+                    <td><strong>Opening Balance</strong></td>
+                    ${isAllSites ? '<td>-</td>' : ''}
+                    <td class="text-right">-</td>
+                    <td class="text-right">-</td>
+                    <td class="text-right"><strong>${globalPrintData.openBal !== 0 ? formatMoney(Math.abs(globalPrintData.openBal)) + " " + openSign : ""}</strong></td>
+                </tr>
+            `;
+
+            // Data Rows
+            globalPrintData.rows.forEach(row => {
+                let balSign = row.balance > 0 ? "Dr" : (row.balance < 0 ? "Cr" : "");
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${row.date}</td>
+                        <td>${row.particulars}</td>
+                        ${isAllSites ? `<td><strong>${row.siteName}</strong></td>` : ''}
+                        <td class="text-right">${row.debit > 0 ? formatMoney(row.debit) : ""}</td>
+                        <td class="text-right">${row.credit > 0 ? formatMoney(row.credit) : ""}</td>
+                        <td class="text-right">${formatMoney(Math.abs(row.balance))} ${balSign}</td>
+                    </tr>
+                `;
+            });
+
+            // Closing Balance / Totals Row
+            let closeSign = globalPrintData.closeBal > 0 ? "Dr" : (globalPrintData.closeBal < 0 ? "Cr" : "");
+            tbody.innerHTML += `
+                <tr class="tally-totals">
+                    <td colspan="${isAllSites ? '3' : '2'}" class="text-right">Closing Balance / Totals:</td>
+                    <td class="text-right">${formatMoney(globalPrintData.totalDebit)}</td>
+                    <td class="text-right">${formatMoney(globalPrintData.totalCredit)}</td>
+                    <td class="text-right">${formatMoney(Math.abs(globalPrintData.closeBal))} ${closeSign}</td>
+                </tr>
+            `;
+
+            window.print();
+        }
+
+        window.onload = () => {
+            checkPortalNavigation();
+            initFilters();
+        };
+    </script>
+</body>
+</html>

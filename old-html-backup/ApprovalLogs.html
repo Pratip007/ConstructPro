@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Master Approval History Center</title>
+    
+    <!-- Sync theme with Master Dashboard -->
+    <script>
+        function applyDashboardTheme() {
+            const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        }
+        applyDashboardTheme();
+        window.addEventListener('storage', applyDashboardTheme);
+    </script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- SheetJS (XLSX) Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- jsPDF Library for A4 Portrait PDF Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-body: transparent; 
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.12);
+            
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(0, 0, 0, 0.25);
+            --input-focus-bg: rgba(0, 0, 0, 0.45);
+            
+            --shadow: 0 4px 15px rgba(0,0,0,0.3);
+            
+            --theme-color: #E30B5C;
+            --theme-glow: rgba(227, 11, 92, 0.4);
+            --theme-transition: all 0.3s ease;
+            --calendar-filter: invert(1);
+        }
+
+        [data-theme="light"] {
+            --bg-body: #f4f6f9;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #555555;
+            --border-color: rgba(0, 0, 0, 0.12);
+            
+            --glass-bg: rgba(255, 255, 255, 0.9);
+            --glass-border: rgba(0, 0, 0, 0.1);
+            --input-bg: #f1f3f5;
+            --input-focus-bg: #ffffff;
+            
+            --shadow: 0 8px 25px rgba(0,0,0,0.05);
+            --calendar-filter: invert(0);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; scroll-behavior: smooth; }
+        body { background-color: var(--bg-body); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; transition: var(--theme-transition); }
+
+        /* ================= MAIN CONTENT ================= */
+        .main-content { flex: 1; display: flex; flex-direction: column; padding: 20px 25px; height: 100vh; overflow: hidden; width: 100%; max-width: 1650px; margin: 0 auto; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; flex-shrink: 0; flex-wrap: wrap; gap: 12px; }
+        .header h1 { font-size: 22px; color: var(--text-main); display: flex; align-items: center; gap: 10px; margin-top: 5px; }
+        
+        .btn-back-dash { 
+            background-color: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color); 
+            text-decoration: none; padding: 6px 13px; border-radius: 6px; font-weight: 700; font-size: 11.5px; 
+            transition: all 0.3s; display: inline-flex; align-items: center; width: max-content;
+        }
+        .btn-back-dash:hover { background-color: var(--theme-color); color: #fff; border-color: var(--theme-color); transform: translateY(-2px); box-shadow: 0 4px 10px var(--theme-glow); }
+
+        .header-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+        /* Source Switcher Buttons */
+        .tab-btn {
+            background: var(--input-bg); color: var(--text-muted); border: 1px solid var(--border-color);
+            padding: 9px 14px; border-radius: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer;
+            text-transform: uppercase; transition: all 0.3s; display: flex; align-items: center; gap: 7px;
+        }
+        .tab-btn:hover { border-color: var(--theme-color); color: var(--text-main); }
+        .tab-btn.active { background: var(--theme-color); color: #ffffff; border-color: var(--theme-color); box-shadow: 0 4px 15px var(--theme-glow); }
+        
+        .count-pill { background: rgba(0,0,0,0.3); color: #fff; padding: 2px 6px; border-radius: 10px; font-size: 10px; font-weight: 800; }
+
+        .btn-export-excel { background: rgba(40, 167, 69, 0.15); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.4); padding: 9px 14px; border-radius: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer; text-transform: uppercase; transition: all 0.3s; display: flex; align-items: center; gap: 5px; }
+        .btn-export-excel:hover { background-color: #28a745; color: white; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(40,167,69,0.3); }
+
+        .btn-export-pdf { background: rgba(0, 123, 255, 0.15); color: #007bff; border: 1px solid rgba(0, 123, 255, 0.4); padding: 9px 14px; border-radius: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer; text-transform: uppercase; transition: all 0.3s; display: flex; align-items: center; gap: 5px; }
+        .btn-export-pdf:hover { background-color: #007bff; color: white; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,123,255,0.3); }
+
+        /* ================= KPI SUMMARY CARDS ================= */
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 12px; flex-shrink: 0; }
+        .stat-card { 
+            background: var(--glass-bg); backdrop-filter: blur(12px); border: 1px solid var(--border-color);
+            padding: 12px 16px; border-radius: 10px; position: relative; overflow: hidden; box-shadow: var(--shadow);
+        }
+        .stat-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; }
+        .stat-card.blue::before { background: #007bff; }
+        .stat-card.green::before { background: #28a745; }
+        .stat-card.red::before { background: #dc3545; }
+        .stat-card.purple::before { background: #b18cfd; }
+        
+        .stat-card h4 { font-size: 10px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.4px; }
+        .stat-card h2 { font-size: 19px; font-weight: 800; color: var(--text-main); }
+        .stat-card .sub-text { font-size: 10.5px; margin-top: 3px; display: block; color: var(--text-muted); }
+
+        /* ================= FILTER CONTROLS BAR ================= */
+        .controls-bar { 
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 10px; align-items: end; margin-bottom: 12px; 
+            background: var(--glass-bg); backdrop-filter: blur(12px);
+            padding: 11px 15px; border-radius: 10px; border: 1px solid var(--glass-border); flex-shrink: 0;
+        }
+        .filter-item { display: flex; flex-direction: column; gap: 4px; }
+        .filter-item label { font-size: 9.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; }
+        .form-control { background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 8px 10px; border-radius: 6px; font-size: 11.5px; outline: none; transition: 0.3s; width: 100%; }
+        .form-control:focus { border-color: var(--theme-color); box-shadow: 0 0 6px var(--theme-glow); background: var(--input-focus-bg); }
+        .form-control option { background: var(--bg-card); color: var(--text-main); }
+        ::-webkit-calendar-picker-indicator { filter: var(--calendar-filter); cursor: pointer; }
+
+        /* ================= FIXED TABLE (NO HORIZONTAL SCROLLBAR) ================= */
+        .table-container-box { 
+            background: var(--glass-bg); backdrop-filter: blur(12px);
+            border-radius: 12px 12px 0 0; box-shadow: var(--shadow); flex: 1; min-height: 0; 
+            border: 1px solid var(--glass-border); border-top: 4px solid var(--theme-color); border-bottom: none; 
+            overflow-y: auto; overflow-x: hidden; width: 100%;
+        }
+        .table-container-box::-webkit-scrollbar { width: 6px; }
+        .table-container-box::-webkit-scrollbar-thumb { background: rgba(227, 11, 92, 0.35); border-radius: 4px; }
+        
+        table { width: 100%; table-layout: fixed; border-collapse: collapse; border-spacing: 0; text-align: left; }
+        thead { position: sticky; top: 0; background-color: var(--bg-card); z-index: 10; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        th { 
+            padding: 11px 8px; color: var(--theme-color); font-weight: 700; text-transform: uppercase; 
+            font-size: 10px; letter-spacing: 0.3px; border-bottom: 2px solid var(--theme-color); 
+            border-right: 1px solid var(--border-color); vertical-align: middle; line-height: 1.3;
+            word-wrap: break-word; overflow-wrap: break-word;
+        }
+        th:last-child { border-right: none; }
+        td { 
+            padding: 10px 8px; border-bottom: 1px solid var(--border-color); 
+            border-right: 1px solid var(--border-color); font-size: 11.5px; 
+            color: var(--text-main); vertical-align: middle; line-height: 1.35;
+            word-wrap: break-word; overflow-wrap: break-word;
+        }
+        td:last-child { border-right: none; }
+        tbody tr { transition: background 0.2s; }
+        tbody tr:hover { background: rgba(227, 11, 92, 0.05); }
+
+        /* Badges */
+        .badge { padding: 3px 8px; border-radius: 14px; font-size: 9.5px; font-weight: 700; display: inline-block; text-transform: uppercase; text-align: center; }
+        .badge-approved { background: rgba(40, 167, 69, 0.15); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.35); }
+        .badge-rejected { background: rgba(220, 53, 69, 0.15); color: #dc3545; border: 1px solid rgba(220, 53, 69, 0.35); }
+
+        /* Portal Source Badges */
+        .src-office { background: rgba(0, 123, 255, 0.15); color: #007bff; border: 1px solid rgba(0, 123, 255, 0.35); padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 800; text-transform: uppercase; display: inline-block; margin-bottom: 3px; }
+        .src-supervisor { background: rgba(255, 193, 7, 0.15); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.35); padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 800; text-transform: uppercase; display: inline-block; margin-bottom: 3px; }
+
+        /* Module / Category Sub-Badges */
+        .cat-tag { display: inline-block; background: var(--input-bg); color: var(--text-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-size: 9.5px; font-weight: 700; margin-top: 2px; }
+        .diff-old { color: #ff6b6b; text-decoration: line-through; font-size: 10.5px; display: block; }
+        .diff-new { color: #28a745; font-weight: 700; font-size: 11px; display: block; }
+
+        .basis-perday { display: inline-block; background: rgba(0, 123, 255, 0.15); color: #007bff; border: 1px solid rgba(0, 123, 255, 0.35); padding: 1px 5px; border-radius: 4px; font-size: 9px; font-weight: 800; text-transform: uppercase; }
+        .basis-monthly { display: inline-block; background: rgba(111, 66, 193, 0.15); color: #b18cfd; border: 1px solid rgba(111, 66, 193, 0.35); padding: 1px 5px; border-radius: 4px; font-size: 9px; font-weight: 800; text-transform: uppercase; }
+
+        .sync-tag { display: inline-block; background: rgba(32, 201, 151, 0.15); color: #20c997; border: 1px solid rgba(32, 201, 151, 0.35); padding: 2px 5px; border-radius: 4px; font-size: 9px; font-weight: 700; margin-top: 3px; }
+
+        .action-btns { display: flex; align-items: center; justify-content: center; width: 100%; }
+        .btn-act { padding: 5px 8px; border-radius: 5px; font-size: 10px; font-weight: 700; cursor: pointer; border: none; transition: 0.2s; display: inline-flex; align-items: center; gap: 3px; text-transform: uppercase; }
+        .btn-view { background: rgba(23, 162, 184, 0.15); color: #17a2b8; border: 1px solid rgba(23, 162, 184, 0.4); }
+        .btn-view:hover { background: #17a2b8; color: #fff; }
+
+        /* STICKY FOOTER BAR */
+        .summary-footer-bar { 
+            background: var(--input-bg); padding: 11px 25px; border-radius: 0 0 12px 12px; 
+            display: flex; justify-content: space-between; align-items: center; 
+            border: 1px solid var(--border-color); border-top: 2px solid var(--theme-color); 
+            flex-shrink: 0; box-shadow: 0 -4px 15px rgba(0,0,0,0.2); z-index: 20; flex-wrap: wrap; gap: 15px;
+        }
+        .summary-footer-box { text-align: center; }
+        .summary-footer-box span { display: block; font-size: 9.5px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 2px; }
+        .summary-footer-box h3 { font-size: 14.5px; margin: 0; font-weight: 800; }
+
+        /* ================= MODAL ================= */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(8px); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 20px; }
+        .modal-overlay.active { display: flex; }
+        .modal-card { background: var(--bg-card); width: 100%; max-width: 820px; border-radius: 12px; border-top: 4px solid var(--theme-color); box-shadow: 0 10px 40px rgba(0,0,0,0.6); max-height: 92vh; display: flex; flex-direction: column; border: 1px solid var(--border-color); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; border-bottom: 1px solid var(--border-color); }
+        .modal-header h2 { font-size: 17px; color: var(--theme-color); }
+        .close-btn { background: none; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; }
+        .close-btn:hover { color: #dc3545; }
+        .modal-body { padding: 22px; overflow-y: auto; overflow-x: hidden; flex: 1; }
+        .modal-footer { padding: 14px 24px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 10px; background: var(--input-bg); border-radius: 0 0 12px 12px; }
+
+        .btn-save { background: var(--theme-color); color: white; padding: 9px 18px; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; text-transform: uppercase; transition: 0.3s; box-shadow: 0 4px 10px var(--theme-glow); }
+        .btn-save:hover { filter: brightness(1.1); transform: translateY(-2px); }
+    </style>
+</head>
+<body>
+
+    <div class="main-content">
+        <!-- HEADER -->
+        <div class="header">
+            <div>
+                <a href="dashboard.html" class="btn-back-dash">← Back to Dashboard</a>
+                <h1>📜 Master Approval & Rejection History Center</h1>
+            </div>
+            <div class="header-actions">
+                <!-- Portal Source Filter Tabs -->
+                <button class="tab-btn active" id="tabAll" onclick="switchPortalSource('All')">
+                    🌐 All History <span class="count-pill" id="pillAll">0</span>
+                </button>
+                <button class="tab-btn" id="tabOffice" onclick="switchPortalSource('Office User')">
+                    🏢 Office User History <span class="count-pill" id="pillOffice">0</span>
+                </button>
+                <button class="tab-btn" id="tabSupervisor" onclick="switchPortalSource('Supervisor')">
+                    🛡️ Supervisor History <span class="count-pill" id="pillSupervisor">0</span>
+                </button>
+
+                <!-- Export Buttons -->
+                <button class="btn-export-excel" onclick="exportHistoryExcel()">📊 Export Excel</button>
+                <button class="btn-export-pdf" onclick="exportHistoryPDF()">📑 Export PDF</button>
+            </div>
+        </div>
+
+        <!-- KPI SUMMARY CARDS -->
+        <div class="stats-grid">
+            <div class="stat-card blue">
+                <h4>Total Decisions Logged</h4>
+                <h2 id="kpiTotalHistory">0</h2>
+                <span class="sub-text" id="kpiSourceSplit">Office: 0 | Supervisor: 0</span>
+            </div>
+            <div class="stat-card green">
+                <h4>Total Approved Requests</h4>
+                <h2 id="kpiApprovedCount" style="color: #28a745;">0</h2>
+                <span class="sub-text" id="kpiApprovedValue">Approved Value: ₹0.00</span>
+            </div>
+            <div class="stat-card red">
+                <h4>Total Rejected Requests</h4>
+                <h2 id="kpiRejectedCount" style="color: #dc3545;">0</h2>
+                <span class="sub-text" id="kpiRejectedValue">Declined Value: ₹0.00</span>
+            </div>
+            <div class="stat-card purple">
+                <h4>Auto-Synced To Ledgers</h4>
+                <h2 id="kpiSyncedCount" style="color: #b18cfd;">0</h2>
+                <span class="sub-text">Master DB & Employee Ledgers Updated</span>
+            </div>
+        </div>
+
+        <!-- FILTERS BAR -->
+        <div class="controls-bar">
+            <div class="filter-item">
+                <label>👤 Select Staff / Supervisor</label>
+                <select class="form-control" id="filterPerson" onchange="renderHistoryTable()">
+                    <option value="All">All Users & Supervisors</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label>🏗️ Project / Site</label>
+                <select class="form-control" id="filterSite" onchange="renderHistoryTable()">
+                    <option value="All">All Sites</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label>📌 Final Decision Status</label>
+                <select class="form-control" id="filterDecision" onchange="renderHistoryTable()">
+                    <option value="All">All Decisions (Approved & Rejected)</option>
+                    <option value="Approved">✔️ Approved Only</option>
+                    <option value="Rejected">❌ Rejected Only</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label>📅 From Date</label>
+                <input type="date" class="form-control" id="filterFrom" onchange="renderHistoryTable()">
+            </div>
+            <div class="filter-item">
+                <label>📅 To Date</label>
+                <input type="date" class="form-control" id="filterTo" onchange="renderHistoryTable()">
+            </div>
+            <div class="filter-item">
+                <label>🔍 Quick Search</label>
+                <input type="text" class="form-control" id="searchBox" placeholder="Req ID, Name, Module, Ref, Remarks..." onkeyup="renderHistoryTable()">
+            </div>
+        </div>
+
+        <!-- MAIN TABLE (100% Fixed Layout - No Horizontal Scrollbar) -->
+        <div class="table-container-box">
+            <table id="historyTable">
+                <thead>
+                    <tr>
+                        <th style="width: 10%;">Req ID & Date</th>
+                        <th style="width: 14%;">Source & User Details</th>
+                        <th style="width: 12%;">Module / Category</th>
+                        <th style="width: 26%;">Entry / Modification / Present & OT Details</th>
+                        <th style="width: 9%;">Ref / Sub ID</th>
+                        <th style="width: 10%; text-align:right;">Value / Amt (₹)</th>
+                        <th style="width: 8%; text-align:center;">Decision</th>
+                        <th style="width: 11%;">Admin Action & Remarks</th>
+                        <th style="width: 5%; text-align:center;">View</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+
+        <!-- STICKY FOOTER BAR -->
+        <div class="summary-footer-bar">
+            <div class="summary-footer-box">
+                <span>Active Portal Filter</span>
+                <h3 id="footSourceMode" style="color: var(--theme-color);">🌐 ALL PORTAL HISTORY</h3>
+            </div>
+            <div class="summary-footer-box">
+                <span>History Records Displayed</span>
+                <h3 id="footDisplayed">0</h3>
+            </div>
+            <div class="summary-footer-box">
+                <span>Displayed Approved / Rejected</span>
+                <h3 id="footRatio" style="color: #007bff;">0 Approved / 0 Rejected</h3>
+            </div>
+            <div class="summary-footer-box">
+                <span>Displayed Approved Value</span>
+                <h3 id="footApprovedVal" style="color: #28a745;">₹ 0.00</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= VIEW FULL AUDIT LOG MODAL ================= -->
+    <div class="modal-overlay" id="viewHistoryModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2 id="modalTitle">👁️ Approval History Audit Log</h2>
+                <button class="close-btn" onclick="closeViewModal()">×</button>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+            <div class="modal-footer">
+                <button class="btn-save" onclick="closeViewModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ================= MASTER APPROVAL HISTORY DATABASE (Office Users + Supervisors) =================
+        const masterHistoryRecords = [
+            // --- OFFICE USER HISTORY RECORDS ---
+            {
+                id: 101,
+                reqNo: "REQ-2026-098",
+                reqDate: "2026-09-26",
+                reqTime: "04:10 PM",
+                portalSource: "Office User",
+                userId: "STF-101",
+                userName: "Amitava Roy (Accounts)",
+                site: "Dum Dum Complex",
+                moduleOrCat: "Mobilization Ledger",
+                actionSubType: "New Entry",
+                refNo: "PAY/26/048",
+                amount: 60000,
+                oldData: "N/A (Fresh Payment Entry)",
+                newData: "Part Payment against INV-MOB-102 to Maa Tara Civil Contractors (2% TDS Deducted)",
+                userReason: "NEFT UTR #HDFC9928171 verified with bank statement.",
+                status: "Approved",
+                syncInfo: "Posted to Mobilization Ledger",
+                adminDate: "2026-09-26 05:00 PM",
+                adminRemarks: "UTR verified with HDFC statement. Approved."
+            },
+            {
+                id: 102,
+                reqNo: "REQ-2026-099",
+                reqDate: "2026-09-27",
+                reqTime: "12:30 PM",
+                portalSource: "Office User",
+                userId: "STF-103",
+                userName: "Bikram Sen (Store Keeper)",
+                site: "Barasat Highway",
+                moduleOrCat: "Stock & Material",
+                actionSubType: "Edit / Update",
+                refNo: "STK-OUT-112",
+                amount: 82500,
+                oldData: "TMT Bar 12mm Issued: 1.0 MT (₹55,000)",
+                newData: "TMT Bar 12mm Issued: 1.5 MT (₹82,500)",
+                userReason: "Updated issue quantity for culvert reinforcement.",
+                status: "Rejected",
+                syncInfo: "No Change Applied",
+                adminDate: "2026-09-27 02:15 PM",
+                adminRemarks: "Rejected: Gate pass & supervisor signature missing for extra 0.5 MT."
+            },
+            {
+                id: 103,
+                reqNo: "REQ-2026-100",
+                reqDate: "2026-09-27",
+                reqTime: "05:45 PM",
+                portalSource: "Office User",
+                userId: "STF-102",
+                userName: "Sneha Das (Billing Exec)",
+                site: "Salt Lake Sector V",
+                moduleOrCat: "Invoice Management",
+                actionSubType: "Edit / Update",
+                refNo: "INV-2026-002",
+                amount: 14700,
+                oldData: "River Sand Bill Qty: 200 CFT | Gross: ₹8,400",
+                newData: "River Sand Bill Qty: 350 CFT | Gross: ₹14,700",
+                userReason: "Challan #409 had 150 CFT extra sand delivered on same day.",
+                status: "Approved",
+                syncInfo: "Updated in Invoice Table",
+                adminDate: "2026-09-27 06:30 PM",
+                adminRemarks: "Challan #409 checked and verified. Approved."
+            },
+            {
+                id: 104,
+                reqNo: "REQ-2026-101",
+                reqDate: "2026-09-28",
+                reqTime: "01:15 PM",
+                portalSource: "Office User",
+                userId: "STF-101",
+                userName: "Amitava Roy (Accounts)",
+                site: "Barasat Highway",
+                moduleOrCat: "Contractor Bill",
+                actionSubType: "Delete Record",
+                refNo: "CPAY/26/031",
+                amount: 45000,
+                oldData: "Duplicate Voucher CPAY/26/031 - Paid ₹45,000 to Royal Electricals",
+                newData: "Permanent Deletion of Duplicate Payment Voucher",
+                userReason: "Entry was accidentally saved twice during bank reconciliation.",
+                status: "Approved",
+                syncInfo: "Duplicate Voucher Removed",
+                adminDate: "2026-09-28 02:10 PM",
+                adminRemarks: "Verified duplicate entry in Contractor Ledger. Deletion Approved."
+            },
+
+            // --- SUPERVISOR HISTORY RECORDS ---
+            {
+                id: 201,
+                reqNo: "SUP-REQ-196",
+                reqDate: "2026-09-25",
+                reqTime: "06:10 PM",
+                portalSource: "Supervisor",
+                userId: "SUP-001",
+                userName: "Rajesh Mondal",
+                site: "Dum Dum Complex",
+                moduleOrCat: "Attendance & OT",
+                actionSubType: "Per Day (8h Duty)",
+                refNo: "SUB-DD-01",
+                amount: 5040,
+                oldData: "Emp: Ramesh Das (EMP-001) | Rate: ₹720/Day (₹90/hr OT)",
+                newData: "6 Days Present (₹4,320) + 8 Hrs OT @ 8h Duty (₹720) = ₹5,040",
+                userReason: "Week 3 Attendance (6 Days Present + 8 Hrs Slab Casting OT)",
+                status: "Approved",
+                syncInfo: "₹5,040 (Cr) Added to Emp Ledger",
+                adminDate: "2026-09-25 07:05 PM",
+                adminRemarks: "Per-Day 8h OT verified & credited to Ramesh Das ledger."
+            },
+            {
+                id: 202,
+                reqNo: "SUP-REQ-197",
+                reqDate: "2026-09-26",
+                reqTime: "05:30 PM",
+                portalSource: "Supervisor",
+                userId: "SUP-001",
+                userName: "Rajesh Mondal",
+                site: "Dum Dum Complex",
+                moduleOrCat: "Attendance & OT",
+                actionSubType: "Monthly Basis",
+                refNo: "SUB-DD-01",
+                amount: 800,
+                oldData: "Emp: Pronab Chatterjee (EMP-009) | Monthly Fixed: ₹24,000",
+                newData: "1 Day Present (₹800) + 3.5 Hrs OT Logged (₹0 - Monthly Not Counted)",
+                userReason: "1 Day Present + 3.5 Hrs Evening Supervision OT",
+                status: "Approved",
+                syncInfo: "₹800 (Cr) Added (OT ₹0)",
+                adminDate: "2026-09-26 06:15 PM",
+                adminRemarks: "Monthly staff attendance approved (3.5h OT logged only, ₹0 added)."
+            },
+            {
+                id: 203,
+                reqNo: "SUP-REQ-198",
+                reqDate: "2026-09-26",
+                reqTime: "06:00 PM",
+                portalSource: "Supervisor",
+                userId: "SUP-001",
+                userName: "Rajesh Mondal",
+                site: "Dum Dum Complex",
+                moduleOrCat: "Employee Payment",
+                actionSubType: "Wage Advance",
+                refNo: "SUB-DD-01",
+                amount: 4000,
+                oldData: "Emp: Ramesh Das (EMP-001) | Paid from Supervisor Advance",
+                newData: "Weekly Wage Payment ₹4,000 Paid in Cash at Site",
+                userReason: "Week 3 Mason Payment from Supervisor Advance",
+                status: "Approved",
+                syncInfo: "₹4,000 (Dr) Added to Emp Ledger",
+                adminDate: "2026-09-26 07:15 PM",
+                adminRemarks: "Payment approved & debited in Ramesh Das ledger."
+            },
+            {
+                id: 204,
+                reqNo: "SUP-REQ-199",
+                reqDate: "2026-09-27",
+                reqTime: "01:20 PM",
+                portalSource: "Supervisor",
+                userId: "SUP-004",
+                userName: "Koushik Ghosh",
+                site: "Barasat Highway",
+                moduleOrCat: "Site Expense",
+                actionSubType: "Tool / Transport",
+                refNo: "NO-BILL",
+                amount: 3500,
+                oldData: "Site Expense Claim without Memo",
+                newData: "Unbilled Local Van Transport & Scaffolding Unloading (₹3,500)",
+                userReason: "Local van fare for shifting scaffolding pipes",
+                status: "Rejected",
+                syncInfo: "Not Deducted",
+                adminDate: "2026-09-27 03:00 PM",
+                adminRemarks: "Rejected: Please attach proper challan or vehicle slip."
+            },
+            {
+                id: 205,
+                reqNo: "SUP-REQ-200",
+                reqDate: "2026-09-28",
+                reqTime: "11:40 AM",
+                portalSource: "Supervisor",
+                userId: "SUP-003",
+                userName: "Subrata Roy",
+                site: "Salt Lake Sector V",
+                moduleOrCat: "Site Expense",
+                actionSubType: "Hardware Tools",
+                refNo: "CH-8821",
+                amount: 1850,
+                oldData: "Retailer: Maa Tara Hardware",
+                newData: "4 inch Cutting Wheel & 10kg Shuttering Binding Wire",
+                userReason: "Urgent cutting discs & binding wire purchased for shuttering",
+                status: "Approved",
+                syncInfo: "Deducted from Sup Advance",
+                adminDate: "2026-09-28 12:30 PM",
+                adminRemarks: "Hardware cash memo verified & approved."
+            }
+        ];
+
+        let activeSourceTab = 'All'; // 'All', 'Office User', or 'Supervisor'
+
+        window.onload = function() {
+            populateFilterDropdowns();
+            renderHistoryTable();
+        };
+
+        function switchPortalSource(source) {
+            activeSourceTab = source;
+            document.getElementById('tabAll').classList.toggle('active', source === 'All');
+            document.getElementById('tabOffice').classList.toggle('active', source === 'Office User');
+            document.getElementById('tabSupervisor').classList.toggle('active', source === 'Supervisor');
+
+            const modeLabel = source === 'All'
+                ? '🌐 ALL PORTAL HISTORY'
+                : (source === 'Office User' ? '🏢 OFFICE USER HISTORY' : '🛡️ SUPERVISOR HISTORY');
+            document.getElementById('footSourceMode').innerText = modeLabel;
+
+            populateFilterDropdowns();
+            renderHistoryTable();
+        }
+
+        function populateFilterDropdowns() {
+            const personSelect = document.getElementById('filterPerson');
+            const siteSelect = document.getElementById('filterSite');
+
+            const sourceFiltered = masterHistoryRecords.filter(r =>
+                activeSourceTab === 'All' || r.portalSource === activeSourceTab
+            );
+
+            const userMap = new Map();
+            const siteSet = new Set();
+
+            sourceFiltered.forEach(r => {
+                if (!userMap.has(r.userId)) {
+                    userMap.set(r.userId, `${r.userName} (${r.userId})`);
+                }
+                siteSet.add(r.site);
+            });
+
+            personSelect.innerHTML = `<option value="All">All Users / Supervisors (${userMap.size})</option>`;
+            userMap.forEach((label, id) => {
+                personSelect.innerHTML += `<option value="${id}">${label}</option>`;
+            });
+
+            const currentSite = siteSelect.value || 'All';
+            siteSelect.innerHTML = `<option value="All">All Sites (${siteSet.size})</option>`;
+            siteSet.forEach(s => {
+                siteSelect.innerHTML += `<option value="${s}">${s}</option>`;
+            });
+            if ([...siteSet].includes(currentSite)) siteSelect.value = currentSite;
+        }
+
+        function getFilteredHistory() {
+            const person = document.getElementById('filterPerson').value;
+            const site = document.getElementById('filterSite').value;
+            const decision = document.getElementById('filterDecision').value;
+            const fromDate = document.getElementById('filterFrom').value;
+            const toDate = document.getElementById('filterTo').value;
+            const query = document.getElementById('searchBox').value.toLowerCase();
+
+            return masterHistoryRecords.filter(r => {
+                if (activeSourceTab !== 'All' && r.portalSource !== activeSourceTab) return false;
+                if (person !== 'All' && r.userId !== person) return false;
+                if (site !== 'All' && r.site !== site) return false;
+                if (decision !== 'All' && r.status !== decision) return false;
+                if (fromDate && r.reqDate < fromDate) return false;
+                if (toDate && r.reqDate > toDate) return false;
+
+                const searchStr = `${r.reqNo} ${r.userName} ${r.userId} ${r.site} ${r.moduleOrCat} ${r.actionSubType} ${r.refNo} ${r.oldData} ${r.newData} ${r.userReason} ${r.adminRemarks}`.toLowerCase();
+                if (query && !searchStr.includes(query)) return false;
+                return true;
+            });
+        }
+
+        function updateMasterKPIs() {
+            const allCount = masterHistoryRecords.length;
+            const officeCount = masterHistoryRecords.filter(r => r.portalSource === 'Office User').length;
+            const supCount = masterHistoryRecords.filter(r => r.portalSource === 'Supervisor').length;
+
+            document.getElementById('pillAll').innerText = allCount;
+            document.getElementById('pillOffice').innerText = officeCount;
+            document.getElementById('pillSupervisor').innerText = supCount;
+
+            const filtered = getFilteredHistory();
+            const approvedList = filtered.filter(r => r.status === 'Approved');
+            const rejectedList = filtered.filter(r => r.status === 'Rejected');
+
+            const approvedVal = approvedList.reduce((s, r) => s + r.amount, 0);
+            const rejectedVal = rejectedList.reduce((s, r) => s + r.amount, 0);
+
+            document.getElementById('kpiTotalHistory').innerText = filtered.length;
+            document.getElementById('kpiSourceSplit').innerText = `Office: ${filtered.filter(r => r.portalSource === 'Office User').length} | Supervisor: ${filtered.filter(r => r.portalSource === 'Supervisor').length}`;
+            document.getElementById('kpiApprovedCount').innerText = approvedList.length;
+            document.getElementById('kpiApprovedValue').innerText = `Approved Value: ₹${approvedVal.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+            document.getElementById('kpiRejectedCount').innerText = rejectedList.length;
+            document.getElementById('kpiRejectedValue').innerText = `Declined Value: ₹${rejectedVal.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+            document.getElementById('kpiSyncedCount').innerText = approvedList.length;
+        }
+
+        function renderHistoryTable() {
+            updateMasterKPIs();
+            const list = getFilteredHistory();
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            let appCount = 0, rejCount = 0, appSum = 0;
+
+            if (list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:35px; color:var(--text-muted);">No approval or rejection history found for the selected filters.</td></tr>`;
+            } else {
+                list.forEach(r => {
+                    if (r.status === 'Approved') {
+                        appCount++;
+                        appSum += r.amount;
+                    } else {
+                        rejCount++;
+                    }
+
+                    const sourceBadge = r.portalSource === 'Office User'
+                        ? `<span class="src-office">🏢 Office User</span>`
+                        : `<span class="src-supervisor">🛡️ Supervisor</span>`;
+
+                    let subTypeBadge = `<span class="cat-tag">${r.actionSubType}</span>`;
+                    if (r.actionSubType === 'Per Day (8h Duty)') {
+                        subTypeBadge = `<span class="basis-perday">Per Day (8h Duty)</span>`;
+                    } else if (r.actionSubType === 'Monthly Basis') {
+                        subTypeBadge = `<span class="basis-monthly">Monthly Basis</span>`;
+                    }
+
+                    const statusBadge = r.status === 'Approved'
+                        ? `<span class="badge badge-approved">✔️ APPROVED</span><div class="sync-tag">🔗 ${r.syncInfo}</div>`
+                        : `<span class="badge badge-rejected">❌ REJECTED</span>`;
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>
+                                <strong style="color:var(--theme-color);">${r.reqNo}</strong>
+                                <div style="font-size:10px; color:var(--text-muted);">${r.reqDate}<br>${r.reqTime}</div>
+                            </td>
+                            <td>
+                                ${sourceBadge}
+                                <div style="font-weight:700;">${r.userName}</div>
+                                <div style="font-size:10.5px; color:var(--theme-color); margin-top:2px;">📍 ${r.site}</div>
+                            </td>
+                            <td>
+                                <div style="font-weight:700;">${r.moduleOrCat}</div>
+                                <div style="margin-top:3px;">${subTypeBadge}</div>
+                            </td>
+                            <td>
+                                <span class="diff-old">${r.oldData}</span>
+                                <span class="diff-new">${r.newData}</span>
+                                <div style="font-size:10px; color:var(--text-muted); margin-top:2px;">💬 "${r.userReason}"</div>
+                            </td>
+                            <td>
+                                <div style="font-weight:700; color:var(--theme-color);">${r.refNo}</div>
+                            </td>
+                            <td style="text-align:right; font-weight:800; font-size:12.5px; color:${r.status === 'Approved' ? '#28a745' : '#ff6b6b'};">
+                                ₹${r.amount.toLocaleString('en-IN', {minimumFractionDigits: 2})}
+                            </td>
+                            <td style="text-align:center;">${statusBadge}</td>
+                            <td>
+                                <div style="font-size:10px; font-weight:700;">🕒 ${r.adminDate}</div>
+                                <div style="font-size:10.5px; color:${r.status === 'Approved' ? '#28a745' : '#ff6b6b'}; margin-top:2px;">
+                                    💬 ${r.adminRemarks}
+                                </div>
+                            </td>
+                            <td style="text-align:center;">
+                                <div class="action-btns">
+                                    <button class="btn-act btn-view" onclick="openViewModal(${r.id})" title="Inspect Full Audit Log">👁️</button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+
+            document.getElementById('footDisplayed').innerText = `${list.length} Records`;
+            document.getElementById('footRatio').innerText = `${appCount} Approved / ${rejCount} Rejected`;
+            document.getElementById('footApprovedVal').innerText = `₹ ${appSum.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+        }
+
+        // ================= VIEW AUDIT LOG MODAL =================
+        function openViewModal(id) {
+            const r = masterHistoryRecords.find(item => item.id === id);
+            if (!r) return;
+
+            document.getElementById('modalTitle').innerText = `👁️ History Audit Log — ${r.reqNo}`;
+            const body = document.getElementById('modalBody');
+
+            const statusBadge = r.status === 'Approved'
+                ? `<span class="badge badge-approved">✔️ APPROVED</span>`
+                : `<span class="badge badge-rejected">❌ REJECTED</span>`;
+
+            body.innerHTML = `
+                <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; background:var(--input-bg); padding:14px; border-radius:8px; border:1px solid var(--border-color);">
+                    <div><span style="font-size:10px; color:var(--text-muted); display:block;">PORTAL SOURCE</span><strong>${r.portalSource}</strong></div>
+                    <div><span style="font-size:10px; color:var(--text-muted); display:block;">SUBMITTED BY</span><strong>${r.userName} (${r.userId})</strong></div>
+                    <div><span style="font-size:10px; color:var(--text-muted); display:block;">PROJECT / SITE</span><strong style="color:var(--theme-color);">📍 ${r.site}</strong></div>
+                    <div><span style="font-size:10px; color:var(--text-muted); display:block;">MODULE / CATEGORY</span><strong>${r.moduleOrCat} (${r.actionSubType})</strong></div>
+                    <div><span style="font-size:10px; color:var(--text-muted); display:block;">REFERENCE / SUB ID</span><strong>${r.refNo}</strong></div>
+                    <div><span style="font-size:10px; color:var(--text-muted); display:block;">FINANCIAL VALUE</span><strong style="color:#28a745; font-size:15px;">₹${r.amount.toLocaleString('en-IN', {minimumFractionDigits: 2})}</strong></div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px; margin-top:15px;">
+                    <div style="background:var(--input-bg); padding:14px; border-radius:8px; border-left:4px solid #dc3545;">
+                        <h4 style="font-size:11px; color:#ff6b6b; text-transform:uppercase; margin-bottom:6px;">⏮️ Context / Previous Info</h4>
+                        <p style="font-size:12.5px; line-height:1.5;">${r.oldData}</p>
+                    </div>
+                    <div style="background:var(--input-bg); padding:14px; border-radius:8px; border-left:4px solid #28a745;">
+                        <h4 style="font-size:11px; color:#28a745; text-transform:uppercase; margin-bottom:6px;">🆕 Submitted Entry / Change</h4>
+                        <p style="font-size:12.5px; line-height:1.5; font-weight:700;">${r.newData}</p>
+                    </div>
+                </div>
+
+                <div style="margin-top:15px; padding:12px; border-radius:8px; background:var(--input-bg); border:1px solid var(--border-color);">
+                    <span style="font-size:10px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">User / Supervisor Narration (${r.reqDate} at ${r.reqTime}):</span>
+                    <p style="font-size:12.5px; margin-top:4px;">"${r.userReason}"</p>
+                </div>
+
+                <div style="margin-top:15px; padding:14px; border-radius:8px; background:rgba(227,11,92,0.08); border:1px solid var(--border-color);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                        <div><strong>Admin Final Decision:</strong> ${statusBadge}</div>
+                        <div style="font-size:12px;"><strong>Action Timestamp:</strong> 🕒 ${r.adminDate}</div>
+                        <div style="font-size:12px; color:#20c997; font-weight:700;">🔗 ${r.syncInfo}</div>
+                    </div>
+                    <div style="margin-top:8px; font-size:13px;">
+                        <strong>Admin Remarks:</strong> "${r.adminRemarks}"
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('viewHistoryModal').classList.add('active');
+        }
+
+        function closeViewModal() {
+            document.getElementById('viewHistoryModal').classList.remove('active');
+        }
+
+        // ================= EXPORT TO EXCEL (.XLSX) =================
+        function exportHistoryExcel() {
+            const list = getFilteredHistory();
+            if (list.length === 0) {
+                alert("No history records available to export!");
+                return;
+            }
+
+            const exportData = [
+                ["ATR CONSTRUCTION - MASTER APPROVAL & REJECTION HISTORY REPORT"],
+                ["Portal Source Filter:", activeSourceTab.toUpperCase(), "Export Date:", new Date().toLocaleDateString()],
+                [],
+                ["Req ID", "Request Date", "Time", "Portal Source", "User/Supervisor ID", "Name", "Project / Site", "Module / Category", "Action / Basis", "Ref / Sub ID", "Amount (Rs.)", "Previous / Context Info", "Submitted Entry / Change", "User Narration", "Final Decision", "Ledger Sync Status", "Admin Action Time", "Admin Remarks"]
+            ];
+
+            list.forEach(r => {
+                exportData.push([
+                    r.reqNo, r.reqDate, r.reqTime, r.portalSource,
+                    r.userId, r.userName, r.site, r.moduleOrCat,
+                    r.actionSubType, r.refNo, r.amount, r.oldData,
+                    r.newData, r.userReason, r.status, r.syncInfo,
+                    r.adminDate, r.adminRemarks
+                ]);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Approval_History");
+            XLSX.writeFile(wb, `ATR_Approval_History_${activeSourceTab.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.xlsx`);
+        }
+
+        // ================= EXPORT TO PDF (A4 PORTRAIT FIXED) =================
+        function exportHistoryPDF() {
+            const list = getFilteredHistory();
+            if (list.length === 0) {
+                alert("No history records available to export!");
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(14);
+            doc.text("ATR CONSTRUCTION", 105, 13, { align: "center" });
+
+            doc.setFontSize(10.5);
+            doc.text("MASTER APPROVAL & REJECTION HISTORY REPORT", 105, 19, { align: "center" });
+
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(8.5);
+            doc.text(`Portal Source: ${activeSourceTab.toUpperCase()}   |   Total Records: ${list.length}   |   Date: ${new Date().toLocaleDateString()}`, 105, 25, { align: "center" });
+
+            doc.setLineWidth(0.4);
+            doc.line(10, 28, 200, 28);
+
+            const bodyRows = [];
+            list.forEach(r => {
+                bodyRows.push([
+                    `${r.reqNo}\n(${r.reqDate})`,
+                    `${r.portalSource}\n${r.userName}\n(${r.site})`,
+                    `${r.moduleOrCat}\n[${r.actionSubType}]`,
+                    `${r.newData}\n(Ref: ${r.refNo})`,
+                    `Rs.${r.amount.toLocaleString('en-IN')}`,
+                    r.status.toUpperCase(),
+                    `${r.adminDate}\n"${r.adminRemarks}"`
+                ]);
+            });
+
+            // Exact 190mm column width for A4 Portrait (210mm - 20mm margins = 190mm)
+            // 22 + 30 + 25 + 48 + 20 + 16 + 29 = 190mm
+            doc.autoTable({
+                startY: 31,
+                margin: { left: 10, right: 10, top: 12, bottom: 14 },
+                tableWidth: 190,
+                head: [['Req ID / Date', 'Source & User', 'Module / Type', 'Entry / Change Details', 'Amount', 'Status', 'Admin Log & Remarks']],
+                body: bodyRows,
+                theme: 'grid',
+                headStyles: {
+                    fillColor: [227, 11, 92],
+                    textColor: [255, 255, 255],
+                    fontSize: 7.5,
+                    fontStyle: 'bold',
+                    halign: 'center'
+                },
+                styles: {
+                    fontSize: 7,
+                    cellPadding: 2,
+                    overflow: 'linebreak',
+                    lineColor: [180, 180, 180],
+                    lineWidth: 0.2,
+                    valign: 'middle'
+                },
+                columnStyles: {
+                    0: { cellWidth: 22, halign: 'center', fontStyle: 'bold' },
+                    1: { cellWidth: 30, halign: 'left' },
+                    2: { cellWidth: 25, halign: 'left' },
+                    3: { cellWidth: 48, halign: 'left' },
+                    4: { cellWidth: 20, halign: 'right', fontStyle: 'bold' },
+                    5: { cellWidth: 16, halign: 'center', fontStyle: 'bold' },
+                    6: { cellWidth: 29, halign: 'left' }
+                }
+            });
+
+            doc.save(`ATR_Approval_History_${new Date().toISOString().slice(0,10)}.pdf`);
+        }
+    </script>
+</body>
+</html>

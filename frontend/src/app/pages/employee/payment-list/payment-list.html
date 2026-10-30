@@ -1,0 +1,143 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1><i class="ri-money-rupee-circle-line"></i> Payment List</h1>
+  </div>
+
+  <div class="filter-section">
+    <div class="form-group">
+      <label class="filter-label">Payment Month</label>
+      <input type="month" [ngModel]="selectedMonth()" (ngModelChange)="selectedMonth.set($event)" class="filter-input" />
+    </div>
+    <app-searchable-dropdown
+      [items]="siteDropdownItems()"
+      [placeholder]="'All Sites'"
+      [label]="'Site'"
+      [disabled]="role.isSiteLocked()"
+      [ngModel]="selectedSite()"
+      (ngModelChange)="selectedSite.set($event)"
+      style="min-width: 200px;"
+    ></app-searchable-dropdown>
+    <div class="filter-actions">
+      <button class="btn-primary" (click)="generateList()" [disabled]="loading()">
+        <i class="ri-list-check"></i> Generate List
+      </button>
+    </div>
+  </div>
+
+  @if (listGenerated()) {
+    <app-summary-cards [cards]="summaryCards()"></app-summary-cards>
+
+    <div class="action-bar">
+      <div class="action-left">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="filter-label">Payment Date</label>
+          <input type="date" [ngModel]="paymentDate()" (ngModelChange)="paymentDate.set($event)" class="filter-input" />
+        </div>
+        <button class="btn-primary" (click)="submitPayments()" [disabled]="!payments().length">
+          <i class="ri-check-double-line"></i> Submit Payment
+        </button>
+        <button class="btn-warning" (click)="holdPayments()" [disabled]="!payments().length">
+          <i class="ri-pause-circle-line"></i> Put on Hold
+        </button>
+      </div>
+      <div class="action-right">
+        <div class="column-toggle">
+          <button class="btn-outline" (click)="toggleColumnMenu()"><i class="ri-layout-column-line"></i> Columns</button>
+          @if (showColumnMenu()) {
+            <div class="dropdown-menu">
+              @for (col of ['daysWorked','rate','grossAmount','tdsAmount','netAmount','finalPayment','bankName','accountNo','ifsc','status']; track col) {
+                <label class="dropdown-check">
+                  <input type="checkbox" [checked]="isColumnVisible(col)" (change)="toggleColumn(col)" />
+                  {{ columnLabels[col] }}
+                </label>
+              }
+            </div>
+          }
+        </div>
+        <button class="btn-outline" (click)="exportExcel()"><i class="ri-file-excel-line"></i> Excel</button>
+        <button class="btn-outline" (click)="exportPDF()"><i class="ri-file-pdf-line"></i> PDF</button>
+        <button class="btn-outline" (click)="printPayments()"><i class="ri-printer-line"></i> Print</button>
+      </div>
+    </div>
+
+    @if (loading()) {
+      <p class="loading-text">Loading payment data...</p>
+    }
+
+    <div class="table-responsive" id="payment-table">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Employee</th>
+            <th>Site</th>
+            @if (isColumnVisible('daysWorked')) { <th style="text-align: right;">Days</th> }
+            @if (isColumnVisible('rate')) { <th style="text-align: right;">Rate</th> }
+            @if (isColumnVisible('grossAmount')) { <th style="text-align: right;">Gross (Rs.)</th> }
+            @if (isColumnVisible('tdsAmount')) { <th style="text-align: right;">TDS (Rs.)</th> }
+            @if (isColumnVisible('netAmount')) { <th style="text-align: right;">Net (Rs.)</th> }
+            @if (isColumnVisible('finalPayment')) { <th style="text-align: right;">Final Payment (Rs.)</th> }
+            @if (isColumnVisible('bankName')) { <th>Bank</th> }
+            @if (isColumnVisible('accountNo')) { <th>Account No</th> }
+            @if (isColumnVisible('ifsc')) { <th>IFSC</th> }
+            @if (isColumnVisible('status')) { <th>Status</th> }
+          </tr>
+        </thead>
+        <tbody>
+          @for (pay of payments(); track pay.id; let i = $index) {
+            <tr>
+              <td>{{ i + 1 }}</td>
+              <td style="font-weight: 600;">{{ pay.employee }}</td>
+              <td>{{ pay.site }}</td>
+              @if (isColumnVisible('daysWorked')) { <td style="text-align: right;">{{ pay.daysWorked }}</td> }
+              @if (isColumnVisible('rate')) { <td style="text-align: right;">{{ pay.rate | number }}</td> }
+              @if (isColumnVisible('grossAmount')) { <td style="text-align: right; font-weight: 700;">{{ pay.grossAmount | number }}</td> }
+              @if (isColumnVisible('tdsAmount')) { <td style="text-align: right; color: var(--danger);">{{ pay.tdsAmount | number }}</td> }
+              @if (isColumnVisible('netAmount')) { <td style="text-align: right; font-weight: 700;">{{ pay.netAmount | number }}</td> }
+              @if (isColumnVisible('finalPayment')) {
+                <td style="text-align: right;">
+                  <input type="number" class="compact-input" style="text-align: right; font-weight: 700; color: var(--accent);"
+                    [ngModel]="pay.finalPayment"
+                    (ngModelChange)="updateFinalPayment(pay.id, $event)" min="0" />
+                </td>
+              }
+              @if (isColumnVisible('bankName')) { <td>{{ pay.bankName }}</td> }
+              @if (isColumnVisible('accountNo')) { <td>{{ pay.accountNo }}</td> }
+              @if (isColumnVisible('ifsc')) { <td>{{ pay.ifsc }}</td> }
+              @if (isColumnVisible('status')) {
+                <td>
+                  <span class="badge"
+                    [class.badge-info]="pay.status === 'draft'"
+                    [class.badge-success]="pay.status === 'submitted' || pay.status === 'cleared'"
+                    [class.badge-warning]="pay.status === 'on_hold'"
+                    [class.badge-danger]="pay.status === 'pending'">
+                    {{ pay.status }}
+                  </span>
+                </td>
+              }
+            </tr>
+          } @empty {
+            <tr><td colspan="13" class="empty-state">No payment records. Generate a list for the selected month.</td></tr>
+          }
+        </tbody>
+        @if (payments().length) {
+          <tfoot>
+            <tr class="summary-footer">
+              <td colspan="3" style="font-weight: 700;">Totals ({{ payments().length }} employees)</td>
+              @if (isColumnVisible('daysWorked')) { <td></td> }
+              @if (isColumnVisible('rate')) { <td></td> }
+              @if (isColumnVisible('grossAmount')) { <td style="text-align: right; font-weight: 700;">{{ totalGross() | number }}</td> }
+              @if (isColumnVisible('tdsAmount')) { <td style="text-align: right; font-weight: 700; color: var(--danger);">{{ totalTds() | number }}</td> }
+              @if (isColumnVisible('netAmount')) { <td style="text-align: right; font-weight: 700;">{{ totalNet() | number }}</td> }
+              @if (isColumnVisible('finalPayment')) { <td style="text-align: right; font-weight: 700; color: var(--accent);">{{ totalFinalPayment() | number }}</td> }
+              @if (isColumnVisible('bankName')) { <td></td> }
+              @if (isColumnVisible('accountNo')) { <td></td> }
+              @if (isColumnVisible('ifsc')) { <td></td> }
+              @if (isColumnVisible('status')) { <td></td> }
+            </tr>
+          </tfoot>
+        }
+      </table>
+    </div>
+  }
+</div>

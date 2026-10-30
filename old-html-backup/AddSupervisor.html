@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Assign Supervisor</title>
+    
+    <!-- Sync theme with Master Dashboard -->
+    <script>
+        const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        window.addEventListener('storage', function(e) {
+            if(e.key === 'atr_theme') { document.documentElement.setAttribute('data-theme', e.newValue); }
+        });
+    </script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-body: transparent; 
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.1);
+            
+            /* Dynamic Glass & Input Variables */
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(0, 0, 0, 0.2);
+            --input-focus-bg: rgba(0, 0, 0, 0.4);
+            
+            --shadow: 0 4px 15px rgba(0,0,0,0.3);
+            
+            /* Primary Theme Color (Purple #6f42c1 as requested) */
+            --theme-color: #6f42c1;
+            --theme-glow: rgba(111, 66, 193, 0.4);
+            --theme-transition: all 0.4s ease;
+        }
+
+        [data-theme="light"] {
+            --bg-body: transparent;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #555555;
+            --border-color: rgba(0, 0, 0, 0.1);
+            
+            --glass-bg: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --input-bg: rgba(255, 255, 255, 0.5);
+            --input-focus-bg: #ffffff;
+            
+            --shadow: 0 8px 25px rgba(0,0,0,0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Montserrat', sans-serif;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            transition: var(--theme-transition);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 30px;
+            height: 100vh;
+            overflow-y: auto;
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(111, 66, 193, 0.3); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--theme-color); }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 15px;
+            transition: var(--theme-transition);
+        }
+
+        .header h1 {
+            font-size: 26px;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .role-mode-badge {
+            display: none;
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 700;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn-back-dash { 
+            background-color: var(--glass-bg); 
+            color: var(--text-main); 
+            border: 1px solid var(--border-color); 
+            text-decoration: none; 
+            padding: 9px 16px; 
+            border-radius: 6px; 
+            font-weight: bold; 
+            font-size: 13px; 
+            transition: all 0.3s; 
+            display: flex; 
+            align-items: center; 
+            cursor: pointer;
+        }
+        .btn-back-dash:hover { 
+            background-color: var(--theme-color); 
+            color: #fff; 
+            border-color: var(--theme-color); 
+            transform: translateY(-2px); 
+            box-shadow: 0 4px 10px var(--theme-glow); 
+        }
+
+        .btn-assign {
+            background-color: var(--theme-color);
+            color: #ffffff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 0 4px 15px var(--theme-glow);
+            transition: all 0.3s;
+        }
+
+        .btn-assign:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+            box-shadow: 0 6px 15px var(--theme-glow);
+        }
+
+        /* Table Styling */
+        .table-container-box {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            flex: 1;
+            border: 1px solid var(--glass-border);
+            border-top: 4px solid var(--theme-color);
+            overflow: auto;
+            transition: var(--theme-transition);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+            background-color: var(--input-bg);
+            z-index: 10;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        th {
+            padding: 16px;
+            color: var(--theme-color);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.8px;
+            border-bottom: 2px solid var(--theme-color);
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 13px;
+            color: var(--text-main);
+            vertical-align: middle;
+            transition: var(--theme-transition);
+        }
+
+        tbody tr { transition: background 0.2s; }
+        tbody tr:hover { background-color: var(--glass-bg); }
+
+        .pending-status-pill {
+            display: inline-block;
+            background: rgba(255, 193, 7, 0.16);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.45);
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            margin-top: 4px;
+            text-transform: uppercase;
+        }
+
+        /* Action Buttons Wrapper inside TD so table row border never breaks */
+        .action-btns {
+            display: inline-flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: nowrap;
+            white-space: nowrap;
+        }
+
+        .btn-action {
+            padding: 6px 10px;
+            border: none;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            color: white;
+            transition: 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn-edit { background: rgba(0, 123, 255, 0.15); color: #007bff; border: 1px solid rgba(0,123,255,0.3); }
+        .btn-edit:hover { background: #007bff; color: white; }
+        
+        .btn-delete { background: rgba(220, 53, 69, 0.15); color: #dc3545; border: 1px solid rgba(220,53,69,0.3); }
+        .btn-delete:hover { background: #dc3545; color: white; }
+        
+        .btn-status-active { background: rgba(40, 167, 69, 0.15); color: #28a745; border: 1px solid rgba(40,167,69,0.3); }
+        .btn-status-active:hover { background: #28a745; color: white; }
+        
+        .btn-status-deactive { background: rgba(255, 193, 7, 0.15); color: #ffc107; border: 1px solid rgba(255,193,7,0.3); }
+        .btn-status-deactive:hover { background: #ffc107; color: #121212; }
+
+        .btn-reveal {
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            color: var(--theme-color);
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 10px;
+            transition: 0.3s;
+        }
+        .btn-reveal:hover {
+            background: var(--theme-color);
+            color: #ffffff;
+        }
+
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+            display: inline-block;
+        }
+        .status-active-bg { background: rgba(40, 167, 69, 0.15); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.3); }
+        .status-deactive-bg { background: rgba(220, 53, 69, 0.15); color: #dc3545; border: 1px solid rgba(220, 53, 69, 0.3); }
+
+        /* ================= MODAL & FORM (BLUR EFFECT) ================= */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal-card {
+            background: var(--bg-card);
+            width: 100%;
+            max-width: 650px;
+            border-radius: 12px;
+            border-top: 4px solid var(--theme-color);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+            padding: 30px;
+            transform: translateY(-20px);
+            transition: transform 0.3s ease, background 0.4s ease;
+            border-left: 1px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-overlay.active .modal-card {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+
+        .modal-header h2 { font-size: 20px; color: var(--theme-color); }
+        
+        .close-btn {
+            background: none; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; transition: 0.3s;
+        }
+        .close-btn:hover { color: #dc3545; }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .form-group { display: flex; flex-direction: column; gap: 8px; position: relative; }
+        .form-group.full-width { grid-column: span 2; }
+
+        .form-group label {
+            font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; transition: 0.3s;
+        }
+        .form-group:focus-within label { color: var(--theme-color); }
+
+        .form-control {
+            background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main);
+            padding: 12px 14px; border-radius: 8px; font-size: 13px; outline: none; transition: all 0.3s;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); width: 100%;
+        }
+        .form-control:focus { border-color: var(--theme-color); background: var(--input-focus-bg); box-shadow: 0 0 10px var(--theme-glow); }
+        .form-control[readonly] { background: var(--glass-bg); color: var(--text-muted); cursor: not-allowed; }
+
+        /* 3D Custom Searchable Dropdown */
+        .custom-dropdown-container { position: relative; z-index: 100; }
+        .dropdown-selected {
+            cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none;
+        }
+        .dropdown-menu-custom {
+            position: absolute; top: calc(100% + 8px); left: 0; right: 0; background: var(--bg-card);
+            border: 1px solid var(--theme-color); border-radius: 8px; box-shadow: 0 15px 35px rgba(0,0,0,0.4), 0 0 10px var(--theme-glow);
+            z-index: 1000; overflow: hidden;
+            
+            /* 3D Float Animation */
+            display: block; visibility: hidden; opacity: 0; transform: translateY(-10px) scale(0.98);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); pointer-events: none;
+        }
+        .dropdown-menu-custom.show { visibility: visible; opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+        
+        .dropdown-search-input {
+            width: 100%; padding: 12px 14px; background: var(--input-bg); border: none;
+            border-bottom: 1px solid var(--border-color); color: var(--text-main); font-size: 13px; outline: none;
+        }
+        .dropdown-list { max-height: 160px; overflow-y: auto; list-style: none; }
+        .dropdown-list li {
+            padding: 12px 14px; font-size: 13px; cursor: pointer; display: flex; justify-content: space-between; color: var(--text-main);
+            transition: background 0.2s;
+        }
+        .dropdown-list li:hover { background: rgba(111, 66, 193, 0.15); color: var(--theme-color); }
+
+        .modal-footer {
+            margin-top: 25px; display: flex; justify-content: flex-end; gap: 10px;
+        }
+
+        .btn-save {
+            background: var(--theme-color); color: white; padding: 12px 24px; border: none; border-radius: 8px;
+            font-weight: bold; cursor: pointer; text-transform: uppercase; transition: 0.3s; box-shadow: 0 4px 10px var(--theme-glow);
+        }
+        .btn-save:hover { filter: brightness(1.1); transform: translateY(-2px); }
+
+    </style>
+</head>
+<body>
+
+    <div class="main-content">
+        <div class="header">
+            <div>
+                <h1>
+                    🛡️ Supervisor Management
+                    <span id="roleModeBadge" class="role-mode-badge">🏢 Office Mode</span>
+                </h1>
+            </div>
+            <div class="header-actions">
+                <a href="dashboard_home.html" id="btnBackDashboard" class="btn-back-dash" onclick="handleBackToDashboard(event)">← Back to Dashboard</a>
+                <button class="btn-assign" onclick="openModal(false)">➕ Assign New Supervisor</button>
+            </div>
+        </div>
+
+        <div class="table-container-box">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Sl No.</th>
+                        <th>Supervisor Name</th>
+                        <th>Contact Number</th>
+                        <th>Assigned User ID</th>
+                        <th>Login Password</th>
+                        <th>Account Status</th>
+                        <th>Action Console</th>
+                    </tr>
+                </thead>
+                <tbody id="supervisorTableBody">
+                    <!-- Dynamic Rows populated by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- MODAL FORM (BLUR OVERLAY) -->
+    <div class="modal-overlay" id="entryModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2 id="modalTitle">➕ Assign New Supervisor</h2>
+                <button class="close-btn" onclick="closeModal()">×</button>
+            </div>
+            
+            <div class="form-grid">
+                <!-- Employee Selector -->
+                <div class="form-group full-width">
+                    <label>👥 Select Employee to Assign</label>
+                    <div class="custom-dropdown-container">
+                        <div class="form-control dropdown-selected" id="dropdownSelected" onclick="toggleDropdown()">
+                            <span id="selectedEmpText">Search & Select Employee...</span>
+                            <span style="font-size: 10px;">▼</span>
+                        </div>
+                        <div class="dropdown-menu-custom" id="dropdownMenu">
+                            <input type="text" class="dropdown-search-input" placeholder="🔍 Search by Name or ID..." id="empSearchInput" onkeyup="filterEmployees()">
+                            <ul class="dropdown-list" id="empList">
+                                <!-- Dynamic List -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Auto-fill Fields -->
+                <div class="form-group">
+                    <label>📞 Contact Number</label>
+                    <input type="text" class="form-control" id="contactField" readonly placeholder="Auto-filled">
+                </div>
+                <div class="form-group">
+                    <label>📍 Address</label>
+                    <input type="text" class="form-control" id="addressField" readonly placeholder="Auto-filled">
+                </div>
+
+                <!-- Credentials -->
+                <div class="form-group">
+                    <label>🆔 Set Login User ID</label>
+                    <input type="text" class="form-control" id="userIdField" placeholder="Enter Unique ID (e.g. rahul_sup)">
+                </div>
+                <div class="form-group">
+                    <label>🔑 Set Login Password</label>
+                    <input type="text" class="form-control" id="passwordField" placeholder="Enter secure password">
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-action btn-delete" style="padding: 12px 20px; font-size: 12px; border-radius: 8px;" onclick="closeModal()">Cancel</button>
+                <button type="button" id="btnSaveSupervisor" class="btn-save" onclick="saveSupervisor()">💾 Save Supervisor</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= OFFICE PORTAL APPROVAL MODAL (ROUTES TO ApproveOffice.html) ================= -->
+    <div class="modal-overlay" id="officeApprovalModal" style="z-index: 2000;">
+        <div class="modal-card" style="max-width: 480px; border-top-color: #ffc107;">
+            <div class="modal-header">
+                <h2 style="color: #ffc107; font-size: 18px;">🏢 Send Request to ApproveOffice.html</h2>
+                <button class="close-btn" onclick="closeOfficeApprovalModal()">×</button>
+            </div>
+            <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">
+                অফিস পোর্টাল থেকে নতুন সুপারভাইজার অ্যাসাইন, এডিট, স্ট্যাটাস পরিবর্তন বা ডিলিট করলে তা অ্যাডমিনের <strong>ApproveOffice.html</strong>-এ পাঠানো হবে। অ্যাডমিন অ্যাপ্রুভ করলেই এটি চূড়ান্ত হবে।
+            </p>
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label>Action & Supervisor Summary</label>
+                <input type="text" id="officeApprovalSummary" class="form-control" readonly style="color: #ffc107; font-weight: 700;">
+            </div>
+            <div class="form-group">
+                <label>Reason / Remarks for Admin Approval <span style="color: #ff4d4d;">*</span></label>
+                <textarea id="officeApprovalReason" class="form-control" rows="3" placeholder="Write a short note or reason for this supervisor action..." style="resize: none;"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-action btn-delete" style="padding: 11px 18px; font-size: 12px; border-radius: 8px;" onclick="closeOfficeApprovalModal()">Cancel</button>
+                <button type="button" class="btn-save" style="background: #ffc107; color: #121212; box-shadow: none;" onclick="confirmOfficeApprovalRequest()">📤 Send for Approval</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================================================
+        // 1. PORTAL ROLE DETECTION & LOCALSTORAGE PERSISTENCE ENGINE
+        // =========================================================================================
+        const ADMIN_PASSWORD = "admin"; // Accepts both 'admin' and 'admin123' for convenience
+
+        let currentPortalMode = "admin"; // 'admin' or 'office'
+        let loggedUserId = "ADMIN";
+        let loggedUserName = "Super Admin";
+        let pendingOfficePayload = null;
+
+        // Default Company Employee Database
+        const defaultEmployees = [
+            { empId: 1, name: "Rahul Sk", contact: "9876543210", address: "Dum Dum, Kolkata" },
+            { empId: 2, name: "Amitabha Roy", contact: "8765432109", address: "Salt Lake, Sec V" },
+            { empId: 3, name: "Sayan Karmakar", contact: "7654321098", address: "Barasat, North 24 Pgs" },
+            { empId: 4, name: "Rajat Dutta", contact: "6543210987", address: "New Town, Rajarhat" }
+        ];
+
+        // Default Active Supervisors Array
+        const defaultSupervisors = [
+            { supId: 101, empId: 1, name: "Rahul Sk", contact: "9876543210", address: "Dum Dum, Kolkata", userId: "rahul01", password: "password123", status: "Active", pendingStatus: null },
+            { supId: 102, empId: 2, name: "Amitabha Roy", contact: "8765432109", address: "Salt Lake, Sec V", userId: "amitabha_sup", password: "secure456", status: "Active", pendingStatus: null }
+        ];
+
+        let employees = [];
+        let supervisors = [];
+
+        let isEditMode = false;
+        let editSupId = null;
+        let selectedEmpId = null;
+
+        function loadAndSyncDatabases() {
+            // Merge default employees with any employees registered in atr_employees
+            employees = [...defaultEmployees];
+            const storedEmps = JSON.parse(localStorage.getItem('atr_employees')) || [];
+            storedEmps.forEach((se, idx) => {
+                const exists = employees.some(e => e.name.toLowerCase() === (se.name || '').toLowerCase());
+                if (!exists && se.name) {
+                    employees.push({
+                        empId: se.id || (100 + idx),
+                        name: se.name,
+                        contact: se.phone || se.contact || se.mobile || "9800000000",
+                        address: se.address || se.current_site || "Kolkata, WB"
+                    });
+                }
+            });
+
+            const storedSups = JSON.parse(localStorage.getItem('atr_supervisors_db'));
+            if (Array.isArray(storedSups) && storedSups.length > 0) {
+                supervisors = storedSups;
+            } else {
+                supervisors = [...defaultSupervisors];
+                localStorage.setItem('atr_supervisors_db', JSON.stringify(supervisors));
+            }
+        }
+
+        function saveSupervisorsDatabase() {
+            localStorage.setItem('atr_supervisors_db', JSON.stringify(supervisors));
+        }
+
+        function checkPortalPermissions() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewParam = (urlParams.get('view') || '').toLowerCase();
+            const badge = document.getElementById('roleModeBadge');
+            const backBtn = document.getElementById('btnBackDashboard');
+            const saveBtn = document.getElementById('btnSaveSupervisor');
+
+            let parentPath = "";
+            try {
+                if (window.parent && window.parent !== window) {
+                    parentPath = (window.parent.location.pathname || '').toLowerCase();
+                }
+            } catch (e) {}
+
+            if (viewParam === 'office' || parentPath.includes('officedashboard')) {
+                currentPortalMode = 'office';
+                loggedUserId = urlParams.get('userId') || sessionStorage.getItem('atr_logged_office_id') || localStorage.getItem('atr_logged_office_id') || "OFF-101";
+                loggedUserName = urlParams.get('userName') || "Office Staff";
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🏢 Office Mode (${loggedUserName}) — Synced with ApproveOffice.html`;
+                }
+                if (backBtn) {
+                    backBtn.href = "office/office_dashboard_home.html";
+                }
+                if (saveBtn) {
+                    saveBtn.innerText = "📤 Submit for Approval";
+                }
+            } else {
+                currentPortalMode = 'admin';
+                if (backBtn) {
+                    backBtn.href = "dashboard_home.html";
+                }
+            }
+        }
+
+        function handleBackToDashboard(event) {
+            if (currentPortalMode === 'office') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.loadOfficeWorkspaceHome === 'function') {
+                        window.parent.loadOfficeWorkspaceHome();
+                        return;
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "office_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "office/office_dashboard_home.html";
+            }
+        }
+
+        // Initialize App
+        function init() {
+            checkPortalPermissions();
+            loadAndSyncDatabases();
+            renderSupervisorTable();
+            populateEmpDropdown();
+        }
+
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'atr_supervisors_db' || e.key === 'atr_employees') {
+                loadAndSyncDatabases();
+                renderSupervisorTable();
+                populateEmpDropdown();
+            }
+        });
+
+        // ================= SECURITY / ADMIN PROMPT =================
+        function checkAdminAuth(actionText) {
+            let pass = prompt(`⚠️ SECURE ACTION: ${actionText}\n\nEnter Admin Password to proceed:`);
+            if (pass === ADMIN_PASSWORD || pass === "admin123") {
+                return true;
+            } else if (pass !== null) {
+                alert("❌ Authentication Failed! Incorrect Admin Password.");
+            }
+            return false;
+        }
+
+        // ================= RENDER TABLE =================
+        function renderSupervisorTable() {
+            const tbody = document.getElementById('supervisorTableBody');
+            tbody.innerHTML = '';
+
+            if (supervisors.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 30px; color: var(--text-muted);">No supervisors assigned yet.</td></tr>`;
+                return;
+            }
+
+            supervisors.forEach((sup, index) => {
+                let badgeClass = sup.status === 'Active' ? 'status-active-bg' : 'status-deactive-bg';
+                let toggleBtn = sup.status === 'Active' ? 
+                    `<button class="btn-action btn-status-deactive" onclick="toggleStatus('${sup.supId}')">Deactivate</button>` : 
+                    `<button class="btn-action btn-status-active" onclick="toggleStatus('${sup.supId}')">Activate</button>`;
+
+                let pendingBadge = sup.pendingStatus
+                    ? `<br><span class="pending-status-pill">⏳ ${sup.pendingStatus}</span>`
+                    : '';
+
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td style="font-weight: bold;">
+                        ${sup.name}
+                        ${pendingBadge}
+                    </td>
+                    <td>${sup.contact}</td>
+                    <td style="color: var(--theme-color); font-weight: 600;">${sup.userId}</td>
+                    <td>
+                        <span id="passMask_${sup.supId}">••••••••</span>
+                        <span id="passText_${sup.supId}" style="display:none; color: var(--theme-color); font-weight: bold;">${sup.password}</span>
+                        <button class="btn-reveal" onclick="revealPassword('${sup.supId}')">👁️</button>
+                    </td>
+                    <td><span class="status-badge ${badgeClass}">${sup.status}</span></td>
+                    <td>
+                        <div class="action-btns">
+                            ${toggleBtn}
+                            <button class="btn-action btn-edit" onclick="attemptEdit('${sup.supId}')">Edit</button>
+                            <button class="btn-action btn-delete" onclick="attemptDelete('${sup.supId}')">Delete</button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // ================= ACTIONS (VIEW PAGE) =================
+        function revealPassword(id) {
+            if(checkAdminAuth("View Employee Password")) {
+                document.getElementById(`passMask_${id}`).style.display = 'none';
+                document.getElementById(`passText_${id}`).style.display = 'inline';
+                setTimeout(() => {
+                    const maskEl = document.getElementById(`passMask_${id}`);
+                    const textEl = document.getElementById(`passText_${id}`);
+                    if (maskEl && textEl) {
+                        maskEl.style.display = 'inline';
+                        textEl.style.display = 'none';
+                    }
+                }, 5000);
+            }
+        }
+
+        function toggleStatus(id) {
+            let sup = supervisors.find(s => String(s.supId) === String(id));
+            if (!sup) return;
+
+            const newStatus = sup.status === 'Active' ? 'Deactive' : 'Active';
+
+            // OFFICE PORTAL: Route Status Toggle to ApproveOffice.html
+            if (currentPortalMode === 'office') {
+                openOfficeApprovalModal({
+                    type: 'STATUS_TOGGLE',
+                    targetId: sup.supId,
+                    newStatus: newStatus,
+                    actionLabel: `${newStatus === 'Active' ? 'ACTIVATE' : 'DEACTIVATE'} SUPERVISOR`,
+                    summary: `${sup.name} (User ID: ${sup.userId}) — Change Status: ${sup.status} → ${newStatus}`,
+                    oldData: { ...sup },
+                    newData: { ...sup, status: newStatus }
+                });
+                return;
+            }
+
+            // ADMIN DIRECT STATUS TOGGLE
+            sup.status = newStatus;
+            sup.pendingStatus = null;
+            saveSupervisorsDatabase();
+            renderSupervisorTable();
+        }
+
+        function attemptDelete(id) {
+            let sup = supervisors.find(s => String(s.supId) === String(id));
+            if (!sup) return;
+
+            // OFFICE PORTAL: Route Deletion to ApproveOffice.html
+            if (currentPortalMode === 'office') {
+                openOfficeApprovalModal({
+                    type: 'DELETE',
+                    targetId: sup.supId,
+                    actionLabel: "DELETE SUPERVISOR ACCOUNT",
+                    summary: `Remove Supervisor: ${sup.name} (User ID: ${sup.userId} | Contact: ${sup.contact})`,
+                    oldData: { ...sup },
+                    newData: null
+                });
+                return;
+            }
+
+            // ADMIN DIRECT DELETE
+            if(checkAdminAuth("Delete Supervisor Record")) {
+                if(confirm("Are you sure you want to permanently remove this supervisor?")) {
+                    supervisors = supervisors.filter(s => String(s.supId) !== String(id));
+                    saveSupervisorsDatabase();
+                    renderSupervisorTable();
+                }
+            }
+        }
+
+        function attemptEdit(id) {
+            // In Office Mode, open Edit Modal directly and require Admin Approval on Save
+            if (currentPortalMode === 'office') {
+                openModal(true, id);
+                return;
+            }
+
+            if(checkAdminAuth("Edit Supervisor Details")) {
+                openModal(true, id);
+            }
+        }
+
+        // ================= DROPDOWN ENGINE =================
+        function populateEmpDropdown() {
+            const ul = document.getElementById('empList');
+            ul.innerHTML = '';
+            employees.forEach(emp => {
+                let li = document.createElement('li');
+                li.innerHTML = `<span>${emp.name}</span> <span style="color:var(--text-muted); font-size:11px;">Emp ID: #${emp.empId}</span>`;
+                li.onclick = () => selectEmployee(emp.empId);
+                ul.appendChild(li);
+            });
+        }
+
+        function toggleDropdown() {
+            document.getElementById('dropdownMenu').classList.toggle('show');
+        }
+
+        window.onclick = function(event) {
+            if (!event.target.closest('.custom-dropdown-container')) {
+                const dm = document.getElementById('dropdownMenu');
+                if (dm) dm.classList.remove('show');
+            }
+        };
+
+        function filterEmployees() {
+            const input = document.getElementById('empSearchInput').value.toLowerCase();
+            const li = document.getElementById('empList').getElementsByTagName('li');
+            for (let i = 0; i < li.length; i++) {
+                const text = li[i].innerText.toLowerCase();
+                li[i].style.display = text.includes(input) ? "" : "none";
+            }
+        }
+
+        function selectEmployee(id, fallbackSup = null) {
+            let emp = employees.find(e => String(e.empId) === String(id));
+            if(emp) {
+                selectedEmpId = emp.empId;
+                document.getElementById('selectedEmpText').innerText = emp.name;
+                document.getElementById('contactField').value = emp.contact;
+                document.getElementById('addressField').value = emp.address;
+            } else if (fallbackSup) {
+                selectedEmpId = fallbackSup.empId;
+                document.getElementById('selectedEmpText').innerText = fallbackSup.name;
+                document.getElementById('contactField').value = fallbackSup.contact || "";
+                document.getElementById('addressField').value = fallbackSup.address || "";
+            }
+            document.getElementById('dropdownMenu').classList.remove('show');
+        }
+
+        // ================= MODAL CONTROLS =================
+        function openModal(isEdit = false, supId = null) {
+            isEditMode = isEdit;
+            editSupId = supId;
+            document.getElementById('entryModal').classList.add('active');
+
+            if(isEditMode) {
+                document.getElementById('modalTitle').innerText = currentPortalMode === 'office'
+                    ? "✏️ Edit Supervisor Profile (Requires Approval)"
+                    : "✏️ Edit Supervisor Profile";
+                document.getElementById('btnSaveSupervisor').innerText = currentPortalMode === 'office'
+                    ? "📤 Send Update for Approval"
+                    : "💾 Update Supervisor";
+                let sup = supervisors.find(s => String(s.supId) === String(supId));
+                if (sup) {
+                    selectEmployee(sup.empId, sup);
+                    document.getElementById('userIdField').value = sup.userId;
+                    document.getElementById('passwordField').value = sup.password;
+                }
+            } else {
+                document.getElementById('modalTitle').innerText = "➕ Assign New Supervisor";
+                document.getElementById('btnSaveSupervisor').innerText = currentPortalMode === 'office'
+                    ? "📤 Submit for Approval"
+                    : "💾 Save Supervisor";
+                selectedEmpId = null;
+                document.getElementById('selectedEmpText').innerText = "Search & Select Employee...";
+                document.getElementById('contactField').value = "";
+                document.getElementById('addressField').value = "";
+                document.getElementById('userIdField').value = "";
+                document.getElementById('passwordField').value = "";
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('entryModal').classList.remove('active');
+        }
+
+        // ================= SAVE ENGINE =================
+        function saveSupervisor() {
+            if(!selectedEmpId) { alert("Please select an Employee first."); return; }
+            
+            let uId = document.getElementById('userIdField').value.trim();
+            let pWord = document.getElementById('passwordField').value.trim();
+
+            if(uId === "" || pWord === "") { alert("User ID and Password cannot be empty."); return; }
+
+            // Check Duplicate User ID
+            let duplicateUser = supervisors.find(s => s.userId.toLowerCase() === uId.toLowerCase() && String(s.supId) !== String(editSupId));
+            if(duplicateUser) {
+                alert("❌ Validation Error: This User ID already exists! Please choose a different ID.");
+                return;
+            }
+
+            // Check Duplicate Employee Assignment
+            let duplicateEmp = supervisors.find(s => String(s.empId) === String(selectedEmpId) && String(s.supId) !== String(editSupId));
+            if (duplicateEmp) {
+                alert(`❌ Validation Error: ${duplicateEmp.name} is already assigned as a Supervisor (User ID: ${duplicateEmp.userId}).`);
+                return;
+            }
+
+            let emp = employees.find(e => String(e.empId) === String(selectedEmpId)) || {
+                empId: selectedEmpId,
+                name: document.getElementById('selectedEmpText').innerText,
+                contact: document.getElementById('contactField').value,
+                address: document.getElementById('addressField').value
+            };
+
+            if(isEditMode) {
+                let supIndex = supervisors.findIndex(s => String(s.supId) === String(editSupId));
+                if (supIndex === -1) return;
+
+                const oldSup = { ...supervisors[supIndex] };
+                const updatedSup = {
+                    ...oldSup,
+                    empId: emp.empId,
+                    name: emp.name,
+                    contact: emp.contact,
+                    address: emp.address,
+                    userId: uId,
+                    password: pWord,
+                    pendingStatus: null
+                };
+
+                // OFFICE PORTAL: Route Edit to ApproveOffice.html
+                if (currentPortalMode === 'office') {
+                    openOfficeApprovalModal({
+                        type: 'EDIT',
+                        targetId: oldSup.supId,
+                        actionLabel: "EDIT SUPERVISOR CREDENTIALS",
+                        summary: `${updatedSup.name} — User ID: ${oldSup.userId} → ${updatedSup.userId} | Contact: ${updatedSup.contact}`,
+                        oldData: oldSup,
+                        newData: updatedSup
+                    });
+                    return;
+                }
+
+                // ADMIN DIRECT UPDATE
+                supervisors[supIndex] = updatedSup;
+                saveSupervisorsDatabase();
+                renderSupervisorTable();
+                closeModal();
+                alert("✅ Supervisor updated successfully!");
+            } else {
+                let newSup = {
+                    supId: Date.now(),
+                    empId: emp.empId,
+                    name: emp.name,
+                    contact: emp.contact,
+                    address: emp.address,
+                    userId: uId,
+                    password: pWord,
+                    status: "Active",
+                    pendingStatus: null
+                };
+
+                // OFFICE PORTAL: Route New Assignment to ApproveOffice.html
+                if (currentPortalMode === 'office') {
+                    openOfficeApprovalModal({
+                        type: 'CREATE',
+                        targetId: newSup.supId,
+                        actionLabel: "ASSIGN NEW SUPERVISOR",
+                        summary: `Assign ${newSup.name} as Supervisor (User ID: ${newSup.userId} | Contact: ${newSup.contact})`,
+                        oldData: null,
+                        newData: newSup
+                    });
+                    return;
+                }
+
+                // ADMIN DIRECT SAVE
+                supervisors.push(newSup);
+                saveSupervisorsDatabase();
+                renderSupervisorTable();
+                closeModal();
+                alert("✅ New Supervisor assigned successfully!");
+            }
+        }
+
+        // =========================================================================================
+        // OFFICE PORTAL APPROVAL MODAL ENGINE (ROUTES TO ApproveOffice.html)
+        // =========================================================================================
+        function openOfficeApprovalModal(payload) {
+            pendingOfficePayload = payload;
+            document.getElementById('officeApprovalSummary').value = `${payload.actionLabel}: ${payload.summary}`;
+            document.getElementById('officeApprovalReason').value = '';
+            document.getElementById('officeApprovalModal').classList.add('active');
+            setTimeout(() => document.getElementById('officeApprovalReason').focus(), 50);
+        }
+
+        function closeOfficeApprovalModal() {
+            document.getElementById('officeApprovalModal').classList.remove('active');
+            pendingOfficePayload = null;
+        }
+
+        function confirmOfficeApprovalRequest() {
+            const reason = document.getElementById('officeApprovalReason').value.trim();
+            if (!reason) {
+                alert("⚠️ Please enter a reason/remark for Admin Approval.");
+                return;
+            }
+            if (!pendingOfficePayload) return;
+
+            if (pendingOfficePayload.type === 'CREATE') {
+                supervisors.push({
+                    ...pendingOfficePayload.newData,
+                    pendingStatus: "Pending in ApproveOffice"
+                });
+                saveSupervisorsDatabase();
+                closeModal();
+            } else if (pendingOfficePayload.type === 'EDIT') {
+                const idx = supervisors.findIndex(s => String(s.supId) === String(pendingOfficePayload.targetId));
+                if (idx > -1) {
+                    supervisors[idx].pendingStatus = "Edit Pending";
+                    saveSupervisorsDatabase();
+                }
+                closeModal();
+            } else if (pendingOfficePayload.type === 'STATUS_TOGGLE') {
+                const idx = supervisors.findIndex(s => String(s.supId) === String(pendingOfficePayload.targetId));
+                if (idx > -1) {
+                    supervisors[idx].pendingStatus = `${pendingOfficePayload.newStatus} Pending`;
+                    saveSupervisorsDatabase();
+                }
+            } else if (pendingOfficePayload.type === 'DELETE') {
+                const idx = supervisors.findIndex(s => String(s.supId) === String(pendingOfficePayload.targetId));
+                if (idx > -1) {
+                    supervisors[idx].pendingStatus = "Delete Pending";
+                    saveSupervisorsDatabase();
+                }
+            }
+
+            // 1. Push Request to ApproveOffice.html queue
+            const newReq = {
+                reqId: "OFF-SUP-" + Date.now().toString().slice(-5),
+                userId: loggedUserId,
+                userName: loggedUserName,
+                designation: "Office Staff",
+                module: "AddSupervisor.html",
+                action: pendingOfficePayload.actionLabel,
+                summary: pendingOfficePayload.summary,
+                oldData: pendingOfficePayload.oldData,
+                newData: pendingOfficePayload.newData,
+                reason: reason,
+                timestamp: new Date().toLocaleString('en-IN'),
+                status: "Pending"
+            };
+
+            const officeQueue = JSON.parse(localStorage.getItem('atr_office_approvals')) || [];
+            officeQueue.unshift(newReq);
+            localStorage.setItem('atr_office_approvals', JSON.stringify(officeQueue));
+            localStorage.setItem('approve_office_requests', JSON.stringify(officeQueue));
+            localStorage.setItem('ApproveOffice_requests', JSON.stringify(officeQueue));
+
+            // 2. Log in Office Daily Work Report (office_dashboard_home.html)
+            const workLogs = JSON.parse(localStorage.getItem('atr_office_daily_work')) || [];
+            const todayStr = new Date().toISOString().split('T')[0];
+            const nowTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+            workLogs.unshift({
+                id: "WRK-" + Date.now().toString().slice(-5),
+                userId: loggedUserId,
+                userName: loggedUserName,
+                date: todayStr,
+                time: nowTime,
+                module: "Assign Supervisor (AddSupervisor.html)",
+                refNo: newReq.reqId,
+                desc: `${pendingOfficePayload.actionLabel}: ${pendingOfficePayload.summary}`,
+                status: "Sent for Approval"
+            });
+            localStorage.setItem('atr_office_daily_work', JSON.stringify(workLogs));
+
+            // 3. Refresh Parent OfficeDashboard.html Notification Bell if inside iframe
+            try {
+                if (window.parent && window.parent !== window && typeof window.parent.refreshNotificationsUI === 'function') {
+                    window.parent.refreshNotificationsUI();
+                }
+            } catch (e) {}
+
+            closeOfficeApprovalModal();
+            renderSupervisorTable();
+            alert("📤 Request sent to ApproveOffice.html for Admin Approval!");
+        }
+
+        // Initialize script
+        init();
+    </script>
+</body>
+</html>

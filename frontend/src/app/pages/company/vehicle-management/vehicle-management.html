@@ -1,0 +1,308 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1><i class="ri-truck-line"></i> {{ editingId() ? 'Edit Vehicle' : 'Vehicle Management' }}</h1>
+    <div style="display: flex; gap: 10px;">
+      @if (filteredVehicles().length) {
+        <button class="btn-export" (click)="exportExcel()"><i class="ri-file-excel-2-line"></i> Excel</button>
+      }
+    </div>
+  </div>
+
+  <!-- Service Due Notification Banner -->
+  @if (serviceDueVehicles().length) {
+    <div class="card-container" style="border-left: 4px solid var(--warning); margin-bottom: 0;">
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+        <i class="ri-alarm-warning-line" style="font-size: 20px; color: var(--warning);"></i>
+        <strong style="color: var(--warning);">Service Due Alerts ({{ serviceDueVehicles().length }})</strong>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+        @for (v of serviceDueVehicles(); track v.id) {
+          <div style="display: flex; align-items: center; gap: 8px; background: var(--input-bg); padding: 6px 14px; border-radius: 8px; font-size: 13px;">
+            <i class="ri-truck-line" style="color: var(--accent);"></i>
+            <strong>{{ v.vehicle_number }}</strong>
+            <span>—</span>
+            @if (v.daysUntilService <= 0) {
+              <span class="badge badge-danger">Overdue</span>
+            } @else {
+              <span class="badge badge-warning">{{ v.daysUntilService }} day{{ v.daysUntilService > 1 ? 's' : '' }} left</span>
+            }
+            <button class="btn-secondary" style="padding: 2px 8px; font-size: 11px;" (click)="openServiceLog(v.id)">
+              <i class="ri-add-line"></i> Log
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <app-summary-cards [cards]="summaryCards()"></app-summary-cards>
+
+  <!-- Vehicle Entry Form -->
+  <div class="card-container" style="margin-top: 20px;">
+    <h3 style="font-size: 14px; font-weight: 700; margin-bottom: 16px; color: var(--accent);">
+      {{ editingId() ? 'Edit Vehicle' : 'Add New Vehicle' }}
+    </h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Vehicle No <span style="color: var(--danger);">*</span></label>
+        <input type="text" [ngModel]="vehicleNo()" (ngModelChange)="vehicleNo.set($event)" name="vNo" placeholder="e.g., WB-26-A-1234" />
+      </div>
+      <div class="form-group">
+        <label>Vehicle Type <span style="color: var(--danger);">*</span></label>
+        <select [ngModel]="vehicleType()" (ngModelChange)="vehicleType.set($event)" name="vType">
+          <option value="">-- Select Type --</option>
+          @for (t of vehicleTypes; track t) {
+            <option [value]="t">{{ t }}</option>
+          }
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Owner Name</label>
+        <input type="text" [ngModel]="owner()" (ngModelChange)="owner.set($event)" name="owner" placeholder="Owner Name" />
+      </div>
+      <div class="form-group">
+        <label>Driver Name</label>
+        <input type="text" [ngModel]="driver()" (ngModelChange)="driver.set($event)" name="driver" placeholder="Driver Name" />
+      </div>
+      <div class="form-group">
+        <label>Fuel Type</label>
+        <select [ngModel]="fuelType()" (ngModelChange)="fuelType.set($event)" name="fuel">
+          <option value="">-- Select Fuel --</option>
+          @for (f of fuelTypes; track f) {
+            <option [value]="f">{{ f }}</option>
+          }
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Insurance Expiry</label>
+        <input type="date" [ngModel]="insuranceExpiry()" (ngModelChange)="insuranceExpiry.set($event)" name="insExp" />
+      </div>
+      <div class="form-group">
+        <app-searchable-dropdown
+          [items]="siteItems()"
+          [label]="'Assigned Site'"
+          [placeholder]="'Select Site...'"
+          [ngModel]="assignedSiteId()"
+          (ngModelChange)="assignedSiteId.set($event)"
+          name="site"
+        ></app-searchable-dropdown>
+      </div>
+    </div>
+    <div style="margin-top: 20px; display: flex; gap: 10px;">
+      <button class="btn-primary" (click)="saveVehicle()" [disabled]="saving()">
+        <i [class]="editingId() ? 'ri-save-line' : 'ri-add-line'"></i>
+        {{ saving() ? 'Saving...' : (editingId() ? 'Update Vehicle' : 'Add Vehicle') }}
+      </button>
+      @if (editingId()) {
+        <button class="btn-secondary" (click)="cancelEdit()">Cancel</button>
+      }
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="card-container" style="margin-top: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <h3 style="font-size: 14px; font-weight: 700; margin: 0;"><i class="ri-filter-3-line"></i> Filters</h3>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Search</label>
+        <input type="text" [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" placeholder="Search by Vehicle No, Owner, Driver..." name="search" />
+      </div>
+      <div class="form-group">
+        <label>Filter by Status</label>
+        <select [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)" name="sFilter">
+          <option value="">All Vehicles</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+          <option value="maintenance">Under Maintenance</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vehicle List -->
+  <div class="table-responsive" style="margin-top: 20px;">
+    @if (loading()) {
+      <div class="empty-state"><div class="skeleton" style="height: 200px;"></div></div>
+    } @else {
+      <table>
+        <thead>
+          <tr>
+            <th>Vehicle No</th>
+            <th>Type</th>
+            <th>Owner</th>
+            <th>Driver</th>
+            <th>Fuel</th>
+            <th>Site</th>
+            <th>Insurance</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (v of filteredVehicles(); track v.id) {
+            <tr>
+              <td style="font-weight: 700; font-family: monospace;">{{ v.vehicle_number }}</td>
+              <td>
+                <span class="badge badge-info">{{ v.vehicle_type }}</span>
+              </td>
+              <td>{{ v.owner_name ?? '—' }}</td>
+              <td>{{ v.driver_name ?? '—' }}</td>
+              <td>{{ v.fuel_type ?? '—' }}</td>
+              <td>
+                @if (v.assigned_site_id) {
+                  <span class="badge badge-success">{{ siteName(v.assigned_site_id) }}</span>
+                } @else {
+                  <span style="color: var(--text-secondary);">—</span>
+                }
+              </td>
+              <td>
+                @if (v.insurance_expiry) {
+                  <span>{{ v.insurance_expiry }}</span>
+                } @else {
+                  —
+                }
+              </td>
+              <td>
+                <span class="badge"
+                  [class.badge-success]="v.status === 'active' || !v.status"
+                  [class.badge-warning]="v.status === 'maintenance'"
+                  [class.badge-danger]="v.status === 'inactive'">
+                  {{ v.status ?? 'active' }}
+                </span>
+              </td>
+              <td>
+                <div style="display: flex; gap: 6px;">
+                  <button class="btn-secondary" style="padding: 4px 10px; font-size: 12px;" (click)="editVehicle(v)" title="Edit">
+                    <i class="ri-pencil-line"></i>
+                  </button>
+                  <button class="btn-primary" style="padding: 4px 10px; font-size: 12px;" (click)="openServiceLog(v.id)" title="Add Service Log">
+                    <i class="ri-tools-line"></i>
+                  </button>
+                  <button class="btn-secondary" style="padding: 4px 10px; font-size: 12px;" (click)="openServiceHistory(v.id)" title="Service History">
+                    <i class="ri-history-line"></i>
+                  </button>
+                  <button class="btn-danger" style="padding: 4px 10px; font-size: 12px;" (click)="deleteVehicle(v)" title="Delete">
+                    <i class="ri-delete-bin-line"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="9" class="empty-state">No vehicles found.</td></tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+
+  <!-- Add Service Log Modal -->
+  <app-modal-dialog [isOpen]="serviceModalOpen()" [title]="'Add Service Log — ' + (selectedVehicle()?.vehicle_number ?? '')" (closed)="closeServiceModal()" size="lg">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Service Date</label>
+        <input type="date" [ngModel]="serviceDate()" (ngModelChange)="serviceDate.set($event)" name="sDate" />
+      </div>
+      <div class="form-group">
+        <label>Service Type <span style="color: var(--danger);">*</span></label>
+        <select [ngModel]="serviceType()" (ngModelChange)="serviceType.set($event)" name="sType">
+          <option value="">-- Select --</option>
+          <option value="Oil Change">Oil Change</option>
+          <option value="Tyre Replacement">Tyre Replacement</option>
+          <option value="Engine Repair">Engine Repair</option>
+          <option value="Body Repair">Body Repair</option>
+          <option value="Brake Service">Brake Service</option>
+          <option value="Battery">Battery</option>
+          <option value="General Service">General Service</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Cost (₹)</label>
+        <input type="number" [ngModel]="serviceCost()" (ngModelChange)="serviceCost.set($event)" name="sCost" placeholder="Service Cost" />
+      </div>
+      <div class="form-group">
+        <label>Odometer (km)</label>
+        <input type="number" [ngModel]="serviceOdometer()" (ngModelChange)="serviceOdometer.set($event)" name="sOdo" placeholder="Current Reading" />
+      </div>
+      <div class="form-group">
+        <label>Payment Bank</label>
+        <select [ngModel]="serviceBank()" (ngModelChange)="serviceBank.set($event)" name="sBank">
+          <option value="">-- Select Bank --</option>
+          <option value="Cash">Cash</option>
+          @for (b of bankOptions(); track b.id ?? $index) {
+            <option [value]="b.bank_name ?? b.name">{{ b.bank_name ?? b.name }}</option>
+          }
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Next Service Due</label>
+        <input type="date" [ngModel]="serviceNextDue()" (ngModelChange)="serviceNextDue.set($event)" name="sNext" />
+      </div>
+      <div class="form-group" style="grid-column: 1 / -1;">
+        <label>Remarks</label>
+        <textarea rows="2" [ngModel]="serviceRemarks()" (ngModelChange)="serviceRemarks.set($event)" name="sRemarks" placeholder="Service remarks..."></textarea>
+      </div>
+    </div>
+    <div modal-footer>
+      <button class="btn-primary" (click)="addServiceLog()" [disabled]="!serviceType()">
+        <i class="ri-add-line"></i> Add Service Log
+      </button>
+    </div>
+  </app-modal-dialog>
+
+  <!-- Service History Modal -->
+  <app-modal-dialog [isOpen]="serviceHistoryModalOpen()" [title]="'Service History — ' + (selectedVehicle()?.vehicle_number ?? '')" (closed)="closeServiceHistory()" size="xl">
+    @if (serviceLogsLoading()) {
+      <div class="empty-state"><div class="skeleton" style="height: 150px;"></div></div>
+    } @else {
+      @if (serviceLogs().length) {
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
+          <span style="font-weight: 700; font-size: 14px; color: var(--accent);">
+            Total Expense: ₹{{ totalServiceExpense().toLocaleString() }}
+          </span>
+        </div>
+      }
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Type</th>
+              <th>Cost (₹)</th>
+              <th>Odometer</th>
+              <th>Bank</th>
+              <th>Next Due</th>
+              <th>Remarks</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (log of serviceLogs(); track log.id ?? $index) {
+              <tr>
+                <td>{{ log.service_date }}</td>
+                <td><span class="badge badge-info">{{ log.service_type }}</span></td>
+                <td style="font-weight: 700; color: var(--danger);">₹{{ (log.cost ?? 0).toLocaleString() }}</td>
+                <td>{{ log.odometer_reading ? log.odometer_reading + ' km' : '—' }}</td>
+                <td>{{ log.serviced_by ?? '—' }}</td>
+                <td>{{ log.next_service_date ?? '—' }}</td>
+                <td>{{ log.remarks ?? '—' }}</td>
+              </tr>
+            } @empty {
+              <tr><td colspan="7" class="empty-state">No service logs for this vehicle.</td></tr>
+            }
+          </tbody>
+          @if (serviceLogs().length) {
+            <tfoot>
+              <tr style="font-weight: 800; background: var(--input-bg);">
+                <td colspan="2" style="text-align: right;">Total</td>
+                <td style="color: var(--danger);">₹{{ totalServiceExpense().toLocaleString() }}</td>
+                <td colspan="4"></td>
+              </tr>
+            </tfoot>
+          }
+        </table>
+      </div>
+    }
+  </app-modal-dialog>
+</div>

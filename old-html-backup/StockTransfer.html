@@ -1,0 +1,1753 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Stock Transfer Management</title>
+    
+    <!-- Sync theme with Master Dashboard -->
+    <script>
+        function applyDashboardTheme() {
+            const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        }
+        applyDashboardTheme();
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'atr_theme' || !e.key) {
+                applyDashboardTheme();
+            }
+        });
+    </script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- SheetJS CDN for XLSX Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- HTML2PDF CDN for PDF Download -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <style>
+        :root {
+            --bg-body: transparent; 
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #b0b0b0;
+            --border-color: rgba(255, 255, 255, 0.12);
+            
+            /* Dynamic Glass & Input Variables */
+            --glass-bg: rgba(30, 30, 30, 0.75);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --input-bg: rgba(15, 15, 15, 0.6);
+            --input-focus-bg: rgba(20, 20, 20, 0.9);
+            
+            --shadow: 0 4px 20px rgba(0,0,0,0.4);
+            
+            /* Primary Theme Color (#9c27b0) */
+            --theme-color: #9c27b0;
+            --theme-glow: rgba(156, 39, 176, 0.3);
+            --theme-transition: all 0.3s ease;
+        }
+
+        [data-theme="light"] {
+            --bg-body: transparent;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #666666;
+            --border-color: rgba(0, 0, 0, 0.12);
+            
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(0, 0, 0, 0.1);
+            --input-bg: rgba(240, 240, 240, 0.8);
+            --input-focus-bg: #ffffff;
+            
+            --shadow: 0 8px 25px rgba(0,0,0,0.06);
+        }
+
+        /* Crisp Font Rendering */
+        * { 
+            margin: 0; padding: 0; box-sizing: border-box; 
+            font-family: 'Montserrat', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+        }
+        
+        body { background-color: var(--bg-body); color: var(--text-main); height: 100vh; overflow: hidden; display: flex; flex-direction: column; transition: var(--theme-transition); }
+        .main-content { padding: 20px 40px; width: 100%; max-width: 1600px; margin: 0 auto; flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* FIXED HEADER */
+        .header { 
+            flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; 
+            margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; 
+            flex-wrap: wrap; gap: 15px; transition: var(--theme-transition); 
+        }
+        .header-left { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+        .header h1 { font-size: 22px; color: var(--theme-color); font-weight: 700; white-space: nowrap; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        
+        .role-mode-badge {
+            display: none;
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 700;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-back-dash { 
+            background-color: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color); 
+            text-decoration: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; font-size: 12px; 
+            transition: all 0.3s; display: flex; align-items: center; width: max-content; cursor: pointer;
+        }
+        .btn-back-dash:hover { background-color: var(--theme-color); color: #ffffff; border-color: var(--theme-color); transform: translateY(-2px); box-shadow: 0 4px 10px var(--theme-glow); }
+
+        .header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        
+        .search-input { 
+            background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main); 
+            padding: 10px 15px; border-radius: 6px; font-size: 13px; font-weight: 500; outline: none; transition: 0.3s; 
+            width: 220px; height: 41px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); 
+        }
+        .search-input:focus { border-color: var(--theme-color); box-shadow: 0 0 8px var(--theme-glow); }
+
+        /* FILTER PANEL & TABLE PANEL (With Proper Z-Index Layering) */
+        .filter-section { 
+            background: var(--bg-card); padding: 15px 20px; border-radius: 10px; margin-bottom: 15px; 
+            display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color); 
+            border-left: 4px solid var(--theme-color); box-shadow: var(--shadow); flex-shrink: 0; gap: 15px; 
+            flex-wrap: wrap; transition: var(--theme-transition); position: relative; z-index: 50;
+        }
+        .filter-title { font-size: 14px; font-weight: bold; color: var(--theme-color); text-transform: uppercase; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+
+        .table-container { 
+            flex: 1; background: var(--bg-card); border-radius: 10px 10px 0 0; border: 1px solid var(--border-color); 
+            border-top: 4px solid var(--theme-color); box-shadow: var(--shadow); display: flex; flex-direction: column; 
+            overflow: hidden; min-height: 0; transition: var(--theme-transition); position: relative; z-index: 1;
+        }
+        .table-scroll { flex: 1; overflow-y: auto; padding: 0 15px; }
+        
+        .table-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+        .table-scroll::-webkit-scrollbar-track { background: transparent; }
+        .table-scroll::-webkit-scrollbar-thumb { background: rgba(156, 39, 176, 0.3); border-radius: 4px; }
+        .table-scroll::-webkit-scrollbar-thumb:hover { background: var(--theme-color); }
+
+        /* FORM ELEMENTS IN MODAL (Stacking Context Fixed for Dropdowns) */
+        .panel { 
+            background: var(--glass-bg); padding: 25px; border-radius: 10px; margin-bottom: 20px; 
+            border: 1px solid var(--border-color); border-top: 3px solid var(--theme-color); box-shadow: var(--shadow);
+            position: relative; overflow: visible;
+        }
+        .panel.panel-top { z-index: 40; }
+        .panel.panel-mid { z-index: 30; }
+        .panel.panel-cart { z-index: 10; padding: 0; overflow: hidden; }
+        .panel.panel-bottom { z-index: 5; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; }
+        .form-group { display: flex; flex-direction: column; gap: 8px; position: relative; }
+        .form-group label { font-size: 12px; color: var(--text-muted); font-weight: bold; text-transform: uppercase; }
+        
+        .form-control { 
+            background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main); 
+            padding: 10px 15px; border-radius: 6px; font-size: 13px; font-weight: 500; outline: none; transition: all 0.3s; 
+            width: 100%; height: 41px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); color-scheme: dark;
+        }
+        [data-theme="light"] .form-control { color-scheme: light; }
+        .form-control:focus { border-color: var(--theme-color); box-shadow: 0 0 8px var(--theme-glow); }
+        .form-control[readonly] { background-color: rgba(0,0,0,0.15); color: var(--text-muted); cursor: not-allowed; }
+        
+        .form-control[type="date"] { cursor: pointer; }
+        ::-webkit-calendar-picker-indicator { filter: invert(0.8); cursor: pointer; }
+        [data-theme="light"] ::-webkit-calendar-picker-indicator { filter: invert(0); }
+
+        .item-row-grid { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 15px; align-items: start; }
+        @media(max-width: 900px) { .item-row-grid { grid-template-columns: 1fr; } }
+
+        /* BUTTONS */
+        .btn { 
+            padding: 10px 18px; border-radius: 6px; font-weight: 700; font-size: 12px; cursor: pointer; border: none; 
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-transform: uppercase; 
+            transition: all 0.3s; height: 41px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+        }
+        .btn:hover { transform: translateY(-2px); }
+        .btn-primary { background-color: var(--theme-color); color: #ffffff; box-shadow: 0 4px 10px var(--theme-glow); }
+        .btn-primary:hover { filter: brightness(1.1); box-shadow: 0 6px 15px var(--theme-glow); }
+        
+        .btn-submit { background-color: #28a745; color: #ffffff; padding: 12px 30px; font-size: 14px; height: auto; box-shadow: 0 4px 10px rgba(40,167,69,0.3); }
+        .btn-submit:hover { background-color: #218838; }
+        
+        .btn-export { background: rgba(25, 135, 84, 0.15); color: #198754; border: 1px solid rgba(25, 135, 84, 0.4); }
+        .btn-export:hover { background-color: #198754; color: #ffffff; }
+        
+        /* UNIFORM ACTION BUTTONS */
+        .btn-action-edit, .btn-challan, .btn-view-items, .btn-view, .btn-action-delete {
+            width: 88px; height: 30px; padding: 4px 6px; font-size: 11px; font-weight: bold; border-radius: 4px; 
+            text-align: center; display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; 
+            overflow: hidden; text-overflow: ellipsis; box-sizing: border-box; text-transform: uppercase; cursor: pointer; transition: 0.2s;
+        }
+
+        .action-buttons-container { display: flex; gap: 5px; justify-content: center; align-items: center; }
+        
+        .btn-action-edit { background: rgba(255, 193, 7, 0.15); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.4); }
+        .btn-action-edit:hover { background: #ffc107; color: #121212; }
+        
+        .btn-action-delete { background: rgba(220, 53, 69, 0.15); color: #dc3545; border: 1px solid rgba(220, 53, 69, 0.4); }
+        .btn-action-delete:hover { background: #dc3545; color: #ffffff; }
+
+        .btn-pick { background: rgba(23, 162, 184, 0.15); color: #17a2b8; border: 1px solid rgba(23, 162, 184, 0.4); padding: 6px 12px; font-size: 11px; font-weight: bold; border-radius: 4px; margin-right: 5px; cursor: pointer; text-transform: uppercase; transition: 0.2s; }
+        .btn-pick:hover { background: #17a2b8; color: #ffffff; }
+        
+        .btn-remove { background: rgba(220, 53, 69, 0.15); color: #dc3545; border: 1px solid rgba(220, 53, 69, 0.4); padding: 6px 12px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: 0.2s; }
+        .btn-remove:hover { background: #dc3545; color: #ffffff; }
+        
+        .btn-view-items { background: rgba(156, 39, 176, 0.15); color: var(--theme-color); border: 1px solid rgba(156, 39, 176, 0.4); }
+        .btn-view-items:hover { background: var(--theme-color); color: #ffffff; }
+        
+        .btn-challan { background: rgba(13, 202, 240, 0.15); color: #0dcaf0; border: 1px solid rgba(13, 202, 240, 0.4); text-decoration: none; }
+        .btn-challan:hover { background: #0dcaf0; color: #121212; }
+
+        .btn-view { background: rgba(23, 162, 184, 0.15); color: #17a2b8; border: 1px solid rgba(23, 162, 184, 0.4); text-decoration: none; }
+        .btn-view:hover { background: #17a2b8; color: #ffffff; }
+
+        .pending-status-pill {
+            display: inline-block;
+            background: rgba(255, 193, 7, 0.16);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.45);
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            margin-top: 4px;
+            text-transform: uppercase;
+        }
+
+        /* TABLES & STICKY HEADER */
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        thead th { 
+            position: sticky; top: 0; background-color: var(--input-bg); z-index: 5; padding: 15px 10px; 
+            color: var(--theme-color); font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; 
+            border-bottom: 2px solid var(--theme-color); white-space: nowrap; transition: var(--theme-transition); 
+        }
+        tbody td { 
+            padding: 12px 10px; border-bottom: 1px solid var(--border-color); font-size: 13px; color: var(--text-main); 
+            vertical-align: middle; transition: var(--theme-transition); font-weight: 500; 
+        }
+        tbody tr:hover { background: var(--glass-bg); }
+        .empty-row { text-align: center; padding: 40px; color: var(--text-muted); font-size: 14px; font-weight: 600; }
+
+        .nowrap-date { white-space: nowrap; }
+
+        /* NESTED TREE / SUB-ROW STYLING */
+        .sub-row { background-color: var(--input-bg); display: none; }
+        .sub-row.show { display: table-row; }
+        .nested-table { width: 95%; margin: 10px auto; background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border-color); overflow: hidden; }
+        .nested-table th { background: var(--input-bg); font-size: 10px; color: var(--theme-color); padding: 8px 12px; border-bottom: 1px solid var(--border-color); }
+        .nested-table td { padding: 8px 12px; font-size: 12px; border-bottom: 1px solid var(--border-color); }
+
+        /* MODAL OVERLAY & CONTAINER */
+        .modal-overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); 
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 1000; display: none; 
+            justify-content: center; align-items: center; padding: 20px; 
+        }
+        .modal-overlay.show { display: flex; }
+        
+        .modal-container { 
+            background: var(--bg-card); width: 100%; max-width: 950px; max-height: 95vh; overflow-y: auto; 
+            border-radius: 12px; border: 1px solid var(--theme-color); box-shadow: 0 15px 40px rgba(0,0,0,0.5); 
+            position: relative; display: flex; flex-direction: column; transition: var(--theme-transition); 
+        }
+        .modal-header { 
+            position: sticky; top: 0; background: var(--bg-card); padding: 20px 25px; border-bottom: 1px solid var(--border-color); 
+            z-index: 20; display: flex; justify-content: space-between; align-items: center; border-radius: 12px 12px 0 0; 
+        }
+        .modal-header h2 { font-size: 18px; color: var(--theme-color); margin: 0; font-weight: 700; }
+        .close-btn { font-size: 28px; color: var(--text-muted); cursor: pointer; line-height: 1; transition: 0.2s; }
+        .close-btn:hover { color: #dc3545; }
+        .modal-body { padding: 25px; flex: 1; overflow-y: auto; }
+
+        /* A4 CHALLAN SHEET STYLING - UPDATED FOR PRINT FIXES */
+        .a4-challan {
+            width: 210mm;
+            min-height: 296mm;
+            padding: 15mm;
+            margin: 0 auto;
+            background: #ffffff;
+            color: #000000;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .challan-content-flex {
+            flex: 1;
+        }
+
+        @media print {
+            @page { size: A4 portrait; margin: 0; }
+            html, body { height: auto !important; overflow: visible !important; background: #ffffff !important; color: #000000 !important; }
+            .main-content, #entryModal, #previewModal, #roleApprovalModal { display: none !important; }
+            #challanModal, #challanModal * { visibility: visible !important; }
+            #challanModal {
+                position: static !important; width: 100% !important; height: auto !important;
+                background: white !important; padding: 0 !important; margin: 0 !important; display: block !important;
+            }
+            .modal-container { 
+                max-width: 100% !important; max-height: none !important; border: none !important; 
+                box-shadow: none !important; background: white !important; overflow: visible !important; 
+            }
+            .modal-body { overflow: visible !important; padding: 0 !important; background: white !important; }
+            .modal-header, .no-print { display: none !important; }
+            .a4-challan { 
+                box-shadow: none !important; margin: 0 auto !important; width: 210mm !important; padding: 15mm !important; 
+                min-height: 296mm !important;
+            }
+        }
+
+        /* CUSTOM ULTRA-SMOOTH SEARCHABLE DROPDOWN */
+        .custom-select { position: relative; min-width: 220px; user-select: none; }
+        .select-header { 
+            background: var(--input-bg); border: 1px solid var(--border-color); padding: 10px 15px; border-radius: 6px; 
+            cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s ease; 
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); font-size: 13px; font-weight: 600; color: var(--text-main); height: 41px; 
+        }
+        .select-header:hover { border-color: rgba(156, 39, 176, 0.5); }
+        .select-header.active { border-color: var(--theme-color); box-shadow: 0 0 8px var(--theme-glow); background: var(--input-focus-bg); }
+        .select-header .arrow { transition: transform 0.3s ease; font-size: 14px; }
+        .select-header.active .arrow { transform: rotate(180deg); color: var(--theme-color); }
+        
+        .select-options-container { 
+            position: absolute; top: calc(100% + 8px); left: 0; width: 100%; background: var(--bg-card); 
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--theme-color); 
+            border-radius: 8px; box-shadow: 0 15px 35px rgba(0,0,0,0.65); z-index: 999; opacity: 0; visibility: hidden; 
+            transform: translateY(-10px); transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); overflow: hidden; 
+        }
+        [data-theme="light"] .select-options-container { box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
+        .select-options-container.active { opacity: 1; visibility: visible; transform: translateY(0); }
+        
+        .select-search { padding: 10px; border-bottom: 1px solid var(--border-color); background: rgba(0,0,0,0.2); }
+        [data-theme="light"] .select-search { background: rgba(255,255,255,0.5); }
+        .select-search input { 
+            width: 100%; padding: 8px 12px; background: var(--input-bg); border: 1px solid var(--border-color); 
+            border-radius: 4px; color: var(--text-main); font-size: 13px; font-weight: 500; outline: none; transition: 0.3s; 
+        }
+        .select-search input:focus { border-color: var(--theme-color); }
+        
+        .select-options { max-height: 220px; overflow-y: auto; list-style: none; margin: 0; padding: 5px 0; }
+        .select-options::-webkit-scrollbar { width: 6px; }
+        .select-options::-webkit-scrollbar-thumb { background: rgba(156, 39, 176, 0.4); border-radius: 3px; }
+        .select-options li { 
+            padding: 10px 15px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text-main); 
+            transition: background 0.2s; border-bottom: 1px solid rgba(255,255,255,0.02); 
+        }
+        .select-options li:hover { background: var(--theme-color); color: #ffffff; }
+        .option-office { color: #ffc107; font-weight: bold; }
+        .item-meta { display: block; font-size: 10px; color: var(--text-muted); margin-top: 3px; }
+        .select-options li:hover .item-meta { color: rgba(255,255,255,0.8); }
+    </style>
+</head>
+<body>
+
+    <!-- ================= MAIN FRONT VIEW PAGE ================= -->
+    <div class="main-content">
+        <div class="header">
+            <div class="header-left">
+                <a href="dashboard_home.html" id="btnBackDashboard" class="btn-back-dash" onclick="handleBackToDashboard(event)">← Back to Dashboard</a>
+                <h1>
+                    🚚 Stock Transfer Management
+                    <span id="roleModeBadge" class="role-mode-badge">🏢 Office Mode</span>
+                </h1>
+            </div>
+            <div class="header-actions">
+                <input type="text" id="ledgerSearchInput" class="search-input" placeholder="🔍 Search Transfer ID..." onkeyup="renderTransferLedger()">
+                <button class="btn btn-export" onclick="exportTransfersToExcel()">📤 Export Excel</button>
+                <button class="btn btn-primary" onclick="openEntryModal()">➕ New Transfer Entry</button>
+            </div>
+        </div>
+
+        <div class="filter-section">
+            <div class="filter-title">📋 Stock Transfer Records</div>
+            
+            <!-- SITE-WISE CUSTOM SEARCHABLE DROPDOWN FILTER -->
+            <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                <div class="custom-select" id="ledgerSiteFilterDropdown">
+                    <div class="select-header">
+                        <span class="selected-text">🌍 All Sites</span>
+                        <span class="arrow">▼</span>
+                    </div>
+                    <div class="select-options-container">
+                        <div class="select-search">
+                            <input type="text" placeholder="Filter site..." class="search-input-dropdown">
+                        </div>
+                        <ul class="select-options" id="ledgerSiteList">
+                            <!-- Populated via JS -->
+                        </ul>
+                    </div>
+                </div>
+                <input type="hidden" id="selectedLedgerSiteFilter" value="">
+            </div>
+        </div>
+
+        <div class="table-container">
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Transfer ID</th>
+                            <th>Date</th>
+                            <th>Transfer From</th>
+                            <th>Transfer To</th>
+                            <th>Items Count</th>
+                            <th>Challan No</th>
+                            <th style="text-align: center;">Challan Action</th>
+                            <th style="text-align: center;">View Items (Tree)</th>
+                            <th style="text-align: center;">Challan Proof</th>
+                            <th style="text-align: center;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transferTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ================= STOCK TRANSFER ENTRY MODAL ================= -->
+    <div class="modal-overlay" id="entryModal">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2 id="modalTitle">📦 New Stock Transfer Entry</h2>
+                <span class="close-btn" onclick="closeEntryModal()">&times;</span>
+            </div>
+            
+            <div class="modal-body">
+                <div class="panel panel-top">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Transfer Date</label>
+                            <input type="date" id="transferDate" class="form-control">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Transfer From (Source Site)</label>
+                            <div class="custom-select" id="fromSiteDropdown" style="width: 100%;">
+                                <div class="select-header">
+                                    <span class="selected-text" style="color: var(--text-muted);">-- Choose Source Site --</span>
+                                    <span class="arrow">▼</span>
+                                </div>
+                                <div class="select-options-container">
+                                    <div class="select-search">
+                                        <input type="text" placeholder="Search source..." class="search-input-dropdown">
+                                    </div>
+                                    <ul class="select-options" id="fromSiteList">
+                                        <!-- Populated via JS -->
+                                    </ul>
+                                </div>
+                            </div>
+                            <input type="hidden" id="selectedFromSite">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Transfer To (Destination Site)</label>
+                            <div class="custom-select" id="toSiteDropdown" style="width: 100%;">
+                                <div class="select-header">
+                                    <span class="selected-text" style="color: var(--text-muted);">-- Choose Destination Site --</span>
+                                    <span class="arrow">▼</span>
+                                </div>
+                                <div class="select-options-container">
+                                    <div class="select-search">
+                                        <input type="text" placeholder="Search destination..." class="search-input-dropdown">
+                                    </div>
+                                    <ul class="select-options" id="toSiteList">
+                                        <!-- Populated via JS -->
+                                    </ul>
+                                </div>
+                            </div>
+                            <input type="hidden" id="selectedToSite">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel panel-mid">
+                    <div class="item-row-grid">
+                        <div class="form-group">
+                            <label>Product (Active at Source)</label>
+                            <div class="custom-select" id="productDropdown" style="width: 100%;">
+                                <div class="select-header">
+                                    <span class="selected-text" style="color: var(--text-muted);">-- Select Product --</span>
+                                    <span class="arrow">▼</span>
+                                </div>
+                                <div class="select-options-container">
+                                    <div class="select-search">
+                                        <input type="text" placeholder="Search product..." class="search-input-dropdown">
+                                    </div>
+                                    <ul class="select-options" id="productList">
+                                        <!-- Populated via JS -->
+                                    </ul>
+                                </div>
+                            </div>
+                            <input type="hidden" id="selectedProductName">
+                            <input type="hidden" id="selectedProductUnit">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Available Stock</label>
+                            <input type="text" id="availableStock" class="form-control" readonly placeholder="0">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Transfer Qty</label>
+                            <input type="number" id="transferQty" class="form-control" placeholder="Qty" min="0.01" step="any">
+                        </div>
+
+                        <div class="form-group" style="justify-content: flex-end;">
+                            <label style="visibility: hidden; display: block; margin-bottom: 8px;">Action</label>
+                            <button type="button" class="btn btn-primary" onclick="addToCart()" style="width: 100%;">➕ Add to Cart</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel panel-cart">
+                    <table style="margin-top: 0; border: none;">
+                        <thead style="background: rgba(0,0,0,0.2);">
+                            <tr>
+                                <th style="border-top: none;">Product Name</th>
+                                <th style="border-top: none;">Transfer Qty</th>
+                                <th style="border-top: none;">Unit</th>
+                                <th style="text-align: center; border-top: none;">Preview Action (Edit / Remove)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cartTableBody">
+                            <tr><td colspan="4" class="empty-row">Cart is empty. Add products to transfer.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="panel panel-bottom" style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="generateChallanCheck" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--theme-color);">
+                        <label for="generateChallanCheck" style="font-size: 13px; font-weight: bold; cursor: pointer; color: #0dcaf0;">Generate Challan?</label>
+                    </div>
+
+                    <button type="button" id="btnSubmitTransferMain" class="btn btn-submit" onclick="submitTransfer()">✅ Submit Transfer Entry</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ================= A4 CHALLAN VIEW / DOWNLOAD MODAL ================= -->
+    <div class="modal-overlay" id="challanModal" style="z-index: 2100;">
+        <div class="modal-container" style="max-width: 850px;">
+            <div class="modal-header no-print">
+                <h2>📄 Delivery Challan Preview (A4 Size)</h2>
+                <span class="close-btn" onclick="closeChallanModal()">&times;</span>
+            </div>
+            <!-- Wrap in an ID for PDF export -->
+            <div class="modal-body" style="padding: 20px; background: rgba(0,0,0,0.2); overflow-x: auto;">
+                <div id="challanContent" class="a4-challan"></div>
+            </div>
+            <div style="background: var(--bg-card); padding: 15px; text-align: right; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 10px;" class="no-print">
+                <button type="button" class="btn btn-export" onclick="downloadChallanPDF()">📥 Download PDF</button>
+                <button type="button" class="btn btn-primary" onclick="window.print()">🖨️ Print A4 Challan</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ================= PROOF PREVIEW & UPLOADER MODAL ================= -->
+    <div class="modal-overlay" id="previewModal" style="z-index: 2200;">
+        <div class="modal-container" style="max-width: 600px; text-align: center;">
+            <div class="modal-header">
+                <h2>📄 Challan Proof & Uploader</h2>
+                <span class="close-btn" onclick="closePreviewModal()">&times;</span>
+            </div>
+            <div class="modal-body" id="previewContainer" style="padding: 20px; display: flex; justify-content: center; align-items: center; flex-direction: column; gap: 15px;">
+                <!-- Rendered dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= OFFICE / SUPERVISOR APPROVAL MODAL ================= -->
+    <div class="modal-overlay" id="roleApprovalModal" style="z-index: 2500;">
+        <div class="modal-container" style="max-width: 480px; border-color: #ffc107;">
+            <div class="modal-header">
+                <h2 id="roleApprovalTitle" style="color: #ffc107;">🏢 Send Request to ApproveOffice.html</h2>
+                <span class="close-btn" onclick="closeRoleApprovalModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p id="roleApprovalDesc" style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.5;">
+                    অফিস পোর্টাল থেকে নতুন স্টক ট্রান্সফার, এডিট বা ডিলিট করলে তা অ্যাডমিনের <strong>ApproveOffice.html</strong>-এ পাঠানো হবে। অ্যাডমিন অ্যাপ্রুভ করলেই এটি চূড়ান্ত হবে।
+                </p>
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label>Transfer Action Summary</label>
+                    <input type="text" id="roleApprovalSummary" class="form-control" readonly style="color: #ffc107; font-weight: 700;">
+                </div>
+                <div class="form-group" style="margin-bottom: 18px;">
+                    <label>Reason / Remarks for Approval <span style="color: #dc3545;">*</span></label>
+                    <textarea id="roleApprovalReason" class="form-control" rows="3" placeholder="Explain why this stock transfer action is needed..." style="height: auto; resize: none;"></textarea>
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" class="btn btn-action-delete" style="width: auto; height: 40px; padding: 0 18px;" onclick="closeRoleApprovalModal()">Cancel</button>
+                    <button type="button" class="btn" style="height: 40px; background: #ffc107; color: #121212;" onclick="confirmRoleApprovalRequest()">📤 Send for Approval</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================================================
+        // 1. PORTAL ROLE DETECTION (ADMIN / OFFICE STAFF / SUPERVISOR) & LOCALSTORAGE ENGINE
+        // =========================================================================================
+        const ADMIN_PASSWORD = "admin"; // Accepts both 'admin' and 'admin123'
+        let currentPortalMode = "admin"; // 'admin', 'office', or 'supervisor'
+        let isSupervisorMode = false;
+        let loggedUserId = "ADMIN";
+        let loggedUserName = "Super Admin";
+        let assignedSite = "";
+
+        let editingTransferId = null;
+        let pendingRolePayload = null;
+        let cart = [];
+
+        const defaultSiteInventory = [
+            { site: "🏢 Office Stock (Main)", itemName: "Ambuja Cement PPC", unit: "Bags", stock: 500 },
+            { site: "🏢 Office Stock (Main)", itemName: "Tata Tiscon TMT Bar 8mm", unit: "Kg", stock: 2000 },
+            { site: "🏢 Office Stock (Main)", itemName: "Red Bricks", unit: "Pcs", stock: 5000 },
+            { site: "Dum Dum Project", itemName: "Red Bricks", unit: "Pcs", stock: 8000 },
+            { site: "Dum Dum Project", itemName: "Ambuja Cement PPC", unit: "Bags", stock: 120 },
+            { site: "Barasat Highway", itemName: "River Sand", unit: "Cft", stock: 1500 },
+            { site: "Salt Lake Sector V", itemName: "Ambuja Cement PPC", unit: "Bags", stock: 250 }
+        ];
+
+        const defaultTransferRecords = [
+            { 
+                id: "TRF-8492", 
+                date: "04-08-2026", 
+                fromSite: "🏢 Office Stock (Main)", 
+                toSite: "Dum Dum Project", 
+                challanNo: "CHL-2026-9012", 
+                proofUrl: "",
+                proofName: "challan_sample.pdf",
+                isPdf: true,
+                pendingStatus: null,
+                items: [
+                    { name: "Ambuja Cement PPC", unit: "Bags", qty: 50 },
+                    { name: "Tata Tiscon TMT Bar 8mm", unit: "Kg", qty: 100 }
+                ]
+            }
+        ];
+
+        const sites = [
+            "🏢 Office Stock (Main)", 
+            "Dum Dum Project", 
+            "Commercial Complex B3", 
+            "Barasat Highway", 
+            "Rajarhat Extension",
+            "Salt Lake Sector V",
+            "New Town Action Area 1"
+        ];
+
+        let siteInventory = [];
+        let transferRecords = [];
+
+        function loadAndSyncDatabases() {
+            const storedInv = JSON.parse(localStorage.getItem('atr_site_inventory_db'));
+            if (Array.isArray(storedInv) && storedInv.length > 0) {
+                siteInventory = storedInv;
+            } else {
+                siteInventory = JSON.parse(JSON.stringify(defaultSiteInventory));
+                localStorage.setItem('atr_site_inventory_db', JSON.stringify(siteInventory));
+            }
+
+            // Merge any newly added stock from StockView.html (atr_submitted_stocks_db)
+            const submittedStocks = JSON.parse(localStorage.getItem('atr_submitted_stocks_db')) || [];
+            submittedStocks.forEach(s => {
+                if (!s.site || !s.itemName) return;
+                const existing = siteInventory.find(i => i.site.toLowerCase() === s.site.toLowerCase() && i.itemName.toLowerCase() === s.itemName.toLowerCase());
+                if (!existing) {
+                    siteInventory.push({
+                        site: s.site,
+                        itemName: s.itemName,
+                        unit: s.unit || "Unit",
+                        stock: Number(s.qty) || 0
+                    });
+                }
+            });
+
+            const storedTransfers = JSON.parse(localStorage.getItem('atr_stock_transfers_db'));
+            if (Array.isArray(storedTransfers) && storedTransfers.length > 0) {
+                transferRecords = storedTransfers;
+            } else {
+                transferRecords = JSON.parse(JSON.stringify(defaultTransferRecords));
+                saveTransfersToStorage();
+            }
+        }
+
+        function saveTransfersToStorage() {
+            localStorage.setItem('atr_site_inventory_db', JSON.stringify(siteInventory));
+            try {
+                localStorage.setItem('atr_stock_transfers_db', JSON.stringify(transferRecords));
+            } catch (err) {
+                const lightCopy = transferRecords.map(t => ({
+                    ...t,
+                    proofUrl: t.proofUrl && t.proofUrl.length > 300000 ? "" : t.proofUrl
+                }));
+                localStorage.setItem('atr_stock_transfers_db', JSON.stringify(lightCopy));
+            }
+        }
+
+        function checkPortalPermissions() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewParam = (urlParams.get('view') || '').toLowerCase();
+            const siteParam = urlParams.get('site');
+
+            let parentPath = "";
+            try {
+                if (window.parent && window.parent !== window) {
+                    parentPath = (window.parent.location.pathname || '').toLowerCase();
+                }
+            } catch (e) {}
+
+            const badge = document.getElementById('roleModeBadge');
+            const backBtn = document.getElementById('btnBackDashboard');
+            const submitBtn = document.getElementById('btnSubmitTransferMain');
+
+            if (viewParam === 'supervisor' || parentPath.includes('supervisordashboard')) {
+                currentPortalMode = 'supervisor';
+                isSupervisorMode = true;
+                assignedSite = (siteParam || sessionStorage.getItem('atr_supervisor_site') || "Salt Lake Sector V").trim();
+                loggedUserId = urlParams.get('supId') || "SUP-003";
+                loggedUserName = urlParams.get('supName') || "Supervisor";
+
+                if (!sites.includes(assignedSite)) sites.push(assignedSite);
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🔒 Site Locked: ${assignedSite}`;
+                }
+                if (backBtn) {
+                    backBtn.href = "supervisor/supervisor_dashboard_home.html";
+                }
+                if (submitBtn) {
+                    submitBtn.innerText = "📤 Submit Transfer for Approval";
+                }
+            } else if (viewParam === 'office' || parentPath.includes('officedashboard')) {
+                currentPortalMode = 'office';
+                isSupervisorMode = false;
+                assignedSite = "";
+                loggedUserId = urlParams.get('userId') || sessionStorage.getItem('atr_logged_office_id') || localStorage.getItem('atr_logged_office_id') || "OFF-101";
+                loggedUserName = urlParams.get('userName') || "Office Staff";
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🏢 Office Mode (${loggedUserName}) — Synced with ApproveOffice.html`;
+                }
+                if (backBtn) {
+                    backBtn.href = "office/office_dashboard_home.html";
+                }
+                if (submitBtn) {
+                    submitBtn.innerText = "📤 Submit Transfer for Approval";
+                }
+            } else {
+                currentPortalMode = 'admin';
+                isSupervisorMode = false;
+                assignedSite = "";
+                if (backBtn) {
+                    backBtn.href = "dashboard_home.html";
+                }
+            }
+        }
+
+        function handleBackToDashboard(event) {
+            if (currentPortalMode === 'office') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.loadOfficeWorkspaceHome === 'function') {
+                        window.parent.loadOfficeWorkspaceHome();
+                        return;
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "office_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "office/office_dashboard_home.html";
+            } else if (currentPortalMode === 'supervisor') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window) {
+                        const parentHomeLink = window.parent.document.querySelector('.dashboard-home-link');
+                        if (parentHomeLink) {
+                            if (typeof window.parent.clearTreeActiveLinks === 'function') {
+                                window.parent.clearTreeActiveLinks();
+                            }
+                            window.location.href = parentHomeLink.href;
+                            return;
+                        }
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "supervisor_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "supervisor/supervisor_dashboard_home.html";
+            }
+        }
+
+        window.onload = () => {
+            checkPortalPermissions();
+            loadAndSyncDatabases();
+            populateSiteLists();
+            initCustomDropdowns();
+            renderTransferLedger();
+        };
+
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'atr_stock_transfers_db' || e.key === 'atr_site_inventory_db' || e.key === 'atr_submitted_stocks_db') {
+                loadAndSyncDatabases();
+                renderTransferLedger();
+            }
+        });
+
+        function formatDateToDDMMYYYY(dateStr) {
+            if (!dateStr) return "";
+            if (dateStr.includes('-') && dateStr.split('-')[0].length === 2) return dateStr;
+            const parts = dateStr.split('-'); 
+            if (parts.length === 3) {
+                return `${parts[2]}-${parts[1]}-${parts[0]}`;
+            }
+            return dateStr;
+        }
+
+        function formatDateToYYYYMMDD(dateStr) {
+            if (!dateStr) return "";
+            const parts = dateStr.split('-');
+            if (parts.length === 3 && parts[0].length === 2) {
+                return `${parts[2]}-${parts[1]}-${parts[0]}`; 
+            }
+            return dateStr;
+        }
+
+        // --- CUSTOM DROPDOWN ENGINE ---
+        function initCustomDropdowns() {
+            setupDropdown('ledgerSiteFilterDropdown', 'selectedLedgerSiteFilter', renderTransferLedger);
+            setupDropdown('fromSiteDropdown', 'selectedFromSite', (selectedSite) => {
+                populateProductDropdown(selectedSite);
+            });
+            setupDropdown('toSiteDropdown', 'selectedToSite', null);
+            setupDropdown('productDropdown', null, null);
+
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.custom-select')) {
+                    document.querySelectorAll('.select-options-container.active').forEach(c => c.classList.remove('active'));
+                    document.querySelectorAll('.select-header.active').forEach(h => h.classList.remove('active'));
+                }
+            });
+        }
+
+        function setupDropdown(dropdownId, hiddenInputId, callback) {
+            const dropdown = document.getElementById(dropdownId);
+            const header = dropdown.querySelector('.select-header');
+            const container = dropdown.querySelector('.select-options-container');
+            const searchInput = dropdown.querySelector('.search-input-dropdown');
+            const optionsList = dropdown.querySelector('.select-options');
+            const selectedText = dropdown.querySelector('.selected-text');
+            const hiddenInput = hiddenInputId ? document.getElementById(hiddenInputId) : null;
+
+            header.addEventListener('click', () => {
+                document.querySelectorAll('.select-options-container.active').forEach(c => {
+                    if (c !== container) {
+                        c.classList.remove('active');
+                        if(c.parentElement.querySelector('.select-header')) {
+                            c.parentElement.querySelector('.select-header').classList.remove('active');
+                        }
+                    }
+                });
+                
+                container.classList.toggle('active');
+                header.classList.toggle('active');
+                
+                if(container.classList.contains('active')) {
+                    searchInput.value = ''; 
+                    filterDropdownOptions('', optionsList);
+                    setTimeout(() => searchInput.focus(), 100);
+                }
+            });
+
+            searchInput.addEventListener('keyup', (e) => {
+                filterDropdownOptions(e.target.value, optionsList);
+            });
+
+            optionsList.addEventListener('click', (e) => {
+                const li = e.target.closest('li');
+                if(li && !li.getAttribute('data-disabled')) {
+                    const value = li.getAttribute('data-value');
+                    const unitAttr = li.getAttribute('data-unit');
+                    const stockAttr = li.getAttribute('data-stock');
+                    const text = unitAttr ? `${value} (Stock: ${stockAttr} ${unitAttr})` : li.innerText;
+                    
+                    selectedText.innerText = text;
+                    selectedText.style.color = (value === "" || value === null) ? "var(--text-main)" : "var(--theme-color)";
+                    if(text.includes("Office")) selectedText.style.color = "#ffc107";
+                    selectedText.style.fontWeight = "700";
+                    
+                    if(hiddenInput) hiddenInput.value = value;
+                    if (dropdownId === 'productDropdown') {
+                        document.getElementById('selectedProductName').value = value;
+                        document.getElementById('selectedProductUnit').value = unitAttr;
+                        document.getElementById('availableStock').value = stockAttr;
+                    }
+                    
+                    container.classList.remove('active');
+                    header.classList.remove('active');
+                    
+                    if(callback) callback(value);
+                }
+            });
+        }
+
+        function filterDropdownOptions(term, list) {
+            const searchTerm = term.toLowerCase();
+            const items = list.querySelectorAll('li');
+            items.forEach(item => {
+                const text = item.innerText.toLowerCase();
+                item.style.display = text.includes(searchTerm) ? 'block' : 'none';
+            });
+        }
+
+        function populateSiteLists() {
+            const filterList = document.getElementById('ledgerSiteList');
+            const fromList = document.getElementById('fromSiteList');
+            const toList = document.getElementById('toSiteList');
+            
+            filterList.innerHTML = `<li data-value="">🌍 All Sites</li>`;
+            fromList.innerHTML = '';
+            toList.innerHTML = '';
+
+            sites.forEach(s => {
+                let html = `<li data-value="${s}" ${s.includes('Office') ? 'class="option-office"' : ''}>${s}</li>`;
+                filterList.innerHTML += html;
+                fromList.innerHTML += html;
+                toList.innerHTML += html;
+            });
+        }
+
+        // Helper: Get effective available stock at sourceSite (including quantity already allocated to editingTransferId)
+        function getEffectiveAvailableStock(sourceSite, itemName) {
+            if (!sourceSite || !itemName) return 0;
+            const inv = siteInventory.find(i => i.site.toLowerCase() === sourceSite.toLowerCase() && i.itemName.toLowerCase() === itemName.toLowerCase());
+            let baseStock = inv ? (Number(inv.stock) || 0) : 0;
+
+            if (editingTransferId) {
+                const prevRec = transferRecords.find(r => r.id === editingTransferId);
+                if (prevRec && prevRec.fromSite.toLowerCase() === sourceSite.toLowerCase()) {
+                    const prevItem = (prevRec.items || []).find(i => i.name.toLowerCase() === itemName.toLowerCase());
+                    if (prevItem) baseStock += Number(prevItem.qty) || 0;
+                }
+            }
+            return baseStock;
+        }
+
+        function populateProductDropdown(sourceSite) {
+            const list = document.getElementById('productList');
+            list.innerHTML = '';
+            clearProductInputs();
+
+            if(!sourceSite) return;
+
+            const activeProds = siteInventory
+                .filter(i => i.site.toLowerCase() === sourceSite.toLowerCase())
+                .map(i => ({
+                    itemName: i.itemName,
+                    unit: i.unit,
+                    stock: getEffectiveAvailableStock(sourceSite, i.itemName)
+                }))
+                .filter(i => i.stock > 0);
+
+            if (activeProds.length === 0) {
+                list.innerHTML = `<li data-disabled="true" style="color: var(--text-muted); font-style: italic;">No active stock at this site</li>`;
+                return;
+            }
+
+            activeProds.forEach(item => {
+                const li = document.createElement('li');
+                li.setAttribute('data-value', item.itemName);
+                li.setAttribute('data-unit', item.unit);
+                li.setAttribute('data-stock', item.stock);
+                li.innerHTML = `<strong>${item.itemName}</strong><span class="item-meta">Stock: ${item.stock} ${item.unit}</span>`;
+                list.appendChild(li);
+            });
+        }
+
+        function getFilteredTransferRecords() {
+            const query = document.getElementById('ledgerSearchInput').value.toLowerCase();
+            const selectedSite = document.getElementById('selectedLedgerSiteFilter').value.toLowerCase();
+
+            return transferRecords.filter(t => {
+                const matchesSearch = t.id.toLowerCase().includes(query) ||
+                    t.challanNo.toLowerCase().includes(query) ||
+                    t.date.toLowerCase().includes(query) ||
+                    t.fromSite.toLowerCase().includes(query) ||
+                    t.toSite.toLowerCase().includes(query) ||
+                    t.items.some(i => i.name.toLowerCase().includes(query));
+
+                const matchesSite = !selectedSite || 
+                    t.fromSite.toLowerCase() === selectedSite || 
+                    t.toSite.toLowerCase() === selectedSite;
+
+                return matchesSearch && matchesSite;
+            });
+        }
+
+        function renderTransferLedger() {
+            const tbody = document.getElementById('transferTableBody');
+            tbody.innerHTML = '';
+
+            const filtered = getFilteredTransferRecords();
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="10" class="empty-row">No transfer records found.</td></tr>`;
+                return;
+            }
+
+            [...filtered].reverse().forEach(record => {
+                const tr = document.createElement('tr');
+                let challanAction = record.challanNo !== "N/A" ? 
+                    `<button class="btn-challan" onclick="viewChallan('${record.id}')">📄 ${record.challanNo}</button>` : 
+                    `<span style="color: var(--text-muted); font-size: 11px;">No Challan</span>`;
+
+                let proofAction = `<button class="btn-view" onclick="openProofPreview('${record.id}')">👁️ View/Upload</button>`;
+
+                const pendingBadge = record.pendingStatus
+                    ? `<br><span class="pending-status-pill">⏳ ${record.pendingStatus}</span>`
+                    : '';
+
+                tr.innerHTML = `
+                    <td style="color:var(--theme-color); font-weight:bold;">
+                        ${record.id}
+                        ${pendingBadge}
+                    </td>
+                    <td class="nowrap-date">${formatDateToDDMMYYYY(record.date)}</td>
+                    <td style="color: ${record.fromSite.includes('Office') ? '#ffc107' : 'var(--text-main)'}; font-weight: 600;">${record.fromSite}</td>
+                    <td style="color: ${record.toSite.includes('Office') ? '#ffc107' : 'var(--text-main)'}; font-weight: 600;">${record.toSite}</td>
+                    <td style="font-weight:bold; color:#0dcaf0;">${record.items.length} Item(s)</td>
+                    <td>${record.challanNo}</td>
+                    <td style="text-align: center;">${challanAction}</td>
+                    <td style="text-align: center;">
+                        <button class="btn-view-items" onclick="toggleSubRow('${record.id}', event)">👁️ View Items</button>
+                    </td>
+                    <td style="text-align: center;">${proofAction}</td>
+                    <td style="text-align: center;">
+                        <div class="action-buttons-container">
+                            <button class="btn-action-edit" onclick="adminAction('edit', '${record.id}')">✏️ Edit</button>
+                            <button class="btn-action-delete" onclick="adminAction('delete', '${record.id}')">🗑️️ Delete</button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+
+                const subTr = document.createElement('tr');
+                subTr.className = `sub-row sub-${record.id}`;
+                
+                let nestedItemsHtml = record.items.map(i => `
+                    <tr>
+                        <td style="color:var(--text-main); font-weight:bold;">📦 ${i.name}</td>
+                        <td>${i.unit}</td>
+                        <td style="text-align: right; color:#28a745; font-weight:bold; font-size: 14px;">${i.qty}</td>
+                    </tr>
+                `).join('');
+
+                subTr.innerHTML = `
+                    <td colspan="10" style="padding: 0;">
+                        <table class="nested-table">
+                            <thead>
+                                <tr>
+                                    <th>Transferred Item Name</th>
+                                    <th>Unit</th>
+                                    <th style="text-align: right;">Quantity</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${nestedItemsHtml}
+                            </tbody>
+                        </table>
+                    </td>
+                `;
+                tbody.appendChild(subTr);
+            });
+        }
+
+        function toggleSubRow(recordId, event) {
+            event.stopPropagation();
+            const subRow = document.querySelector(`.sub-${recordId}`);
+            if (subRow) {
+                subRow.classList.toggle('show');
+            }
+        }
+
+        function exportTransfersToExcel() {
+            const filtered = getFilteredTransferRecords();
+            if (filtered.length === 0) {
+                alert("No transfer records to export!");
+                return;
+            }
+
+            const ws_data = [["Transfer ID", "Date", "Transfer From", "Transfer To", "Item Name", "Qty", "Unit", "Challan No", "Proof File"]];
+            filtered.slice().reverse().forEach(t => {
+                t.items.forEach(i => {
+                    ws_data.push([
+                        t.id,
+                        t.date,
+                        t.fromSite,
+                        t.toSite,
+                        i.name,
+                        i.qty.toString(),
+                        i.unit,
+                        t.challanNo,
+                        t.proofName || "N/A"
+                    ]);
+                });
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(ws_data);
+            for (let cell in ws) {
+                if (cell[0] === '!') continue; 
+                ws[cell].t = 's'; ws[cell].z = '@'; 
+            }
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Stock_Transfers");
+            XLSX.writeFile(wb, "ATR_Stock_Transfer_Ledger.xlsx");
+        }
+
+        function adminAction(actionType, recordId) {
+            const recordIndex = transferRecords.findIndex(r => r.id === recordId);
+            if (recordIndex === -1) return;
+            const record = transferRecords[recordIndex];
+
+            // Office & Supervisor Mode: Route Edit/Delete through Approval Workflow without asking for Admin password
+            if (currentPortalMode !== 'admin') {
+                if (actionType === 'edit') {
+                    openEditTransferModal(record);
+                } else if (actionType === 'delete') {
+                    openRoleApprovalModal({
+                        type: 'DELETE_TRANSFER',
+                        targetId: record.id,
+                        actionLabel: "DELETE STOCK TRANSFER",
+                        summary: `Delete Transfer ${record.id}: ${record.fromSite} → ${record.toSite} (${record.items.length} Items | Challan: ${record.challanNo})`,
+                        oldData: { ...record, proofUrl: undefined },
+                        newData: null
+                    });
+                }
+                return;
+            }
+
+            const pass = prompt(`🛡️ ADMIN PROTECTED ACTION\n\nEnter admin password to ${actionType} record ${recordId}:`);
+            if (pass === null) return;
+
+            if (pass === ADMIN_PASSWORD || pass === "admin123") {
+                if (actionType === 'delete') {
+                    if (confirm(`Are you sure you want to delete transfer batch ${recordId}?`)) {
+                        record.items.forEach(item => {
+                            let srcInv = siteInventory.find(i => i.site.toLowerCase() === record.fromSite.toLowerCase() && i.itemName.toLowerCase() === item.name.toLowerCase());
+                            if (srcInv) srcInv.stock += item.qty;
+
+                            let destInv = siteInventory.find(i => i.site.toLowerCase() === record.toSite.toLowerCase() && i.itemName.toLowerCase() === item.name.toLowerCase());
+                            if (destInv) destInv.stock = Math.max(0, destInv.stock - item.qty);
+                        });
+
+                        transferRecords.splice(recordIndex, 1);
+                        saveTransfersToStorage();
+                        renderTransferLedger();
+                    }
+                } else if (actionType === 'edit') {
+                    openEditTransferModal(record);
+                }
+            } else {
+                alert("❌ Incorrect Password! Access Denied.");
+            }
+        }
+
+        // Safe Non-Destructive Edit Modal Opener (Fixes Data Loss if Modal is Closed/Cancelled)
+        function openEditTransferModal(record) {
+            editingTransferId = record.id;
+            document.getElementById('modalTitle').innerText = currentPortalMode !== 'admin'
+                ? `✏️ Edit Stock Transfer (${record.id} - Requires Approval)`
+                : `✏️ Edit Stock Transfer (${record.id})`;
+            document.getElementById('btnSubmitTransferMain').innerText = currentPortalMode !== 'admin'
+                ? "📤 Send Transfer Update for Approval"
+                : "🔄 Update Transfer Entry";
+
+            document.getElementById('transferDate').value = formatDateToYYYYMMDD(record.date);
+            
+            const fromText = document.querySelector('#fromSiteDropdown .selected-text');
+            fromText.innerText = record.fromSite;
+            fromText.style.color = record.fromSite.includes("Office") ? "#ffc107" : "var(--theme-color)";
+            document.getElementById('selectedFromSite').value = record.fromSite;
+            populateProductDropdown(record.fromSite);
+
+            const toText = document.querySelector('#toSiteDropdown .selected-text');
+            toText.innerText = record.toSite;
+            toText.style.color = record.toSite.includes("Office") ? "#ffc107" : "var(--theme-color)";
+            document.getElementById('selectedToSite').value = record.toSite;
+
+            cart = record.items.map(i => ({
+                name: i.name,
+                unit: i.unit,
+                qty: i.qty
+            }));
+            renderCart();
+            document.getElementById('generateChallanCheck').checked = (record.challanNo && record.challanNo !== "N/A");
+
+            document.getElementById('entryModal').classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function openEntryModal() {
+            editingTransferId = null;
+            document.getElementById('modalTitle').innerText = "📦 New Stock Transfer Entry";
+            document.getElementById('btnSubmitTransferMain').innerText = currentPortalMode !== 'admin'
+                ? "📤 Submit Transfer for Approval"
+                : "✅ Submit Transfer Entry";
+            document.getElementById('transferDate').value = new Date().toISOString().split('T')[0];
+            
+            const fromText = document.querySelector('#fromSiteDropdown .selected-text');
+            fromText.innerText = "-- Choose Source Site --";
+            fromText.style.color = "var(--text-muted)";
+            document.getElementById('selectedFromSite').value = "";
+
+            const toText = document.querySelector('#toSiteDropdown .selected-text');
+            toText.innerText = "-- Choose Destination Site --";
+            toText.style.color = "var(--text-muted)";
+            document.getElementById('selectedToSite').value = "";
+            
+            clearProductInputs();
+            cart = [];
+            renderCart();
+            document.getElementById('generateChallanCheck').checked = false;
+
+            document.getElementById('entryModal').classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeEntryModal() {
+            editingTransferId = null;
+            document.getElementById('entryModal').classList.remove('show');
+            document.body.style.overflow = 'auto';
+            renderTransferLedger();
+        }
+
+        function clearProductInputs() {
+            const prodText = document.querySelector('#productDropdown .selected-text');
+            prodText.innerText = "-- Select Product --";
+            prodText.style.color = "var(--text-muted)";
+            
+            document.getElementById('selectedProductName').value = "";
+            document.getElementById('selectedProductUnit').value = "";
+            document.getElementById('availableStock').value = "";
+            document.getElementById('transferQty').value = "";
+        }
+
+        function addToCart() {
+            const itemName = document.getElementById('selectedProductName').value;
+            const unit = document.getElementById('selectedProductUnit').value;
+            const available = parseFloat(document.getElementById('availableStock').value) || 0;
+            const qty = parseFloat(document.getElementById('transferQty').value);
+
+            if (!itemName || !qty || qty <= 0) {
+                alert("⚠️ Please select a product and enter a valid transfer quantity.");
+                return;
+            }
+
+            const existing = cart.find(c => c.name.toLowerCase() === itemName.toLowerCase());
+            const alreadyInCart = existing ? (Number(existing.qty) || 0) : 0;
+
+            if ((alreadyInCart + qty) > available) {
+                alert(`⚠️ Total transfer quantity (${alreadyInCart + qty}) cannot exceed available stock (${available})!`);
+                return;
+            }
+
+            if (existing) {
+                existing.qty += qty;
+            } else {
+                cart.push({
+                    name: itemName,
+                    unit: unit,
+                    qty: qty
+                });
+            }
+
+            clearProductInputs();
+            renderCart();
+        }
+
+        function pickFromCart(index) {
+            const item = cart[index];
+            const sourceSite = document.getElementById('selectedFromSite').value;
+            const effStock = getEffectiveAvailableStock(sourceSite, item.name);
+            
+            const prodText = document.querySelector('#productDropdown .selected-text');
+            prodText.innerText = `${item.name} (Stock: ${effStock} ${item.unit})`;
+            prodText.style.color = "var(--theme-color)";
+            
+            document.getElementById('selectedProductName').value = item.name;
+            document.getElementById('selectedProductUnit').value = item.unit;
+            document.getElementById('transferQty').value = item.qty;
+            document.getElementById('availableStock').value = effStock;
+
+            cart.splice(index, 1);
+            renderCart();
+        }
+
+        function renderCart() {
+            const tbody = document.getElementById('cartTableBody');
+            tbody.innerHTML = '';
+
+            if (cart.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="empty-row">Cart is empty. Add products to transfer.</td></tr>`;
+                return;
+            }
+
+            cart.forEach((item, idx) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="color:var(--text-main); font-weight:bold;">${item.name}</td>
+                    <td style="color:var(--theme-color); font-weight:bold; font-size:14px;">${item.qty}</td>
+                    <td>${item.unit}</td>
+                    <td style="text-align: center; white-space: nowrap;">
+                        <button type="button" class="btn-pick" onclick="pickFromCart(${idx})">✏️ Edit</button>
+                        <button type="button" class="btn-remove" onclick="cart.splice(${idx}, 1); renderCart();">🗑️</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function submitTransfer() {
+            const rawDate = document.getElementById('transferDate').value;
+            const fromSite = document.getElementById('selectedFromSite').value;
+            const toSite = document.getElementById('selectedToSite').value;
+            const genChallan = document.getElementById('generateChallanCheck').checked;
+
+            if (!rawDate || !fromSite || !toSite) {
+                alert("⚠️ Please select Date, Source Site, and Destination Site.");
+                return;
+            }
+
+            if (fromSite === toSite) {
+                alert("⚠️ Source and Destination sites cannot be the same!");
+                return;
+            }
+
+            if (cart.length === 0) {
+                alert("⚠️ Cart is empty! Add at least one product.");
+                return;
+            }
+
+            if (!genChallan) {
+                const confirmNoChallan = confirm("⚠️ Warning: 'Generate Challan?' is unchecked. No delivery challan will be created for this transfer. Do you still want to proceed?");
+                if (!confirmNoChallan) return;
+            }
+
+            const formattedDate = formatDateToDDMMYYYY(rawDate);
+            let batchItems = cart.map(i => ({
+                name: i.name,
+                unit: i.unit,
+                qty: i.qty
+            }));
+
+            if (editingTransferId) {
+                const recIdx = transferRecords.findIndex(r => r.id === editingTransferId);
+                if (recIdx === -1) return;
+
+                const oldRec = { ...transferRecords[recIdx] };
+                const challanNo = genChallan
+                    ? (oldRec.challanNo && oldRec.challanNo !== "N/A" ? oldRec.challanNo : "CHL-2026-" + Math.floor(1000 + Math.random() * 9000))
+                    : "N/A";
+
+                const updatedRec = {
+                    ...oldRec,
+                    date: formattedDate,
+                    fromSite: fromSite,
+                    toSite: toSite,
+                    challanNo: challanNo,
+                    items: batchItems,
+                    pendingStatus: null
+                };
+
+                // OFFICE OR SUPERVISOR EDIT: Route to Approval Modal
+                if (currentPortalMode !== 'admin') {
+                    closeEntryModal();
+                    openRoleApprovalModal({
+                        type: 'EDIT_TRANSFER',
+                        targetId: oldRec.id,
+                        actionLabel: "EDIT STOCK TRANSFER",
+                        summary: `Transfer ${oldRec.id}: ${fromSite} → ${toSite} (${batchItems.length} Items | Challan: ${challanNo})`,
+                        oldData: { ...oldRec, proofUrl: undefined },
+                        newData: { ...updatedRec, proofUrl: undefined }
+                    });
+                    return;
+                }
+
+                // ADMIN DIRECT UPDATE: Revert old inventory and apply new inventory
+                oldRec.items.forEach(item => {
+                    let srcInv = siteInventory.find(i => i.site.toLowerCase() === oldRec.fromSite.toLowerCase() && i.itemName.toLowerCase() === item.name.toLowerCase());
+                    if (srcInv) srcInv.stock += item.qty;
+
+                    let destInv = siteInventory.find(i => i.site.toLowerCase() === oldRec.toSite.toLowerCase() && i.itemName.toLowerCase() === item.name.toLowerCase());
+                    if (destInv) destInv.stock = Math.max(0, destInv.stock - item.qty);
+                });
+
+                batchItems.forEach(item => {
+                    let srcInv = siteInventory.find(i => i.site.toLowerCase() === fromSite.toLowerCase() && i.itemName.toLowerCase() === item.name.toLowerCase());
+                    if (srcInv) srcInv.stock = Math.max(0, srcInv.stock - item.qty);
+
+                    let destInv = siteInventory.find(i => i.site.toLowerCase() === toSite.toLowerCase() && i.itemName.toLowerCase() === item.name.toLowerCase());
+                    if (destInv) destInv.stock += item.qty;
+                    else siteInventory.push({ site: toSite, itemName: item.name, unit: item.unit, stock: item.qty });
+                });
+
+                transferRecords[recIdx] = updatedRec;
+                saveTransfersToStorage();
+                const targetIdToView = updatedRec.id;
+                closeEntryModal();
+                alert(`✅ Transfer Batch [${targetIdToView}] Updated Successfully!`);
+                if (genChallan) viewChallan(targetIdToView);
+                return;
+            }
+
+            // CREATE NEW TRANSFER
+            const challanNo = genChallan ? "CHL-2026-" + Math.floor(1000 + Math.random() * 9000) : "N/A";
+            const transferId = "TRF-" + Math.floor(1000 + Math.random() * 9000);
+
+            const newTransferRec = {
+                id: transferId,
+                date: formattedDate,
+                fromSite: fromSite,
+                toSite: toSite,
+                challanNo: challanNo,
+                proofUrl: "",
+                proofName: "No File",
+                isPdf: false,
+                pendingStatus: null,
+                items: batchItems
+            };
+
+            // OFFICE OR SUPERVISOR PORTAL: Route New Transfer to Approval Modal
+            if (currentPortalMode !== 'admin') {
+                closeEntryModal();
+                openRoleApprovalModal({
+                    type: 'CREATE_TRANSFER',
+                    targetId: newTransferRec.id,
+                    genChallan: genChallan,
+                    actionLabel: "NEW STOCK TRANSFER ENTRY",
+                    summary: `Transfer ${transferId}: ${fromSite} → ${toSite} (${batchItems.length} Items | Challan: ${challanNo})`,
+                    oldData: null,
+                    newData: newTransferRec
+                });
+                return;
+            }
+
+            // ADMIN DIRECT EXECUTION
+            batchItems.forEach(item => {
+                let srcInv = siteInventory.find(i => i.site.toLowerCase() === fromSite.toLowerCase() && i.itemName.toLowerCase() === item.name.toLowerCase());
+                if (srcInv) srcInv.stock = Math.max(0, srcInv.stock - item.qty);
+
+                let destInv = siteInventory.find(i => i.site.toLowerCase() === toSite.toLowerCase() && i.itemName.toLowerCase() === item.name.toLowerCase());
+                if (destInv) {
+                    destInv.stock += item.qty;
+                } else {
+                    siteInventory.push({ site: toSite, itemName: item.name, unit: item.unit, stock: item.qty });
+                }
+            });
+
+            transferRecords.push(newTransferRec);
+            saveTransfersToStorage();
+            closeEntryModal();
+            alert(`✅ Successfully submitted transfer batch [${transferId}] containing ${batchItems.length} item(s)!\nChallan Status: ${challanNo}`);
+
+            if (genChallan) {
+                viewChallan(transferId);
+            }
+        }
+
+        // --- VIEW & DOWNLOAD A4 CHALLAN LOGIC ---
+        function viewChallan(transferId) {
+            const record = transferRecords.find(r => r.id === transferId);
+            if (!record) return;
+
+            let itemsRows = record.items.map((i, index) => `
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd; text-align: center; color: #000;">${index + 1}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; color: #000;">${i.name}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd; color: #000;">${i.unit}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd; text-align: right; font-weight: bold; color: #000;">${i.qty}</td>
+                </tr>
+            `).join('');
+
+            const container = document.getElementById('challanContent');
+            container.innerHTML = `
+                <div class="challan-content-flex">
+                    <div style="text-align: center; border-bottom: 2px solid #333; padding-bottom: 12px; margin-bottom: 20px;">
+                        <h2 style="color: #9c27b0; margin: 0; font-size: 22px; font-weight: 800;">ATR CONSTRUCTION COMPANY</h2>
+                        <p style="font-size: 11px; color: #555; margin: 4px 0; text-transform: uppercase; letter-spacing: 1px;">Official Material Transfer Delivery Challan</p>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 15px; color: #000;">
+                        <div><strong>Challan No:</strong> <span id="pdfChallanNo">${record.challanNo}</span></div>
+                        <div><strong>Transfer ID:</strong> ${record.id}</div>
+                        <div><strong>Date:</strong> ${record.date}</div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 20px; background: #f9f9f9; padding: 10px; border-radius: 6px; border: 1px solid #eee; color: #000;">
+                        <div><strong>From (Source):</strong> ${record.fromSite}</div>
+                        <div><strong>To (Destination):</strong> ${record.toSite}</div>
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px;">
+                        <thead>
+                            <tr style="background: #333; color: #fff;">
+                                <th style="padding: 8px; border: 1px solid #ddd; width: 40px; text-align: center; color: #fff;">Sl</th>
+                                <th style="padding: 8px; border: 1px solid #ddd; color: #fff;">Item Description</th>
+                                <th style="padding: 8px; border: 1px solid #ddd; width: 80px; color: #fff;">Unit</th>
+                                <th style="padding: 8px; border: 1px solid #ddd; width: 100px; text-align: right; color: #fff;">Quantity</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itemsRows}
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Signature section at the bottom -->
+                <div style="display: flex; justify-content: space-between; font-size: 12px; margin-top: auto; padding-top: 50px; color: #000;">
+                    <div style="border-top: 1px solid #000; width: 180px; text-align: center; padding-top: 5px;">Issued By</div>
+                    <div style="border-top: 1px solid #000; width: 180px; text-align: center; padding-top: 5px;">Receiver Signature</div>
+                </div>
+            `;
+            document.getElementById('challanModal').classList.add('show');
+        }
+
+        // Fixed margin: 0 so the 210mm x 296mm .a4-challan fits on 1 single A4 page without clipping
+        function downloadChallanPDF() {
+            const element = document.getElementById('challanContent');
+            const challanNo = document.getElementById('pdfChallanNo').innerText || 'Challan';
+            
+            const opt = {
+                margin:       0,
+                filename:     `ATR_${challanNo}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true, scrollY: 0 },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save();
+        }
+
+        function closeChallanModal() {
+            document.getElementById('challanModal').classList.remove('show');
+        }
+
+        function openProofPreview(transferId) {
+            const record = transferRecords.find(r => r.id === transferId);
+            if (!record) return;
+
+            const container = document.getElementById('previewContainer');
+            let contentHtml = '';
+
+            if (record.proofUrl) {
+                if (record.isPdf) {
+                    contentHtml += `<iframe src="${record.proofUrl}" width="100%" height="250px" style="border:none; border-radius: 6px;"></iframe>`;
+                    contentHtml += `<a href="${record.proofUrl}" download="${record.proofName}" class="btn btn-primary" style="margin-top: 5px; text-decoration: none;">📥 Download PDF Proof</a>`;
+                } else {
+                    contentHtml += `<img src="${record.proofUrl}" style="max-width: 100%; max-height: 220px; border-radius: 8px; box-shadow: var(--shadow);" />`;
+                    contentHtml += `<a href="${record.proofUrl}" download="${record.proofName}" class="btn btn-primary" style="margin-top: 5px; text-decoration: none;">📥 Download Image Proof</a>`;
+                }
+            } else {
+                contentHtml += `<p style="color: var(--text-muted); font-style: italic;">No proof uploaded yet for this transfer (${record.proofName || 'None'}).</p>`;
+            }
+
+            contentHtml += `
+                <div style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px; width: 100%; text-align: left;">
+                    <label style="font-size: 11px; color: var(--text-muted); font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 5px;">Upload / Update Proof (Image / PDF)</label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="file" id="modalProofFile" accept="image/*,.pdf" class="form-control" style="padding: 6px; flex: 1;">
+                        <button type="button" class="btn btn-primary" onclick="updateRecordProof('${record.id}')">Upload</button>
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = contentHtml;
+            document.getElementById('previewModal').classList.add('show');
+        }
+
+        function updateRecordProof(transferId) {
+            const fileInput = document.getElementById('modalProofFile');
+            if (!fileInput.files || !fileInput.files[0]) {
+                alert("⚠️ Please select a file first.");
+                return;
+            }
+            const file = fileInput.files[0];
+            const record = transferRecords.find(r => r.id === transferId);
+            if (record) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    record.proofName = file.name;
+                    record.isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith('.pdf');
+                    record.proofUrl = evt.target.result;
+                    saveTransfersToStorage();
+                    alert("✅ Proof uploaded/updated successfully!");
+                    openProofPreview(transferId);
+                    renderTransferLedger();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function closePreviewModal() {
+            document.getElementById('previewModal').classList.remove('show');
+        }
+
+        // =========================================================================================
+        // OFFICE & SUPERVISOR APPROVAL MODAL ENGINE (ROUTES TO ApproveOffice / ApproveSupervisor)
+        // =========================================================================================
+        function openRoleApprovalModal(payload) {
+            pendingRolePayload = payload;
+            document.getElementById('roleApprovalSummary').value = `${payload.actionLabel}: ${payload.summary}`;
+            document.getElementById('roleApprovalReason').value = '';
+
+            const titleEl = document.getElementById('roleApprovalTitle');
+            const descEl = document.getElementById('roleApprovalDesc');
+
+            if (currentPortalMode === 'supervisor') {
+                titleEl.innerText = "🛡️ Send Request to ApproveSupervisor.html";
+                descEl.innerHTML = "সুপারভাইজার পোর্টাল থেকে স্টক ট্রান্সফার রিকোয়েস্টটি অ্যাডমিনের <strong>ApproveSupervisor.html</strong>-এ পাঠানো হবে।";
+            } else {
+                titleEl.innerText = "🏢 Send Request to ApproveOffice.html";
+                descEl.innerHTML = "অফিস পোর্টাল থেকে নতুন স্টক ট্রান্সফার, এডিট বা ডিলিট করলে তা অ্যাডমিনের <strong>ApproveOffice.html</strong>-এ পাঠানো হবে। অ্যাডমিন অ্যাপ্রুভ করলেই এটি চূড়ান্ত হবে।";
+            }
+
+            document.getElementById('roleApprovalModal').classList.add('show');
+            setTimeout(() => document.getElementById('roleApprovalReason').focus(), 50);
+        }
+
+        function closeRoleApprovalModal() {
+            document.getElementById('roleApprovalModal').classList.remove('show');
+            pendingRolePayload = null;
+        }
+
+        function confirmRoleApprovalRequest() {
+            const reason = document.getElementById('roleApprovalReason').value.trim();
+            if (!reason) {
+                alert("⚠️ Please enter a valid reason/remark for Admin Approval.");
+                return;
+            }
+            if (!pendingRolePayload) return;
+
+            const targetApprovalPage = currentPortalMode === 'supervisor' ? 'ApproveSupervisor.html' : 'ApproveOffice.html';
+            const shouldOpenChallan = pendingRolePayload.genChallan;
+            const createdId = pendingRolePayload.targetId;
+
+            if (pendingRolePayload.type === 'CREATE_TRANSFER') {
+                const newRec = pendingRolePayload.newData;
+                newRec.items.forEach(item => {
+                    let srcInv = siteInventory.find(i => i.site.toLowerCase() === newRec.fromSite.toLowerCase() && i.itemName.toLowerCase() === item.name.toLowerCase());
+                    if (srcInv) srcInv.stock = Math.max(0, srcInv.stock - item.qty);
+
+                    let destInv = siteInventory.find(i => i.site.toLowerCase() === newRec.toSite.toLowerCase() && i.itemName.toLowerCase() === item.name.toLowerCase());
+                    if (destInv) destInv.stock += item.qty;
+                    else siteInventory.push({ site: newRec.toSite, itemName: item.name, unit: item.unit, stock: item.qty });
+                });
+
+                transferRecords.push({
+                    ...newRec,
+                    pendingStatus: `Pending in ${targetApprovalPage}`
+                });
+            } else if (pendingRolePayload.type === 'EDIT_TRANSFER') {
+                const idx = transferRecords.findIndex(r => r.id === pendingRolePayload.targetId);
+                if (idx > -1) {
+                    transferRecords[idx].pendingStatus = "Edit Pending";
+                }
+            } else if (pendingRolePayload.type === 'DELETE_TRANSFER') {
+                const idx = transferRecords.findIndex(r => r.id === pendingRolePayload.targetId);
+                if (idx > -1) {
+                    transferRecords[idx].pendingStatus = "Delete Pending";
+                }
+            }
+
+            saveTransfersToStorage();
+            renderTransferLedger();
+
+            if (currentPortalMode === 'supervisor') {
+                const supQueue = JSON.parse(localStorage.getItem('atr_supervisor_approvals')) || [];
+                supQueue.unshift({
+                    id: "SUP-TRF-" + Date.now().toString().slice(-5),
+                    module: "StockTransfer.html",
+                    action: pendingRolePayload.actionLabel,
+                    site: assignedSite,
+                    reason: reason,
+                    summary: pendingRolePayload.summary,
+                    requestedAt: new Date().toISOString(),
+                    status: "Pending",
+                    oldData: pendingRolePayload.oldData,
+                    newData: pendingRolePayload.newData
+                });
+                localStorage.setItem('atr_supervisor_approvals', JSON.stringify(supQueue));
+            } else {
+                const newReq = {
+                    reqId: "OFF-TRF-" + Date.now().toString().slice(-5),
+                    userId: loggedUserId,
+                    userName: loggedUserName,
+                    designation: "Office Staff",
+                    module: "StockTransfer.html",
+                    action: pendingRolePayload.actionLabel,
+                    summary: pendingRolePayload.summary,
+                    oldData: pendingRolePayload.oldData,
+                    newData: pendingRolePayload.newData,
+                    reason: reason,
+                    timestamp: new Date().toLocaleString('en-IN'),
+                    status: "Pending"
+                };
+
+                const officeQueue = JSON.parse(localStorage.getItem('atr_office_approvals')) || [];
+                officeQueue.unshift(newReq);
+                localStorage.setItem('atr_office_approvals', JSON.stringify(officeQueue));
+                localStorage.setItem('approve_office_requests', JSON.stringify(officeQueue));
+                localStorage.setItem('ApproveOffice_requests', JSON.stringify(officeQueue));
+
+                // Log in Office Daily Work Report (office_dashboard_home.html)
+                const workLogs = JSON.parse(localStorage.getItem('atr_office_daily_work')) || [];
+                const todayStr = new Date().toISOString().split('T')[0];
+                const nowTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+                workLogs.unshift({
+                    id: "WRK-" + Date.now().toString().slice(-5),
+                    userId: loggedUserId,
+                    userName: loggedUserName,
+                    date: todayStr,
+                    time: nowTime,
+                    module: "Stock Transfer (StockTransfer.html)",
+                    refNo: createdId || newReq.reqId,
+                    desc: `${pendingRolePayload.actionLabel}: ${pendingRolePayload.summary}`,
+                    status: "Sent for Approval"
+                });
+                localStorage.setItem('atr_office_daily_work', JSON.stringify(workLogs));
+
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.refreshNotificationsUI === 'function') {
+                        window.parent.refreshNotificationsUI();
+                    }
+                } catch (e) {}
+            }
+
+            closeRoleApprovalModal();
+            alert(`📤 Request sent to ${targetApprovalPage} for Admin Approval!`);
+            if (shouldOpenChallan && createdId) {
+                viewChallan(createdId);
+            }
+        }
+    </script>
+</body>
+</html>

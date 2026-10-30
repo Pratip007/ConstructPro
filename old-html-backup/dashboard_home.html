@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Executive Dashboard Overview</title>
+    
+    <!-- Sync theme with Master Dashboard -->
+    <script>
+        function applyDashboardTheme() {
+            const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        }
+        applyDashboardTheme();
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'atr_theme' || !e.key) {
+                applyDashboardTheme();
+            }
+        });
+    </script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-body: transparent; /* Transparent so master dashboard background shows through */
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --input-bg: rgba(0, 0, 0, 0.25);
+            --hover-bg: rgba(255, 255, 255, 0.08);
+            --shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        [data-theme="light"] {
+            --bg-body: transparent;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #666666;
+            --border-color: rgba(0, 0, 0, 0.1);
+            --glass-bg: rgba(0, 0, 0, 0.02);
+            --input-bg: #f4f6f9;
+            --hover-bg: rgba(0, 0, 0, 0.05);
+            --shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(136, 136, 136, 0.3); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(136, 136, 136, 0.6); }
+
+        body { background-color: var(--bg-body); color: var(--text-main); padding: 35px 40px; transition: background-color 0.3s ease, color 0.3s ease; }
+
+        /* ================= TOP KPI WIDGETS ================= */
+        .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .card { background-color: var(--bg-card); padding: 24px; border-radius: 10px; border: 1px solid var(--border-color); border-left: 4px solid #ffc107; box-shadow: var(--shadow); transition: transform 0.2s, box-shadow 0.2s; }
+        .card:hover { transform: translateY(-3px); }
+        .card.balance-card { border-left: 4px solid #28a745; }
+        .card.balance-card h4 { color: #28a745; }
+        .card h4 { color: var(--text-muted); font-size: 12.5px; text-transform: uppercase; margin-bottom: 10px; letter-spacing: 0.5px; font-weight: 700; }
+        .card .value { font-size: 26px; font-weight: 800; color: var(--text-main); }
+
+        /* ================= MIDDLE GRID: PENDING DUES, LOANS & HANDOVERS ================= */
+        .dashboard-footer-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+        @media (max-width: 1300px) { .dashboard-footer-grid { grid-template-columns: 1fr 1fr; } }
+        @media (max-width: 900px) { .dashboard-footer-grid { grid-template-columns: 1fr; } }
+
+        .table-container, .handover-container, .loan-container { background-color: var(--bg-card); padding: 25px; border-radius: 10px; border: 1px solid var(--border-color); box-shadow: var(--shadow); overflow-y: auto; max-height: 400px; }
+        .table-container { border-top: 4px solid #ff6b6b; }
+        .loan-container { border-top: 4px solid #6f42c1; }
+        .handover-container { border-top: 4px solid #ffc107; }
+
+        .widget-title { margin-bottom: 18px; font-size: 16px; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 700; }
+        .table-container h3 { color: #ff6b6b; }
+        .loan-container h3 { color: #b18cfd; }
+        .handover-container h3 { color: #ffc107; }
+
+        /* Basic Tables */
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 12px 10px; border-bottom: 1px solid var(--border-color); font-size: 12.5px; color: var(--text-main); vertical-align: middle; }
+        th { color: var(--text-muted); font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
+        tbody tr:hover { background: var(--glass-bg); }
+
+        /* Status Badges */
+        .status-due { background: rgba(220, 53, 69, 0.18); color: #ff6b6b; padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; border: 1px solid rgba(220, 53, 69, 0.4); display: inline-block; text-transform: uppercase; }
+        .status-loan-due { background: rgba(111, 66, 193, 0.18); color: #b18cfd; padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; border: 1px solid rgba(111, 66, 193, 0.4); display: inline-block; text-transform: uppercase; }
+        .status-loan-overdue { background: rgba(220, 53, 69, 0.18); color: #ff6b6b; padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; border: 1px solid rgba(220, 53, 69, 0.4); display: inline-block; text-transform: uppercase; }
+        
+        /* Lists */
+        .handover-list, .loan-list { list-style: none; }
+        .handover-item, .loan-item { background: var(--glass-bg); padding: 15px; border-radius: 8px; margin-bottom: 12px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+        .handover-item { border-left: 3px solid #ffc107; }
+        .loan-item { border-left: 3px solid #6f42c1; align-items: flex-start; flex-direction: column;}
+        
+        .site-name, .loan-bank { font-weight: 700; color: var(--text-main); display: block; font-size: 14px; margin-bottom: 4px; }
+        .client-name, .loan-details { color: var(--text-muted); font-size: 12px; display: block; line-height: 1.4;}
+
+        .btn-clear-due, .btn-table-clear { background-color: #ffc107; color: #121212; border: none; padding: 8px 12px; border-radius: 6px; font-weight: 700; font-size: 11px; cursor: pointer; text-transform: uppercase; transition: all 0.2s; white-space: nowrap; }
+        .btn-table-clear { background-color: #dc3545; color: #ffffff; padding: 6px 10px; font-size: 10px; }
+        .btn-table-clear:hover { background-color: #c82333; transform: translateY(-1px); }
+        .btn-clear-due:hover { background-color: #e0a800; transform: translateY(-1px); }
+
+        /* ================= BOTTOM SECTION: APPROVED & ACTIVITY LOG ================= */
+        .approval-log-card {
+            background-color: var(--bg-card);
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            border-top: 4px solid #28a745;
+            box-shadow: var(--shadow);
+        }
+
+        .log-header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 18px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .log-title-group h3 {
+            font-size: 18px;
+            color: #28a745;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .log-title-group p {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .log-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .log-input, .log-select {
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12.5px;
+            font-weight: 500;
+            outline: none;
+            transition: border-color 0.2s;
+            color-scheme: dark;
+        }
+
+        [data-theme="light"] .log-input,
+        [data-theme="light"] .log-select {
+            color-scheme: light;
+        }
+
+        .log-select option {
+            background-color: var(--bg-card);
+            color: var(--text-main);
+        }
+
+        .log-input:focus, .log-select:focus {
+            border-color: #28a745;
+        }
+
+        .btn-clean-logs {
+            background: rgba(220, 53, 69, 0.15);
+            color: #ff6b6b;
+            border: 1px solid rgba(220, 53, 69, 0.4);
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-clean-logs:hover {
+            background: #dc3545;
+            color: #ffffff;
+            transform: translateY(-1px);
+        }
+
+        .btn-restore-defaults {
+            background: var(--glass-bg);
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-restore-defaults:hover {
+            color: var(--text-main);
+            border-color: #ffc107;
+        }
+
+        .badge-approved {
+            background: rgba(40, 167, 69, 0.16);
+            color: #28a745;
+            border: 1px solid rgba(40, 167, 69, 0.4);
+            padding: 4px 9px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+
+        .badge-source {
+            background: rgba(23, 162, 184, 0.15);
+            color: #17a2b8;
+            border: 1px solid rgba(23, 162, 184, 0.35);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            display: inline-block;
+        }
+
+        .btn-del-log {
+            background: rgba(220, 53, 69, 0.12);
+            color: #ff6b6b;
+            border: 1px solid rgba(220, 53, 69, 0.3);
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-del-log:hover {
+            background: #dc3545;
+            color: #ffffff;
+        }
+
+        .empty-box-msg {
+            text-align: center;
+            padding: 25px 15px;
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ================= 1. TOP KPI SUMMARY CARDS ================= -->
+    <div class="cards-grid">
+        <div class="card"><h4>🏗️ Active Sites</h4><div class="value">08</div></div>
+        <div class="card"><h4>👥 Active Employees</h4><div class="value">148</div></div>
+        <div class="card"><h4>👷 Contractors</h4><div class="value">14</div></div>
+        <div class="card"><h4>🛡️ Supervisors</h4><div class="value">09</div></div>
+        <div class="card"><h4>🏪 Registered Retailers</h4><div class="value">24</div></div>
+        <div class="card balance-card"><h4>💰 Total Bank Balance</h4><div class="value">₹24,50,000</div></div>
+    </div>
+
+    <!-- ================= 2. PENDING DUES, LOANS & HANDOVERS ================= -->
+    <div class="dashboard-footer-grid">
+        
+        <!-- PENDING VENDOR DUES -->
+        <div class="table-container">
+            <h3 class="widget-title">
+                <span>⚠️ Pending Payment Dues</span>
+                <button type="button" class="btn-restore-defaults" onclick="resetDemoDuesAndHandovers()" title="Restore Default Demo Dues">🔄 Reset Demo</button>
+            </h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Party / Name</th>
+                        <th>Amount</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="pendingDuesBody">
+                    <!-- Populated dynamically via JS -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- NEW: UPCOMING LOAN EMI REMINDERS -->
+        <div class="loan-container">
+            <h3 class="widget-title">
+                <span>🏦 Upcoming Loan EMI Reminders</span>
+            </h3>
+            <ul class="loan-list" id="upcomingLoansBody">
+                <!-- Populated dynamically via JS from atr_company_loans_db -->
+            </ul>
+        </div>
+
+        <!-- UPCOMING SITE HANDOVERS -->
+        <div class="handover-container">
+            <h3 class="widget-title">
+                <span>🏗️ Upcoming Site Handovers</span>
+            </h3>
+            <ul class="handover-list" id="handoverListBody">
+                <!-- Populated dynamically via JS -->
+            </ul>
+        </div>
+
+    </div>
+
+    <!-- ================= 3. ADMIN APPROVED RECORDS & ACTIVITY LOG (WITH CLEAN LOG FEATURE) ================= -->
+    <div class="approval-log-card">
+        <div class="log-header-bar">
+            <div class="log-title-group">
+                <h3>✅ Recently Approved & Cleared Activity Log</h3>
+                <p>Tracks all items approved by Admin across Office, Supervisor, Employee portals and cleared dashboard settlements.</p>
+            </div>
+            <div class="log-controls">
+                <select id="logSourceFilter" class="log-select" onchange="renderApprovalLogs()">
+                    <option value="ALL">All Sources</option>
+                    <option value="Office Portal">🏢 Office Portal</option>
+                    <option value="Supervisor Portal">🛡️ Supervisor Portal</option>
+                    <option value="Employee Portal">👥 Employee Portal</option>
+                    <option value="Dashboard Settlement">💰 Dashboard Settlement</option>
+                </select>
+                <input type="text" id="logSearchInput" class="log-input" placeholder="🔍 Search log..." onkeyup="renderApprovalLogs()">
+                <button type="button" class="btn-clean-logs" onclick="cleanAllApprovalLogs()">🧹 Clean All Logs</button>
+            </div>
+        </div>
+
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Log ID</th>
+                        <th>Date & Time</th>
+                        <th>Source / Portal</th>
+                        <th>Requested By / Party</th>
+                        <th>Approved Action & Details</th>
+                        <th>Status</th>
+                        <th style="text-align: center;">Clean</th>
+                    </tr>
+                </thead>
+                <tbody id="approvedLogsTableBody">
+                    <!-- Populated dynamically via JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================================================
+        // 1. DEFAULT DATA FOR PENDING DUES, HANDOVERS & APPROVED LOGS
+        // =========================================================================================
+        const DEFAULT_PENDING_DUES = [
+            { id: "DUE-101", name: "Amitabha Roy", role: "Primary Contractor", amount: "₹1,20,000", status: "Payment Due" },
+            { id: "DUE-102", name: "Sayan Karmakar", role: "Material Retailer (Cement)", amount: "₹85,500", status: "Payment Due" }
+        ];
+
+        const DEFAULT_HANDOVERS = [
+            { id: "HND-201", siteName: "Commercial Complex B3", clientName: "Client: Rajat Dutta (Dum Dum)" }
+        ];
+
+        const DEFAULT_APPROVED_LOGS = [
+            {
+                logId: "APR-901",
+                timestamp: "06-10-2026, 10:15 AM",
+                source: "Office Portal",
+                party: "Anuradha Dipali (OFF-101)",
+                details: "Retailer Bill Entry (INV-SL-895) — Maa Tara Hardware (₹5,310.00)",
+                status: "Approved"
+            },
+            {
+                logId: "APR-902",
+                timestamp: "05-10-2026, 04:40 PM",
+                source: "Supervisor Portal",
+                party: "Subrata Roy (SUP-003)",
+                details: "Stock Addition Request — Salt Lake Sector V (Ambuja Cement 50 Bags)",
+                status: "Approved"
+            },
+            {
+                logId: "APR-903",
+                timestamp: "04-10-2026, 01:20 PM",
+                source: "Employee Portal",
+                party: "Vikas Pandey (OFF-102)",
+                details: "Monthly Attendance & Leave Verification — Dum Dum Project",
+                status: "Approved"
+            }
+        ];
+
+        let pendingDues = [];
+        let upcomingHandovers = [];
+        let approvedActivityLogs = [];
+
+        function loadDashboardState() {
+            const savedDues = localStorage.getItem('atr_dashboard_dues_db');
+            pendingDues = savedDues ? JSON.parse(savedDues) : JSON.parse(JSON.stringify(DEFAULT_PENDING_DUES));
+
+            const savedHandovers = localStorage.getItem('atr_dashboard_handovers_db');
+            upcomingHandovers = savedHandovers ? JSON.parse(savedHandovers) : JSON.parse(JSON.stringify(DEFAULT_HANDOVERS));
+
+            const savedLogs = localStorage.getItem('atr_admin_approved_home_logs');
+            approvedActivityLogs = savedLogs ? JSON.parse(savedLogs) : JSON.parse(JSON.stringify(DEFAULT_APPROVED_LOGS));
+
+            // Automatically sync any newly "Approved" items from Office & Supervisor approval queues
+            syncExternalApprovedRequests();
+        }
+
+        function saveDashboardState() {
+            localStorage.setItem('atr_dashboard_dues_db', JSON.stringify(pendingDues));
+            localStorage.setItem('atr_dashboard_handovers_db', JSON.stringify(upcomingHandovers));
+            localStorage.setItem('atr_admin_approved_home_logs', JSON.stringify(approvedActivityLogs));
+        }
+
+        function syncExternalApprovedRequests() {
+            const hiddenIds = JSON.parse(localStorage.getItem('atr_cleaned_log_ids')) || [];
+
+            // 1. Check Office Approvals (atr_office_approvals) where status === 'Approved'
+            const officeReqs = JSON.parse(localStorage.getItem('atr_office_approvals')) || [];
+            officeReqs.forEach(req => {
+                if (req.status === 'Approved' && req.reqId && !hiddenIds.includes(req.reqId)) {
+                    if (!approvedActivityLogs.some(l => l.logId === req.reqId)) {
+                        approvedActivityLogs.unshift({
+                            logId: req.reqId,
+                            timestamp: req.timestamp || new Date().toLocaleString('en-IN'),
+                            source: "Office Portal",
+                            party: `${req.userName || 'Office Staff'} (${req.userId || 'OFF'})`,
+                            details: `${req.module} — ${req.action}: ${req.summary || req.reason || ''}`,
+                            status: "Approved"
+                        });
+                    }
+                }
+            });
+
+            // 2. Check Supervisor Approvals (atr_supervisor_approvals) where status === 'Approved'
+            const supReqs = JSON.parse(localStorage.getItem('atr_supervisor_approvals')) || [];
+            supReqs.forEach(req => {
+                if (req.status === 'Approved' && req.id && !hiddenIds.includes(req.id)) {
+                    if (!approvedActivityLogs.some(l => l.logId === req.id)) {
+                        approvedActivityLogs.unshift({
+                            logId: req.id,
+                            timestamp: req.requestedAt ? new Date(req.requestedAt).toLocaleString('en-IN') : new Date().toLocaleString('en-IN'),
+                            source: "Supervisor Portal",
+                            party: `Site Supervisor (${req.site || 'Site'})`,
+                            details: `${req.module} — ${req.action}: ${req.summary || req.reason || ''}`,
+                            status: "Approved"
+                        });
+                    }
+                }
+            });
+
+            localStorage.setItem('atr_admin_approved_home_logs', JSON.stringify(approvedActivityLogs));
+        }
+
+        // =========================================================================================
+        // 2. RENDER PENDING DUES, HANDOVERS & LOAN REMINDERS
+        // =========================================================================================
+        
+        // --- 1. Pending Payment Dues ---
+        function renderPendingDues() {
+            const tbody = document.getElementById('pendingDuesBody');
+            tbody.innerHTML = '';
+
+            if (pendingDues.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="empty-box-msg" style="color:#28a745;">✔️ All pending payment dues have been cleared!</td></tr>`;
+                return;
+            }
+
+            pendingDues.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.id = `dueRow_${item.id}`;
+                tr.innerHTML = `
+                    <td>
+                        <strong style="color:var(--text-main);">${item.name}</strong><br>
+                        <span style="font-size:11px; color:var(--text-muted);">${item.role}</span>
+                    </td>
+                    <td style="font-weight: 700; color: #ff6b6b;">${item.amount}</td>
+                    <td style="text-align:right;"><button type="button" class="btn-table-clear" onclick="clearEmployeeDue('${item.id}')">Clear</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function clearEmployeeDue(dueId) {
+            const target = pendingDues.find(d => d.id === dueId);
+            if (!target) return;
+
+            if (confirm(`Are you sure you want to mark the payment due of ${target.amount} for ${target.name} as cleared?`)) {
+                pendingDues = pendingDues.filter(d => d.id !== dueId);
+                approvedActivityLogs.unshift({
+                    logId: "CLR-" + Date.now().toString().slice(-4),
+                    timestamp: new Date().toLocaleString('en-IN'),
+                    source: "Dashboard Settlement",
+                    party: `${target.name} (${target.role})`,
+                    details: `Cleared pending payment due of ${target.amount}`,
+                    status: "Approved & Cleared"
+                });
+                saveDashboardState();
+                renderPendingDues();
+                renderApprovalLogs();
+            }
+        }
+
+        // --- 2. Upcoming Site Handovers ---
+        function renderHandovers() {
+            const listEl = document.getElementById('handoverListBody');
+            listEl.innerHTML = '';
+
+            if (upcomingHandovers.length === 0) {
+                listEl.innerHTML = `<li class="empty-box-msg" style="color:#28a745;">✔️ All scheduled site handovers are completed!</li>`;
+                return;
+            }
+
+            upcomingHandovers.forEach(site => {
+                const li = document.createElement('li');
+                li.className = 'handover-item';
+                li.id = `handoverItem_${site.id}`;
+                li.innerHTML = `
+                    <div class="site-info">
+                        <span class="site-name">${site.siteName}</span>
+                        <span class="client-name">${site.clientName}</span>
+                    </div>
+                    <button type="button" class="btn-clear-due" onclick="clearSiteDue('${site.id}')">Clear Due</button>
+                `;
+                listEl.appendChild(li);
+            });
+        }
+
+        function clearSiteDue(handoverId) {
+            const target = upcomingHandovers.find(h => h.id === handoverId);
+            if (!target) return;
+
+            if (confirm(`Are you sure you want to mark the site handover for "${target.siteName}" as completed & cleared?`)) {
+                upcomingHandovers = upcomingHandovers.filter(h => h.id !== handoverId);
+                approvedActivityLogs.unshift({
+                    logId: "HND-" + Date.now().toString().slice(-4),
+                    timestamp: new Date().toLocaleString('en-IN'),
+                    source: "Dashboard Settlement",
+                    party: target.siteName,
+                    details: `Completed site handover & settlement (${target.clientName})`,
+                    status: "Approved & Cleared"
+                });
+                saveDashboardState();
+                renderHandovers();
+                renderApprovalLogs();
+            }
+        }
+
+        // --- 3. Dynamic Loan EMI Reminders (New) ---
+        function renderLoanReminders() {
+            const listEl = document.getElementById('upcomingLoansBody');
+            listEl.innerHTML = '';
+
+            // Fetch Real Loan & EMI Data
+            const companyLoans = JSON.parse(localStorage.getItem('atr_company_loans_db')) || [];
+            const companyEmis = JSON.parse(localStorage.getItem('atr_company_emis_db')) || [];
+            
+            const today = new Date();
+            const currentMonth = today.getMonth();
+            const currentYear = today.getFullYear();
+            
+            let activeReminders = [];
+
+            companyLoans.forEach(loan => {
+                if(loan.status !== 'Active') return;
+                
+                const dueDate = parseInt(loan.dueDate) || 0;
+                const remindDays = parseInt(loan.remindDays) || 5;
+
+                if (dueDate === 0) return;
+
+                let emiDateObj = new Date(currentYear, currentMonth, dueDate);
+                const diffTime = emiDateObj - today;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                // Check if EMI is already paid for THIS month
+                const monthPadded = String(currentMonth + 1).padStart(2, '0');
+                const thisMonthStr = `${currentYear}-${monthPadded}`;
+                
+                const isPaidThisMonth = companyEmis.some(e => {
+                    return String(e.loanPrimaryId) === String(loan.id) && e.date.startsWith(thisMonthStr);
+                });
+
+                if (!isPaidThisMonth && diffDays <= remindDays) {
+                    
+                    // Calculate expected EMI roughly for display (Total / Tenure) if not strictly set
+                    const emiEst = (loan.totalPayable && loan.tenure) ? (loan.totalPayable / loan.tenure) : 0;
+                    
+                    let statusHtml = "";
+                    if (diffDays < 0) {
+                        statusHtml = `<span class="status-loan-overdue">⚠️ Overdue by ${Math.abs(diffDays)} Days</span>`;
+                    } else if (diffDays === 0) {
+                        statusHtml = `<span class="status-loan-due">⚠️ DUE TODAY</span>`;
+                    } else {
+                        statusHtml = `<span class="status-loan-due">Due in ${diffDays} Days</span>`;
+                    }
+
+                    activeReminders.push(`
+                        <li class="loan-item">
+                            <div style="width: 100%; display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;">
+                                <span class="loan-bank">🏦 ${loan.bank} <span style="font-size:11px; color:var(--text-muted);">(${loan.loanId})</span></span>
+                                ${statusHtml}
+                            </div>
+                            <div class="loan-details" style="width: 100%; display: flex; justify-content: space-between;">
+                                <span>Purpose: ${loan.purpose}</span>
+                                <span style="font-weight: bold; color: #b18cfd;">Target Date: ${dueDate}th</span>
+                            </div>
+                        </li>
+                    `);
+                }
+            });
+
+            if (activeReminders.length === 0) {
+                listEl.innerHTML = `<li class="empty-box-msg" style="color:#28a745;">✔️ No upcoming EMIs due this week!</li>`;
+            } else {
+                listEl.innerHTML = activeReminders.join('');
+            }
+        }
+
+        function resetDemoDuesAndHandovers() {
+            pendingDues = JSON.parse(JSON.stringify(DEFAULT_PENDING_DUES));
+            upcomingHandovers = JSON.parse(JSON.stringify(DEFAULT_HANDOVERS));
+            saveDashboardState();
+            renderPendingDues();
+            renderHandovers();
+        }
+
+        // =========================================================================================
+        // 3. RENDER & CLEAN APPROVED ACTIVITY LOGS
+        // =========================================================================================
+        function renderApprovalLogs() {
+            const tbody = document.getElementById('approvedLogsTableBody');
+            const sourceFilter = document.getElementById('logSourceFilter').value;
+            const searchQuery = document.getElementById('logSearchInput').value.toLowerCase().trim();
+
+            tbody.innerHTML = '';
+
+            const filteredLogs = approvedActivityLogs.filter(log => {
+                const matchSource = (sourceFilter === 'ALL') || (log.source === sourceFilter);
+                const combinedText = `${log.logId} ${log.timestamp} ${log.source} ${log.party} ${log.details}`.toLowerCase();
+                const matchSearch = !searchQuery || combinedText.includes(searchQuery);
+                return matchSource && matchSearch;
+            });
+
+            if (filteredLogs.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="empty-box-msg">📭 No approved activity logs found.</td></tr>`;
+                return;
+            }
+
+            filteredLogs.forEach(log => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-weight: 700; color: #ffc107; white-space: nowrap;">${log.logId}</td>
+                    <td style="white-space: nowrap; font-size: 12.5px; color: var(--text-muted);">${log.timestamp}</td>
+                    <td><span class="badge-source">${log.source}</span></td>
+                    <td style="font-weight: 600;">${log.party}</td>
+                    <td>${log.details}</td>
+                    <td><span class="badge-approved">✔️ ${log.status}</span></td>
+                    <td style="text-align: center;">
+                        <button type="button" class="btn-del-log" onclick="removeSingleApprovalLog('${log.logId}')" title="Remove this log entry">🗑️</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function removeSingleApprovalLog(logId) {
+            approvedActivityLogs = approvedActivityLogs.filter(l => l.logId !== logId);
+
+            // Track cleaned ID so it doesn't re-sync from external queues
+            const hiddenIds = JSON.parse(localStorage.getItem('atr_cleaned_log_ids')) || [];
+            if (!hiddenIds.includes(logId)) {
+                hiddenIds.push(logId);
+                localStorage.setItem('atr_cleaned_log_ids', JSON.stringify(hiddenIds));
+            }
+
+            saveDashboardState();
+            renderApprovalLogs();
+        }
+
+        function cleanAllApprovalLogs() {
+            if (approvedActivityLogs.length === 0) {
+                alert("The activity log is already clean!");
+                return;
+            }
+
+            if (confirm("🧹 Are you sure you want to clean all approved activity logs from the dashboard?")) {
+                const hiddenIds = JSON.parse(localStorage.getItem('atr_cleaned_log_ids')) || [];
+                approvedActivityLogs.forEach(l => {
+                    if (!hiddenIds.includes(l.logId)) hiddenIds.push(l.logId);
+                });
+                localStorage.setItem('atr_cleaned_log_ids', JSON.stringify(hiddenIds));
+
+                approvedActivityLogs = [];
+                saveDashboardState();
+                renderApprovalLogs();
+            }
+        }
+
+        // Initialize on page load & sync across tabs
+        window.onload = function() {
+            loadDashboardState();
+            renderPendingDues();
+            renderLoanReminders(); // Render Dynamic Loan Widget
+            renderHandovers();
+            renderApprovalLogs();
+        };
+
+        window.addEventListener('storage', function(e) {
+            if (
+                e.key === 'atr_office_approvals' ||
+                e.key === 'atr_supervisor_approvals' ||
+                e.key === 'atr_admin_approved_home_logs' ||
+                e.key === 'atr_company_loans_db' ||
+                e.key === 'atr_company_emis_db'
+            ) {
+                loadDashboardState();
+                renderLoanReminders(); // Update EMI Reminders dynamically
+                renderApprovalLogs();
+            }
+        });
+    </script>
+</body>
+</html>

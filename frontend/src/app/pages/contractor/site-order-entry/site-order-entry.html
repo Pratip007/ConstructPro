@@ -1,0 +1,279 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Site Order Entry</h1>
+    <div class="view-toggle">
+      <button class="btn-secondary" [class.active]="viewMode() === 'entry'" (click)="viewMode.set('entry')">
+        <i class="ri-edit-line"></i> Entry View
+      </button>
+      <button class="btn-secondary" [class.active]="viewMode() === 'list'" (click)="viewMode.set('list')">
+        <i class="ri-list-check"></i> List View
+      </button>
+    </div>
+  </div>
+
+  <!-- ========== ENTRY VIEW ========== -->
+  @if (viewMode() === 'entry') {
+    <div class="card-container">
+      <div class="entry-header">
+        <h3>{{ editingId() ? 'Edit Order' : 'New Order' }}</h3>
+        @if (!editingId()) {
+          <span class="order-id-badge">{{ nextOrderId() }}</span>
+        }
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <app-searchable-dropdown
+            [items]="contractorItems()"
+            [label]="'Contractor *'"
+            [placeholder]="'Search contractor...'"
+            [required]="true"
+            [ngModel]="selectedContractorId()"
+            (ngModelChange)="selectedContractorId.set($event)"
+          />
+          @if (selectedContractor(); as c) {
+            @if (c.tds_applicable) {
+              <span class="tds-badge">TDS Applicable: {{ c.tds_percent }}%</span>
+            }
+          }
+        </div>
+        <div class="form-group">
+          <app-searchable-dropdown
+            [items]="siteItems()"
+            [label]="'Site / Project *'"
+            [placeholder]="'Search site...'"
+            [required]="true"
+            [ngModel]="selectedSiteId()"
+            (ngModelChange)="selectedSiteId.set($event)"
+          />
+        </div>
+        <div class="form-group">
+          <label>Order Date *</label>
+          <input type="date" [ngModel]="orderDate()" (ngModelChange)="orderDate.set($event)" />
+        </div>
+        <div class="form-group">
+          <label>Include GST?</label>
+          <div class="radio-group">
+            <label class="radio-label">
+              <input type="radio" name="includeGst" [value]="true" [ngModel]="includeGst()" (ngModelChange)="includeGst.set($event)" />
+              Yes
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="includeGst" [value]="false" [ngModel]="includeGst()" (ngModelChange)="includeGst.set($event)" />
+              No
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="section-title">Order Items</h3>
+      <div class="items-table">
+        <div class="items-header">
+          <span>Product</span>
+          <span>HSN</span>
+          <span>Unit</span>
+          <span>Qty</span>
+          <span>Price</span>
+          @if (includeGst()) { <span>GST %</span> <span>GST Amt</span> }
+          <span>Amount</span>
+          <span></span>
+        </div>
+
+        @for (item of items(); track $index; let i = $index) {
+          <div class="items-row">
+            <div class="form-group compact">
+              <app-searchable-dropdown
+                [items]="productItems()"
+                [placeholder]="'Search product...'"
+                [ngModel]="item.product_id"
+                (ngModelChange)="onProductSelect(item, $event)"
+              />
+            </div>
+            <div class="form-group compact">
+              <input type="text" [ngModel]="item.hsn" (ngModelChange)="item.hsn = $event" placeholder="HSN" />
+            </div>
+            <div class="form-group compact">
+              <select [ngModel]="item.unit" (ngModelChange)="item.unit = $event">
+                <option value="">--</option>
+                @for (u of unitOptions; track u) { <option [value]="u">{{ u }}</option> }
+              </select>
+            </div>
+            <div class="form-group compact">
+              <input type="number" [ngModel]="item.qty" (ngModelChange)="item.qty = +$event" min="0"
+                [placeholder]="item.unit === '%' ? 'Qty %' : 'Qty'" />
+            </div>
+            <div class="form-group compact">
+              <input type="number" [ngModel]="item.price" (ngModelChange)="item.price = +$event" min="0"
+                [placeholder]="item.unit === '%' ? 'Base Amount' : 'Price'" />
+            </div>
+            @if (includeGst()) {
+              <div class="form-group compact">
+                <select [ngModel]="item.gst_percent" (ngModelChange)="item.gst_percent = +$event">
+                  <option [value]="0">0%</option>
+                  <option [value]="5">5%</option>
+                  <option [value]="12">12%</option>
+                  <option [value]="18">18%</option>
+                  <option [value]="28">28%</option>
+                </select>
+              </div>
+              <div class="form-group compact">
+                <input type="text" [value]="formatCurrency(itemGst(item))" readonly class="computed-field" />
+              </div>
+            }
+            <div class="form-group compact">
+              <input type="text" [value]="formatCurrency(itemAmount(item))" readonly class="computed-field highlight" />
+            </div>
+            <div>
+              <button class="btn-icon btn-icon-danger" (click)="removeItem(i)" title="Remove">
+                <i class="ri-delete-bin-line"></i>
+              </button>
+            </div>
+          </div>
+        }
+
+        <button class="btn-secondary" (click)="addItem()" style="margin-top: 8px;">
+          <i class="ri-add-line"></i> Add Item
+        </button>
+      </div>
+
+      <!-- Totals Box -->
+      <div class="totals-card">
+        <div class="totals-row">
+          <span>Base Amount:</span>
+          <strong>{{ formatCurrency(totalBase()) }}</strong>
+        </div>
+        @if (includeGst()) {
+          <div class="totals-row">
+            <span>GST Amount:</span>
+            <strong class="text-info">+ {{ formatCurrency(totalGstAmount()) }}</strong>
+          </div>
+        }
+        @if (tdsPercent()) {
+          <div class="totals-row tds-row">
+            <span>TDS ({{ tdsPercent() }}%):</span>
+            <strong class="text-danger">- {{ formatCurrency(tdsAmount()) }}</strong>
+          </div>
+        }
+        <div class="totals-row grand-row">
+          <span>Grand Total:</span>
+          <strong>{{ formatCurrency(grandTotal()) }}</strong>
+        </div>
+      </div>
+
+      <div class="form-actions" style="margin-top: 20px;">
+        <button class="btn-primary" (click)="saveOrder()" [disabled]="saving()">
+          <i [class]="editingId() ? 'ri-save-line' : 'ri-checkbox-circle-line'"></i>
+          {{ editingId() ? 'Update Order' : 'Create Order' }}
+        </button>
+        @if (editingId()) {
+          <button class="btn-secondary" (click)="resetForm()"><i class="ri-close-line"></i> Cancel</button>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ========== LIST VIEW ========== -->
+  @if (viewMode() === 'list') {
+    <app-summary-cards [cards]="listSummary()" />
+
+    <div class="card-container" style="margin-top: 16px;">
+      <div class="toolbar-row">
+        <input type="text" [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)"
+          placeholder="Search by Order ID, Contractor, Site, Date..." class="search-input" />
+        <div class="export-buttons">
+          <button class="btn-secondary" (click)="exportExcel()"><i class="ri-file-excel-2-line"></i> Excel</button>
+          <button class="btn-secondary" (click)="exportPdf()"><i class="ri-file-pdf-line"></i> PDF</button>
+        </div>
+      </div>
+    </div>
+
+    @if (loading()) {
+      <div class="skeleton" style="height: 200px; margin-top: 16px;"></div>
+    } @else {
+      <div class="table-responsive" style="margin-top: 8px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Order ID</th>
+              <th>Date</th>
+              <th>Contractor</th>
+              <th>Site</th>
+              <th class="text-center">Items</th>
+              <th class="text-right">Base Amt</th>
+              <th class="text-right">GST</th>
+              <th class="text-right">TDS</th>
+              <th class="text-right">Net Total</th>
+              <th class="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (o of filteredOrders(); track o.id) {
+              <tr>
+                <td><span class="order-id-label">{{ o.order_id || o.id }}</span></td>
+                <td>{{ o.date }}</td>
+                <td style="font-weight: 600;">{{ contractorName(o.contractor_id) }}</td>
+                <td>{{ siteName(o.site_id) }}</td>
+                <td class="text-center">{{ o.items?.length || 0 }}</td>
+                <td class="text-right">{{ formatCurrency(o.total_base || 0) }}</td>
+                <td class="text-right text-info">{{ formatCurrency(o.total_gst || 0) }}</td>
+                <td class="text-right text-danger">{{ formatCurrency(o.tds_amount || 0) }}</td>
+                <td class="text-right" style="font-weight: 700;">{{ formatCurrency(o.grand_total || 0) }}</td>
+                <td class="text-center">
+                  <div class="action-buttons">
+                    <button class="btn-icon" (click)="editOrder(o)" title="Edit"><i class="ri-edit-line"></i></button>
+                    <button class="btn-icon btn-icon-danger" (click)="deleteOrder(o)" title="Delete"><i class="ri-delete-bin-line"></i></button>
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="10" class="empty-state">No purchase orders found.</td></tr>
+            }
+          </tbody>
+          @if (filteredOrders().length) {
+            <tfoot>
+              <tr class="totals-footer">
+                <td colspan="4"><strong>Totals</strong></td>
+                <td class="text-center"><strong>{{ filteredOrders().length }}</strong></td>
+                <td class="text-right"><strong>{{ formatCurrency(filteredOrders().reduce(sumBase, 0)) }}</strong></td>
+                <td class="text-right"><strong>{{ formatCurrency(filteredOrders().reduce(sumGst, 0)) }}</strong></td>
+                <td class="text-right"><strong>{{ formatCurrency(filteredOrders().reduce(sumTds, 0)) }}</strong></td>
+                <td class="text-right"><strong>{{ formatCurrency(filteredOrders().reduce(sumTotal, 0)) }}</strong></td>
+                <td></td>
+              </tr>
+            </tfoot>
+          }
+        </table>
+      </div>
+    }
+  }
+
+  <!-- Fixed Bottom Summary Bar -->
+  @if (viewMode() === 'entry' && items().length > 0) {
+    <div class="bottom-summary-bar">
+      <div class="summary-item">
+        <span>Items</span>
+        <strong>{{ items().length }}</strong>
+      </div>
+      <div class="summary-item">
+        <span>Base</span>
+        <strong>{{ formatCurrency(totalBase()) }}</strong>
+      </div>
+      @if (includeGst()) {
+        <div class="summary-item">
+          <span>GST</span>
+          <strong class="text-info">{{ formatCurrency(totalGstAmount()) }}</strong>
+        </div>
+      }
+      @if (tdsPercent()) {
+        <div class="summary-item">
+          <span>TDS</span>
+          <strong class="text-danger">{{ formatCurrency(tdsAmount()) }}</strong>
+        </div>
+      }
+      <div class="summary-item grand">
+        <span>Net Total</span>
+        <strong>{{ formatCurrency(grandTotal()) }}</strong>
+      </div>
+    </div>
+  }
+</div>

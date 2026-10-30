@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Office Workspace Home</title>
+    
+    <!-- Load FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- GLOBAL THEME MEMORY SYNC -->
+    <script>
+        const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        window.addEventListener('storage', function(e) {
+            if(e.key === 'atr_theme') { document.documentElement.setAttribute('data-theme', e.newValue); }
+        });
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
+
+        :root {
+            --bg-body: #121212;
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --input-bg: rgba(0, 0, 0, 0.25);
+            --hover-bg: rgba(255, 255, 255, 0.06);
+            --shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+            --accent: #ffc107;
+            --blue: #007bff;
+            --cyan: #17a2b8;
+            --green: #28a745;
+            --orange: #fd7e14;
+            --purple: #6f42c1;
+            --pink: #e83e8c;
+            --danger: #ff6b6b;
+        }
+
+        [data-theme="light"] {
+            --bg-body: #f0f2f5;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #666666;
+            --border-color: rgba(0, 0, 0, 0.08);
+            --glass-bg: rgba(0, 0, 0, 0.02);
+            --input-bg: #f8f9fa;
+            --hover-bg: rgba(0, 0, 0, 0.04);
+            --shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+            --accent: #e0a800;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; }
+        
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(136, 136, 136, 0.3); border-radius: 10px; }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            padding: 25px 30px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .dashboard-wrapper {
+            max-width: 1480px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* ================= 1. TOP WELCOME BANNER ================= */
+        .welcome-banner {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-left: 5px solid var(--accent);
+            border-radius: 14px;
+            padding: 20px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .welcome-left h2 {
+            font-size: 20px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .welcome-left p {
+            font-size: 12.5px;
+            color: var(--text-muted);
+            margin-top: 5px;
+            line-height: 1.5;
+        }
+
+        .banner-badges {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .info-pill {
+            background: var(--glass-bg);
+            border: 1px solid var(--border-color);
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .info-pill.role-pill {
+            background: rgba(255, 193, 7, 0.12);
+            border-color: rgba(255, 193, 7, 0.35);
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        /* ================= 2. KPI SUMMARY CARDS ================= */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .kpi-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 20px 22px;
+            box-shadow: var(--shadow);
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .kpi-card:hover { transform: translateY(-4px); }
+
+        .kpi-card.modules { border-top: 4px solid var(--blue); }
+        .kpi-card.dailywork { border-top: 4px solid var(--green); }
+        .kpi-card.pending { border-top: 4px solid var(--accent); }
+        .kpi-card.approved { border-top: 4px solid var(--cyan); }
+
+        .kpi-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .kpi-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+        }
+
+        .kpi-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 18px;
+        }
+
+        .kpi-value {
+            font-size: 25px;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .kpi-sub {
+            font-size: 11.5px;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            padding-top: 10px;
+            border-top: 1px dashed var(--border-color);
+        }
+
+        /* ================= 3. FULL-WIDTH DAILY WORK & APPROVAL REPORTS PANEL ================= */
+        .panel-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .panel-header {
+            padding: 16px 22px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--glass-bg);
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .panel-header h3 {
+            font-size: 15px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Report Tabs & Filters */
+        .report-tabs {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.25s;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-main);
+            border-color: var(--accent);
+        }
+
+        .tab-btn.active {
+            background: var(--accent);
+            color: #121212;
+            border-color: var(--accent);
+        }
+
+        .report-toolbar {
+            padding: 14px 22px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            background: var(--bg-card);
+        }
+
+        .toolbar-filters {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .toolbar-filters input {
+            padding: 8px 14px;
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-main);
+            font-size: 12.5px;
+            outline: none;
+            transition: border-color 0.25s;
+            color-scheme: dark;
+        }
+        [data-theme="light"] .toolbar-filters input { color-scheme: light; }
+
+        .toolbar-filters input:focus {
+            border-color: var(--accent);
+        }
+
+        .btn-print-report {
+            background: rgba(23, 162, 184, 0.15);
+            color: var(--cyan);
+            border: 1px solid rgba(23, 162, 184, 0.4);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.25s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-print-report:hover {
+            background: var(--cyan);
+            color: #fff;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            position: sticky;
+            top: 0;
+            padding: 14px 18px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-card);
+            z-index: 5;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 14px 18px;
+            font-size: 13px;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
+        }
+
+        tbody tr:hover { background: var(--hover-bg); }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 10.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+
+        .badge-completed { background: rgba(40, 167, 69, 0.15); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.35); }
+        .badge-progress { background: rgba(23, 162, 184, 0.15); color: #17a2b8; border: 1px solid rgba(23, 162, 184, 0.35); }
+        .badge-hold { background: rgba(255, 193, 7, 0.15); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.35); }
+        .badge-rejected { background: rgba(220, 53, 69, 0.15); color: #ff6b6b; border: 1px solid rgba(220, 53, 69, 0.35); }
+
+        .btn-del-log {
+            background: rgba(220, 53, 69, 0.12);
+            color: var(--danger);
+            border: 1px solid rgba(220, 53, 69, 0.3);
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 700;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+        }
+        .btn-del-log:hover { background: #dc3545; color: #fff; }
+
+        .btn-del-locked {
+            background: rgba(255, 193, 7, 0.1);
+            color: var(--accent);
+            border: 1px dashed rgba(255, 193, 7, 0.4);
+            padding: 4px 9px;
+            border-radius: 4px;
+            font-size: 10.5px;
+            font-weight: 700;
+            cursor: not-allowed;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+        }
+
+        /* ================= DELETE APPROVAL REQUEST MODAL ================= */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(6px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 3000;
+            padding: 20px;
+        }
+        .modal-overlay.active { display: flex; }
+
+        .modal-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-top: 4px solid var(--accent);
+            border-radius: 12px;
+            width: 100%;
+            max-width: 540px;
+            padding: 25px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+        }
+        .modal-header h3 {
+            font-size: 16px;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 22px;
+            cursor: pointer;
+        }
+        .close-btn:hover { color: var(--danger); }
+
+        .form-group {
+            margin-bottom: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .form-group label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 0.4px;
+        }
+        .form-control {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-main);
+            font-size: 12.5px;
+            outline: none;
+        }
+        .form-control:focus { border-color: var(--accent); }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 18px;
+        }
+        .btn-submit-req {
+            flex: 1;
+            background: var(--accent);
+            color: #121212;
+            border: none;
+            padding: 11px 16px;
+            border-radius: 8px;
+            font-size: 12.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: 0.25s;
+        }
+        .btn-submit-req:hover { filter: brightness(1.08); }
+        .btn-cancel-req {
+            background: #dc3545;
+            color: #fff;
+            border: none;
+            padding: 11px 20px;
+            border-radius: 8px;
+            font-size: 12.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            cursor: pointer;
+        }
+
+        .toast-popup {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--green);
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 12.5px;
+            font-weight: 700;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.35);
+            display: none;
+            z-index: 2000;
+            border-left: 4px solid var(--accent);
+        }
+
+        @media print {
+            body { background: #fff; color: #000; padding: 0; }
+            .welcome-banner, .kpi-grid, .report-toolbar, .report-tabs, .modal-overlay { display: none !important; }
+            .panel-card { border: none; box-shadow: none; }
+            .table-responsive { max-height: none; overflow: visible; }
+            th, td { border: 1px solid #ccc; color: #000; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-wrapper">
+
+        <!-- ================= 1. TOP WELCOME BANNER ================= -->
+        <div class="welcome-banner">
+            <div class="welcome-left">
+                <h2>🏢 Welcome back, <span id="userDisplayName" style="color: var(--accent);">Anuradha Dipali</span></h2>
+                <p>Use the left sidebar menu to access your allotted modules and track your daily work & approval reports below.</p>
+            </div>
+            <div class="banner-badges">
+                <div class="info-pill role-pill">
+                    <i class="fas fa-user-tie"></i> <span id="userDisplayRole">Accounts & Billing Executive</span>
+                </div>
+                <div class="info-pill">
+                    <i class="fas fa-id-card" style="color: var(--cyan);"></i> ID: <span id="userDisplayId">OFF-101</span>
+                </div>
+                <div class="info-pill">
+                    <i class="far fa-calendar-check" style="color: var(--green);"></i> <span id="currentDateText"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= 2. KPI SUMMARY CARDS ================= -->
+        <div class="kpi-grid">
+            
+            <!-- Allotted Modules Card -->
+            <div class="kpi-card modules">
+                <div class="kpi-top">
+                    <div>
+                        <div class="kpi-title">My Allotted Menus</div>
+                        <div class="kpi-value" style="color: var(--blue);" id="kpiAllottedCount">0</div>
+                    </div>
+                    <div class="kpi-icon" style="background: rgba(0, 123, 255, 0.15); color: var(--blue);">
+                        <i class="fas fa-th-large"></i>
+                    </div>
+                </div>
+                <div class="kpi-sub">
+                    <span>Active Sections: <strong id="kpiSectionCount">0</strong></span>
+                    <span>Synced: <strong>MenuAlotment</strong></span>
+                </div>
+            </div>
+
+            <!-- Daily Work Logged Card -->
+            <div class="kpi-card dailywork">
+                <div class="kpi-top">
+                    <div>
+                        <div class="kpi-title">Today's Work Entries</div>
+                        <div class="kpi-value" style="color: var(--green);" id="kpiTodayWorkCount">0</div>
+                    </div>
+                    <div class="kpi-icon" style="background: rgba(40, 167, 69, 0.15); color: var(--green);">
+                        <i class="fas fa-clipboard-check"></i>
+                    </div>
+                </div>
+                <div class="kpi-sub">
+                    <span>Total Logged: <strong id="kpiTotalWorkCount">0</strong></span>
+                    <span>Completed: <strong style="color: var(--green);" id="kpiCompletedWorkCount">0</strong></span>
+                </div>
+            </div>
+
+            <!-- Pending Admin Approvals Card -->
+            <div class="kpi-card pending">
+                <div class="kpi-top">
+                    <div>
+                        <div class="kpi-title">Pending in ApproveOffice</div>
+                        <div class="kpi-value" style="color: var(--accent);" id="kpiPendingApprovals">0</div>
+                    </div>
+                    <div class="kpi-icon" style="background: rgba(255, 193, 7, 0.15); color: var(--accent);">
+                        <i class="fas fa-hourglass-half"></i>
+                    </div>
+                </div>
+                <div class="kpi-sub">
+                    <span>Awaiting Admin Action</span>
+                    <span style="color: var(--accent); font-weight: 700;">On Hold</span>
+                </div>
+            </div>
+
+            <!-- Approved Requests Card -->
+            <div class="kpi-card approved">
+                <div class="kpi-top">
+                    <div>
+                        <div class="kpi-title">Approved Changes</div>
+                        <div class="kpi-value" style="color: var(--cyan);" id="kpiApprovedCount">0</div>
+                    </div>
+                    <div class="kpi-icon" style="background: rgba(23, 162, 184, 0.15); color: var(--cyan);">
+                        <i class="fas fa-check-double"></i>
+                    </div>
+                </div>
+                <div class="kpi-sub">
+                    <span>Total Requests Sent: <strong id="kpiTotalReqCount">0</strong></span>
+                    <span style="color: var(--green); font-weight: 700;">Verified</span>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ================= 3. FULL-WIDTH DAILY WORK & APPROVAL REPORTS ================= -->
+        <div class="panel-card">
+            <div class="panel-header">
+                <h3 id="reportPanelTitle"><i class="fas fa-list-check" style="color: var(--green);"></i> My Daily Work & Approval Reports</h3>
+                <div class="report-tabs">
+                    <button class="tab-btn active" id="tabBtnWork" onclick="switchReportTab('work')">📋 Daily Work Report</button>
+                    <button class="tab-btn" id="tabBtnApproval" onclick="switchReportTab('approval')">🏢 Processing Status (ApproveOffice)</button>
+                </div>
+            </div>
+
+            <div class="report-toolbar">
+                <div class="toolbar-filters">
+                    <input type="date" id="filterReportDate" onchange="renderActiveReportTable()" title="Filter by Date">
+                    <input type="text" id="filterReportSearch" placeholder="🔍 Search module, ref, details..." onkeyup="renderActiveReportTable()" style="min-width: 260px;">
+                    <button class="tab-btn" onclick="clearReportFilters()" style="padding: 7px 12px;">Reset</button>
+                </div>
+                <button class="btn-print-report" onclick="window.print()">
+                    <i class="fas fa-print"></i> Print Report
+                </button>
+            </div>
+
+            <!-- TAB 1: DAILY WORK REPORT TABLE -->
+            <div class="table-responsive" id="workReportContainer">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>Allotted Module</th>
+                            <th>Ref / Voucher</th>
+                            <th>Work Description</th>
+                            <th style="text-align: center;">Status</th>
+                            <th style="text-align: center;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dailyWorkTableBody">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- TAB 2: APPROVEOFFICE.HTML REQUESTS TABLE -->
+            <div class="table-responsive" id="approvalReportContainer" style="display: none;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Req ID & Date</th>
+                            <th>Module</th>
+                            <th>Action Type</th>
+                            <th>Target / Change Summary</th>
+                            <th>Reason</th>
+                            <th style="text-align: center;">ApproveOffice Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="approvalStatusTableBody">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ================= DELETE APPROVAL REQUEST MODAL (ROUTES TO ApproveOffice.html) ================= -->
+    <div class="modal-overlay" id="deleteApprovalModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fas fa-shield-halved"></i> Request Admin Approval for Deletion</h3>
+                <button class="close-btn" onclick="closeDeleteApprovalModal()">&times;</button>
+            </div>
+            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.5;">
+                লেজারের হিসাব সুরক্ষিত রাখার জন্য অফিস পোর্টাল থেকে কোনো এন্ট্রি সরাসরি ডিলিট করা যাবে না। আপনার ডিলিট রিকোয়েস্টটি <strong>ApproveOffice.html</strong>-এ পাঠানো হবে। অ্যাডমিন অ্যাপ্রুভ করলেই কেবল এটি ডিলিট হবে।
+            </p>
+            <div class="form-group">
+                <label>Target Module & Reference No.</label>
+                <input type="text" id="delModalModuleRef" class="form-control" readonly style="font-weight: 700; color: var(--accent);">
+            </div>
+            <div class="form-group">
+                <label>Record / Work Description</label>
+                <textarea id="delModalDesc" class="form-control" rows="2" readonly style="color: var(--text-muted);"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Reason for Deletion <span style="color: var(--danger);">*</span></label>
+                <textarea id="delModalReason" class="form-control" rows="3" placeholder="Explain clearly why this entry needs to be deleted..."></textarea>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-submit-req" onclick="submitDeleteRequestToAdmin()">
+                    📤 Send Delete Request to Admin
+                </button>
+                <button type="button" class="btn-cancel-req" onclick="closeDeleteApprovalModal()">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-popup" id="toastPopup"></div>
+
+    <script>
+        // =========================================================================================
+        // 1. EXACT 13 SECTIONS & 56 MENUS SCHEMA (Synced with Admin dashboard.html)
+        // =========================================================================================
+        const ADMIN_DASHBOARD_SCHEMA = [
+            {
+                treeId: "masterTree", title: "🛠️ Master Section", color: "#007bff",
+                items: [
+                    { file: "NewUserEntry.html", label: "👤 New User Entry" },
+                    { file: "MenuAlotment.html", label: "📋 Menu Allotment" },
+                    { file: "HeadAllotment.html", label: "🏷️ Head Entry" },
+                    { file: "BankEntry.html", label: "🏦 Bank Entry" },
+                    { file: "T&CEntry.html", label: "📜 Add T&C Entry" }
+                ]
+            },
+            {
+                treeId: "approvalTree", title: "✅ Approval Section", color: "#17a2b8",
+                items: [
+                    { file: "ApproveOffice.html", label: "🏢 Office User Requests" },
+                    { file: "ApproveSupervisor.html", label: "🛡️ Supervisor Requests" },
+                    { file: "ApproveEmployee.html", label: "👥 Employee Requests" },
+                    { file: "ApprovalLogs.html", label: "📜 Approval History" }
+                ]
+            },
+            {
+                treeId: "employeeTree", title: "👥 Employee Section", color: "#28a745",
+                items: [
+                    { file: "EmployeeCategory.html", label: "👔 Position Category" },
+                    { file: "RegisteredEmployeeRecords.html", label: "📝 Employee Joining" },
+                    { file: "SiteTagging.html", label: "📍 Site Tagging" },
+                    { file: "EmployeeSubId.html", label: "🆔 Sub ID Create" },
+                    { file: "Paymentlist.html", label: "📄 Payment List" },
+                    { file: "EmployeeAttendance.html", label: "📅 Attendence" },
+                    { file: "SiteLeaveEntry.html", label: "🚪 Site Leave Entry" },
+                    { file: "EmployeeLedger.html", label: "📖 Employee Ledger" }
+                ]
+            },
+            {
+                treeId: "contractorTree", title: "🏗️ Contractor Section", color: "#fd7e14",
+                items: [
+                    { file: "AddContractor.html", label: "👷 Add Contractor" },
+                    { file: "SiteOrderEntry.html", label: "📦 Site Order Entry" },
+                    { file: "ProductEntry.html", label: "🧱 Product Entry" },
+                    { file: "ContractorLedger.html", label: "📖 Contractor Ledger" }
+                ]
+            },
+            {
+                treeId: "mobilizationTree", title: "⚙️ Mobilization Section", color: "#6f42c1",
+                items: [
+                    { file: "AddEquipment.html", label: "🚜 Add Equipment" },
+                    { file: "SiteOrderEquipment.html", label: "📋 Site Order Equipment" },
+                    { file: "EquipmentLeave.html", label: "⏱️ Equipment Leave" },
+                    { file: "SiteTaggingEquipment.html", label: "📍 Site Tagging Equipment" }
+                ]
+            },
+            {
+                treeId: "companyTree", title: "🏢 Company Section", color: "#20c997",
+                items: [
+                    { file: "AddCompany.html", label: "🏢 Add Company" },
+                    { file: "BalanceReceived.html", label: "💰 Balance Received" },
+                    { file: "CompanyLedger.html", label: "📊 Company Ledger" },
+                    { file: "IncomeExpenseEntry.html", label: "💸 Income Expense Entry" },
+                    { file: "bankstatement.html", label: "📜 Bank Statement" }
+                ]
+            },
+            {
+                treeId: "supervisorTree", title: "🛡️ Supervisor Section", color: "#3f51b5",
+                items: [
+                    { file: "AddSupervisor.html", label: "👤 Add Supervisor" },
+                    { file: "SiteTaggingSupervisor.html", label: "📍 Site Tagging Supervisor" },
+                    { file: "SupervisorLedger.html", label: "📖 Supervisor Ledger" }
+                ]
+            },
+            {
+                treeId: "salesTree", title: "🛍️ Sales Section", color: "#e91e63",
+                items: [
+                    { file: "PurchaseOrderEntry.html", label: "📄 Purchase Order Entry" },
+                    { file: "InvoiceEntry.html", label: "🧾 Invoice Entry" },
+                    { file: "ViewSite.html", label: "👁️ View Site" }
+                ]
+            },
+            {
+                treeId: "purchaseTree", title: "🛒 Purchase Section", color: "#00bcd4",
+                items: [
+                    { file: "AddRetailer.html", label: "🏪 Add Retailer" },
+                    { file: "RetailSiteInvoice.html", label: "🧾 Retail Site Invoice" },
+                    { file: "GstReport.html", label: "📈 GST Report" },
+                    { file: "NonGstReport.html", label: "📉 Non GST Report" },
+                    { file: "RetailLedger.html", label: "📖 Retail Ledger" }
+                ]
+            },
+            {
+                treeId: "paymentTree", title: "💳 Payment Section", color: "#dc3545",
+                items: [
+                    { file: "AllTypePayment.html", label: "💸 All Type Payment" }
+                ]
+            },
+            {
+                treeId: "reportTree", title: "📊 Report Section", color: "#ffc107",
+                items: [
+                    { file: "MobilizationReport.html", label: "🚜 Mobilization Report" },
+                    { file: "EmployeeReport.html", label: "👥 Employee Report" },
+                    { file: "ContractorReport.html", label: "👷 Contractor Report" },
+                    { file: "CompanyReport.html", label: "🏢 Company Report" },
+                    { file: "SupervisorReport.html", label: "🛡️ Supervisor Report" },
+                    { file: "SalesReport.html", label: "💰 Selles Report" },
+                    { file: "PurchaseReport.html", label: "🛍️ Purchase Report" },
+                    { file: "GstBillDownload.html", label: "📥 GST Bill Download" },
+                    { file: "NonGstBillDownload.html", label: "📥 Non GST Bill Download" }
+                ]
+            },
+            {
+                treeId: "stockTree", title: "📦 Stock Management", color: "#9c27b0",
+                items: [
+                    { file: "StockView.html", label: "🔍 Add/View Stock" },
+                    { file: "CurrentStock.html", label: "📊 Current Stock" },
+                    { file: "StockTransfer.html", label: "🔄 Stock Transfer" },
+                    { file: "StockReport.html", label: "📋 Stock Report" }
+                ]
+            },
+            {
+                treeId: "docTree", title: "📜 Company Document", color: "#457b9d",
+                items: [
+                    { file: "CreateDocList.html", label: "📁 Create Doc List" }
+                ]
+            }
+        ];
+
+        // Default Office Users & Menu Allotments fallback
+        const DEFAULT_OFFICE_USERS = [
+            { userId: "OFF-101", name: "Anuradha Dipali", designation: "Accounts & Billing Executive", role: "Office Staff" },
+            { userId: "OFF-102", name: "Vikas Pandey", designation: "HR & Employee Coordinator", role: "Office Staff" },
+            { userId: "OFF-103", name: "Murshed Akhter", designation: "Purchase & Stock Executive", role: "Office Staff" }
+        ];
+
+        const DEFAULT_ALLOTMENTS = {
+            "OFF-101": [
+                "EmployeeAttendance.html", "EmployeeLedger.html",
+                "AddRetailer.html", "RetailSiteInvoice.html", "GstReport.html", "NonGstReport.html", "RetailLedger.html",
+                "AllTypePayment.html", "SupervisorLedger.html", "IncomeExpenseEntry.html", "bankstatement.html"
+            ],
+            "OFF-102": [
+                "EmployeeCategory.html", "RegisteredEmployeeRecords.html", "SiteTagging.html",
+                "EmployeeSubId.html", "Paymentlist.html", "EmployeeAttendance.html",
+                "SiteLeaveEntry.html", "EmployeeLedger.html", "EmployeeReport.html"
+            ],
+            "OFF-103": [
+                "AddRetailer.html", "RetailSiteInvoice.html", "RetailLedger.html",
+                "StockView.html", "CurrentStock.html", "StockTransfer.html", "StockReport.html",
+                "PurchaseOrderEntry.html", "InvoiceEntry.html", "PurchaseReport.html"
+            ]
+        };
+
+        let currentOfficeUser = null;
+        let userAllottedMenuObjects = [];
+        let activeReportTab = "work";
+        let targetDeleteLogId = null;
+
+        // =========================================================================================
+        // 2. COLLECT USER & MENU ALLOTMENTS FROM NewUserEntry.html & MenuAlotment.html
+        // =========================================================================================
+        function collectOfficeUsers() {
+            const possibleKeys = [
+                'atr_office_users', 'atr_users', 'new_user_entry', 'NewUserEntry',
+                'users', 'user_entry', 'office_users', 'atr_user_list'
+            ];
+            let list = [];
+            possibleKeys.forEach(key => {
+                try {
+                    const raw = localStorage.getItem(key);
+                    if (raw) {
+                        const parsed = JSON.parse(raw);
+                        if (Array.isArray(parsed)) {
+                            parsed.forEach(u => {
+                                const uid = (u.userId || u.id || u.empId || u.username || u.user_id || "").toString().trim();
+                                const uname = (u.name || u.userName || u.fullName || u.user_name || "").toString().trim();
+                                if (uid && !list.some(ex => ex.userId.toUpperCase() === uid.toUpperCase())) {
+                                    list.push({
+                                        userId: uid,
+                                        name: uname || uid,
+                                        designation: u.designation || u.role || u.userType || "Office Staff",
+                                        allottedMenus: u.allottedMenus || u.menus || u.permissions || null
+                                    });
+                                }
+                            });
+                        }
+                    }
+                } catch (e) {}
+            });
+            return list.length > 0 ? list : DEFAULT_OFFICE_USERS;
+        }
+
+        function collectUserAllottedTokens(userId, userName) {
+            const possibleKeys = [
+                'atr_menu_allotments', 'atr_menu_alotment', 'MenuAlotment', 'MenuAllotment',
+                'menu_alotment', 'menu_allotment', 'user_menu_allotment', 'allotted_menus'
+            ];
+            const uidUpper = (userId || "").toUpperCase();
+            const nameUpper = (userName || "").toUpperCase();
+
+            for (let key of possibleKeys) {
+                try {
+                    const raw = localStorage.getItem(key);
+                    if (!raw) continue;
+                    const parsed = JSON.parse(raw);
+
+                    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                        for (let k in parsed) {
+                            if (k.toUpperCase() === uidUpper || (nameUpper && k.toUpperCase() === nameUpper)) {
+                                if (Array.isArray(parsed[k])) return parsed[k];
+                                if (parsed[k] && Array.isArray(parsed[k].menus)) return parsed[k].menus;
+                            }
+                        }
+                    }
+
+                    if (Array.isArray(parsed)) {
+                        const found = parsed.find(entry => {
+                            const eId = (entry.userId || entry.id || entry.user || "").toString().toUpperCase();
+                            const eName = (entry.userName || entry.name || "").toString().toUpperCase();
+                            return eId === uidUpper || (nameUpper && eName === nameUpper);
+                        });
+                        if (found) {
+                            const arr = found.menus || found.allottedMenus || found.permissions || [];
+                            if (Array.isArray(arr)) return arr;
+                        }
+                    }
+                } catch (e) {}
+            }
+
+            const users = collectOfficeUsers();
+            const uObj = users.find(u => u.userId.toUpperCase() === uidUpper);
+            if (uObj && Array.isArray(uObj.allottedMenus)) return uObj.allottedMenus;
+
+            return DEFAULT_ALLOTMENTS[userId] || DEFAULT_ALLOTMENTS["OFF-101"] || [];
+        }
+
+        function isMenuPermitted(menuItem, allottedArray) {
+            if (!Array.isArray(allottedArray) || allottedArray.length === 0) return false;
+            const targetFile = menuItem.file.toLowerCase();
+            const targetFileNoExt = targetFile.replace('.html', '');
+            const targetLabel = menuItem.label.toLowerCase();
+            const cleanLabelText = menuItem.label.replace(/^[^\w\s]+/, '').trim().toLowerCase();
+
+            return allottedArray.some(token => {
+                const t = (token || "").toString().trim().toLowerCase().replace('../', '');
+                if (!t) return false;
+                return (
+                    t === targetFile ||
+                    t === targetFileNoExt ||
+                    t === targetLabel ||
+                    t === cleanLabelText ||
+                    (cleanLabelText.length > 3 && t.includes(cleanLabelText))
+                );
+            });
+        }
+
+        // =========================================================================================
+        // 3. INITIALIZE HOME DASHBOARD ON LOAD
+        // =========================================================================================
+        window.onload = function() {
+            const today = new Date();
+            document.getElementById('currentDateText').innerText = today.toLocaleDateString('en-IN', {
+                day: '2-digit', month: 'short', year: 'numeric'
+            });
+
+            loadActiveUserAndAllotments();
+            seedDemoDailyWorkIfEmpty();
+            updateAllKPIs();
+            renderActiveReportTable();
+        };
+
+        // Live sync if MenuAlotment or Approvals update
+        window.addEventListener('storage', function() {
+            loadActiveUserAndAllotments();
+            updateAllKPIs();
+            renderActiveReportTable();
+        });
+
+        function loadActiveUserAndAllotments() {
+            const urlParams = new URLSearchParams(window.location.search);
+            let loginId = urlParams.get('userId') || urlParams.get('id') || sessionStorage.getItem('atr_logged_office_id') || localStorage.getItem('atr_logged_office_id') || "OFF-101";
+            loginId = loginId.trim();
+
+            const users = collectOfficeUsers();
+            currentOfficeUser = users.find(u =>
+                u.userId.toUpperCase() === loginId.toUpperCase() ||
+                u.name.toUpperCase() === loginId.toUpperCase()
+            ) || users[0];
+
+            document.getElementById('userDisplayName').innerText = currentOfficeUser.name;
+            document.getElementById('userDisplayId').innerText = currentOfficeUser.userId;
+            document.getElementById('userDisplayRole').innerText = currentOfficeUser.designation || "Office Staff";
+
+            const rawTokens = collectUserAllottedTokens(currentOfficeUser.userId, currentOfficeUser.name);
+            userAllottedMenuObjects = [];
+
+            ADMIN_DASHBOARD_SCHEMA.forEach(sec => {
+                sec.items.forEach(item => {
+                    if (isMenuPermitted(item, rawTokens)) {
+                        userAllottedMenuObjects.push({
+                            ...item,
+                            sectionId: sec.treeId,
+                            sectionTitle: sec.title,
+                            color: sec.color
+                        });
+                    }
+                });
+            });
+        }
+
+        // =========================================================================================
+        // 4. DAILY WORK LOG & APPROVAL REPORT ENGINE (WITH AUTO-HIDE FOR APPROVED LOGS)
+        // =========================================================================================
+        function seedDemoDailyWorkIfEmpty() {
+            const existing = JSON.parse(localStorage.getItem('atr_office_daily_work')) || [];
+            if (existing.length === 0) {
+                const todayStr = new Date().toISOString().split('T')[0];
+                const demoLogs = [
+                    {
+                        id: "WRK-101",
+                        userId: "OFF-101",
+                        userName: "Anuradha Dipali",
+                        date: todayStr,
+                        time: "10:30 AM",
+                        module: "Retail Site Invoice (RetailSiteInvoice.html)",
+                        refNo: "INV-SL-895",
+                        desc: "Verified GST hardware bill for Maa Tara Hardware at Salt Lake Sector V.",
+                        status: "Completed"
+                    },
+                    {
+                        id: "WRK-102",
+                        userId: "OFF-101",
+                        userName: "Anuradha Dipali",
+                        date: todayStr,
+                        time: "12:15 PM",
+                        module: "All Type Payment (AllTypePayment.html)",
+                        refNo: "VCH-2026-44",
+                        desc: "Prepared weekly labour advance payment entry for Dum Dum Project.",
+                        status: "Sent for Approval"
+                    },
+                    {
+                        id: "WRK-103",
+                        userId: "OFF-102",
+                        userName: "Vikas Pandey",
+                        date: todayStr,
+                        time: "11:00 AM",
+                        module: "Attendence (EmployeeAttendance.html)",
+                        refNo: "ATT-SEP-2026",
+                        desc: "Updated monthly attendance sheet & overtime hours for site staff.",
+                        status: "Completed"
+                    }
+                ];
+                localStorage.setItem('atr_office_daily_work', JSON.stringify(demoLogs));
+            }
+        }
+
+        function getCombinedUserWorkLogs() {
+            const workLogs = JSON.parse(localStorage.getItem('atr_office_daily_work')) || [];
+            const approvalReqs = JSON.parse(localStorage.getItem('atr_office_approvals')) || [];
+
+            // 1. Get user's own work logs
+            let myLogs = workLogs.filter(l => l.userId && l.userId.toUpperCase() === currentOfficeUser.userId.toUpperCase());
+
+            // 2. Identify log IDs that correspond to an APPROVED request (these should be hidden)
+            const approvedRequestIds = approvalReqs
+                .filter(r => r.status === 'Approved')
+                .map(r => r.reqId);
+                
+            const approvedLinkedWorkLogIds = approvalReqs
+                .filter(r => r.status === 'Approved' && r.linkedWorkLogId)
+                .map(r => r.linkedWorkLogId);
+
+            // Filter out logs that are marked completed via approval
+            myLogs = myLogs.filter(l => {
+                // If this log was sent for approval and the corresponding reqId is now approved, hide it
+                if (approvedRequestIds.includes(l.refNo)) return false;
+                // If this log was marked for deletion and the deletion is approved, hide it
+                if (approvedLinkedWorkLogIds.includes(l.id)) return false;
+                return true;
+            });
+
+            // 3. Process Pending/Rejected Approval Requests
+            const myPendingReqs = approvalReqs.filter(r =>
+                r.userId &&
+                r.userId.toUpperCase() === currentOfficeUser.userId.toUpperCase() &&
+                r.status !== 'Approved' && // Don't show approved ones in the list
+                !r.linkedWorkLogId // Avoid duplicating work logs that triggered a delete request
+            );
+
+            const mappedReqs = myPendingReqs.map(r => {
+                const todayIso = new Date().toISOString().split('T')[0];
+                return {
+                    id: r.reqId,
+                    userId: r.userId,
+                    userName: r.userName,
+                    date: r.dateIso || todayIso,
+                    time: r.timestamp || "",
+                    module: r.module || "Module Action",
+                    refNo: r.reqId || "REQ",
+                    desc: `${r.action}: ${r.summary || r.reason}`,
+                    status: r.status === 'Rejected' ? 'Rejected' : 'Sent for Approval',
+                    isApprovalLinked: true
+                };
+            });
+
+            return [...mappedReqs, ...myLogs];
+        }
+
+        // PROTECTED DELETE: Opens Approval Request Modal instead of deleting directly
+        function requestDeleteWorkLog(logId) {
+            const logs = JSON.parse(localStorage.getItem('atr_office_daily_work')) || [];
+            const targetLog = logs.find(l => l.id === logId);
+
+            if (!targetLog) return;
+
+            if (targetLog.status === 'Delete Pending') {
+                alert("⏳ A delete request for this entry is already pending in ApproveOffice.html!");
+                return;
+            }
+
+            targetDeleteLogId = logId;
+            document.getElementById('delModalModuleRef').value = `${targetLog.module} | Ref: ${targetLog.refNo}`;
+            document.getElementById('delModalDesc').value = `${targetLog.desc} (Date: ${targetLog.date})`;
+            document.getElementById('delModalReason').value = '';
+            document.getElementById('deleteApprovalModal').classList.add('active');
+        }
+
+        function closeDeleteApprovalModal() {
+            document.getElementById('deleteApprovalModal').classList.remove('active');
+            targetDeleteLogId = null;
+        }
+
+        function submitDeleteRequestToAdmin() {
+            const reason = document.getElementById('delModalReason').value.trim();
+            if (!reason) {
+                alert("⚠️ Please enter a valid reason for deleting this entry.");
+                return;
+            }
+
+            let logs = JSON.parse(localStorage.getItem('atr_office_daily_work')) || [];
+            const idx = logs.findIndex(l => l.id === targetDeleteLogId);
+
+            if (idx > -1) {
+                const targetLog = logs[idx];
+
+                // 1. Mark status as "Delete Pending"
+                logs[idx].status = "Delete Pending";
+                localStorage.setItem('atr_office_daily_work', JSON.stringify(logs));
+
+                // 2. Push Delete Request to ApproveOffice.html queue
+                const newReq = {
+                    reqId: "DEL-" + Date.now().toString().slice(-5),
+                    linkedWorkLogId: targetLog.id,
+                    userId: currentOfficeUser.userId,
+                    userName: currentOfficeUser.name,
+                    designation: currentOfficeUser.designation,
+                    module: targetLog.module,
+                    action: "DELETE WORK / RECORD",
+                    summary: `Ref: ${targetLog.refNo} | ${targetLog.desc}`,
+                    oldData: targetLog,
+                    newData: null,
+                    reason: reason,
+                    timestamp: new Date().toLocaleString('en-IN'),
+                    status: "Pending"
+                };
+
+                const queue = JSON.parse(localStorage.getItem('atr_office_approvals')) || [];
+                queue.unshift(newReq);
+                localStorage.setItem('atr_office_approvals', JSON.stringify(queue));
+                localStorage.setItem('approve_office_requests', JSON.stringify(queue));
+                localStorage.setItem('ApproveOffice_requests', JSON.stringify(queue));
+
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.refreshNotificationsUI === 'function') {
+                        window.parent.refreshNotificationsUI();
+                    }
+                } catch (e) {}
+
+                updateAllKPIs();
+                renderActiveReportTable();
+                showToast("📤 Delete Request sent to ApproveOffice.html! Record is now On Hold.");
+            }
+
+            closeDeleteApprovalModal();
+        }
+
+        function switchReportTab(tabName) {
+            activeReportTab = tabName;
+            document.getElementById('tabBtnWork').classList.toggle('active', tabName === 'work');
+            document.getElementById('tabBtnApproval').classList.toggle('active', tabName === 'approval');
+
+            document.getElementById('workReportContainer').style.display = tabName === 'work' ? 'block' : 'none';
+            document.getElementById('approvalReportContainer').style.display = tabName === 'approval' ? 'block' : 'none';
+            renderActiveReportTable();
+        }
+
+        function clearReportFilters() {
+            document.getElementById('filterReportDate').value = '';
+            document.getElementById('filterReportSearch').value = '';
+            renderActiveReportTable();
+        }
+
+        function renderActiveReportTable() {
+            const filterDate = document.getElementById('filterReportDate').value;
+            const searchQuery = document.getElementById('filterReportSearch').value.toLowerCase();
+
+            // 1. Render Daily Work Report (Filtered to only show non-approved/pending tasks)
+            let myLogs = getCombinedUserWorkLogs();
+
+            if (filterDate) myLogs = myLogs.filter(l => l.date === filterDate);
+            if (searchQuery) {
+                myLogs = myLogs.filter(l =>
+                    (l.module || '').toLowerCase().includes(searchQuery) ||
+                    (l.refNo || '').toLowerCase().includes(searchQuery) ||
+                    (l.desc || '').toLowerCase().includes(searchQuery) ||
+                    (l.status || '').toLowerCase().includes(searchQuery)
+                );
+            }
+
+            const workTbody = document.getElementById('dailyWorkTableBody');
+            if (myLogs.length === 0) {
+                workTbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);">No active daily work records found. (Approved entries are automatically cleared)</td></tr>`;
+            } else {
+                workTbody.innerHTML = myLogs.map(l => {
+                    let badgeCls = 'badge-completed';
+                    if (l.status === 'In Progress') badgeCls = 'badge-progress';
+                    else if (l.status === 'Sent for Approval' || l.status === 'Delete Pending') badgeCls = 'badge-hold';
+                    else if (l.status === 'Rejected') badgeCls = 'badge-rejected';
+
+                    let actionCellHTML = '';
+                    if (l.isApprovalLinked) {
+                        actionCellHTML = `<span class="btn-del-locked" title="Synced with ApproveOffice.html">🔒 In Queue</span>`;
+                    } else if (l.status === 'Delete Pending') {
+                        actionCellHTML = `<span class="btn-del-locked" title="Waiting for Admin Approval in ApproveOffice.html">⏳ Del Pending</span>`;
+                    } else {
+                        actionCellHTML = `<button class="btn-del-log" onclick="requestDeleteWorkLog('${l.id}')" title="Request Admin Approval to Delete"><i class="fas fa-trash"></i> Req Delete</button>`;
+                    }
+
+                    return `
+                        <tr>
+                            <td><strong>${l.date}</strong><br><small style="color:var(--text-muted);">${l.time || ''}</small></td>
+                            <td style="font-weight:700; color:var(--accent);">${l.module}</td>
+                            <td><span style="background:var(--glass-bg); border:1px solid var(--border-color); padding:3px 8px; border-radius:4px; font-weight:700; font-size:11px;">${l.refNo}</span></td>
+                            <td>${l.desc}</td>
+                            <td style="text-align:center;"><span class="badge ${badgeCls}">${l.status === 'Delete Pending' ? '⏳ Delete Pending' : l.status}</span></td>
+                            <td style="text-align:center;">${actionCellHTML}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            // 2. Render ApproveOffice.html Approval Requests (Only Pending/Rejected)
+            const allReqs = JSON.parse(localStorage.getItem('atr_office_approvals')) || [];
+            let myReqs = allReqs.filter(r => 
+                r.userId && 
+                r.userId.toUpperCase() === currentOfficeUser.userId.toUpperCase() && 
+                r.status !== 'Approved' // Hide approved requests completely
+            );
+
+            if (searchQuery) {
+                myReqs = myReqs.filter(r =>
+                    (r.module || '').toLowerCase().includes(searchQuery) ||
+                    (r.action || '').toLowerCase().includes(searchQuery) ||
+                    (r.summary || '').toLowerCase().includes(searchQuery) ||
+                    (r.reason || '').toLowerCase().includes(searchQuery)
+                );
+            }
+
+            const appTbody = document.getElementById('approvalStatusTableBody');
+            if (myReqs.length === 0) {
+                appTbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);">No pending or rejected requests found. All approved requests have been cleared.</td></tr>`;
+            } else {
+                appTbody.innerHTML = myReqs.map(r => {
+                    let badgeCls = r.status === 'Rejected' ? 'badge-rejected' : 'badge-hold';
+
+                    return `
+                        <tr>
+                            <td><strong>${r.reqId}</strong><br><small style="color:var(--text-muted);">${r.timestamp}</small></td>
+                            <td style="font-weight:700; color:var(--cyan);">${r.module}</td>
+                            <td><span class="badge badge-progress">${r.action}</span></td>
+                            <td style="font-size:11.5px;">${r.summary}</td>
+                            <td>${r.reason}</td>
+                            <td style="text-align:center;">
+                                <span class="badge ${badgeCls}">${r.status === 'Pending' ? '⏳ Pending in ApproveOffice' : r.status}</span>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+
+        // =========================================================================================
+        // 5. UPDATE TOP KPI SUMMARY CARDS
+        // =========================================================================================
+        function updateAllKPIs() {
+            const uniqueSections = [...new Set(userAllottedMenuObjects.map(m => m.sectionTitle))];
+            document.getElementById('kpiAllottedCount').innerText = userAllottedMenuObjects.length;
+            document.getElementById('kpiSectionCount').innerText = uniqueSections.length;
+
+            const todayStr = new Date().toISOString().split('T')[0];
+            const combinedLogs = getCombinedUserWorkLogs();
+            const todayLogs = combinedLogs.filter(l => l.date === todayStr);
+            const completedLogs = combinedLogs.filter(l => l.status === 'Completed');
+
+            document.getElementById('kpiTodayWorkCount').innerText = todayLogs.length.toString().padStart(2, '0');
+            document.getElementById('kpiTotalWorkCount').innerText = combinedLogs.length;
+            document.getElementById('kpiCompletedWorkCount').innerText = completedLogs.length;
+
+            const allReqs = JSON.parse(localStorage.getItem('atr_office_approvals')) || [];
+            const myReqs = allReqs.filter(r => r.userId && r.userId.toUpperCase() === currentOfficeUser.userId.toUpperCase());
+            const pendingReqs = myReqs.filter(r => r.status === 'Pending');
+            const approvedReqs = myReqs.filter(r => r.status === 'Approved');
+
+            document.getElementById('kpiPendingApprovals').innerText = pendingReqs.length.toString().padStart(2, '0');
+            document.getElementById('kpiApprovedCount').innerText = approvedReqs.length.toString().padStart(2, '0');
+            document.getElementById('kpiTotalReqCount').innerText = myReqs.length;
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toastPopup');
+            toast.innerText = msg;
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 3500);
+        }
+    </script>
+</body>
+</html>

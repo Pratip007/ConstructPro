@@ -1,0 +1,275 @@
+<div class="app-shell" [class.sidebar-hidden]="sidebarHidden()">
+
+  <!-- Mobile sidebar overlay -->
+  @if (isMobile() && !sidebarHidden()) {
+    <div class="sidebar-overlay" (click)="toggleSidebar()"></div>
+  }
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+
+    <!-- BRAND -->
+    <div class="sidebar-brand">
+      <i class="ri-building-4-fill brand-icon"></i>
+      <div class="brand-text">
+        <span class="brand-name">Construct<span>Pro</span></span>
+        <span class="brand-sub">Admin Portal</span>
+      </div>
+    </div>
+
+    <!-- PROFILE SECTION -->
+    <div class="creative-profile-container" [class.active]="profileMenuOpen()">
+      <div class="avatar-wrapper" (click)="toggleProfileMenu($event)">
+        <img [src]="profileImage()" class="profile-img" alt="Admin">
+        <div class="camera-overlay" (click)="fileUpload.click(); $event.stopPropagation()">
+          <i class="ri-camera-line"></i>
+        </div>
+      </div>
+      <input #fileUpload type="file" style="display:none" accept="image/*" (change)="onProfileImageChange($event)">
+
+      <div class="profile-dropdown-menu">
+        <h4>{{ currentUser()?.name || 'Admin' }}</h4>
+        <span>{{ currentUser()?.displayId || 'Super Admin' }}</span>
+        <hr>
+        <a routerLink="change-password" (click)="closeDropdowns()"><i class="ri-key-line"></i> Change Password</a>
+        <a class="logout-btn" (click)="logout()"><i class="ri-logout-box-r-line"></i> Logout</a>
+      </div>
+    </div>
+
+    <!-- DASHBOARD HOME -->
+    <a routerLink="" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="dashboard-home-link">
+      <i class="ri-dashboard-3-line"></i> Main Dashboard
+    </a>
+
+    <!-- MASTER SECTION -->
+    <div class="tree-container" [class.open]="isTreeOpen('master')">
+      <div class="tree-toggle" (click)="toggleTreeMenu('master')">
+        <span class="toggle-label"><i class="ri-settings-3-line tree-icon master-icon"></i> Master Section</span>
+        <i class="ri-arrow-right-s-line arrow"></i>
+      </div>
+      <ul class="tree-menu master">
+        <li><a routerLink="master/new-user-entry" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-user-add-line"></i> New User Entry</a></li>
+        <li><a routerLink="master/menu-allotment" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-list-check-3"></i> Menu Allotment</a></li>
+        <li><a routerLink="master/head-allotment" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-price-tag-3-line"></i> Head Entry</a></li>
+        <li><a routerLink="master/bank-entry" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-bank-line"></i> Bank Entry</a></li>
+        <li><a routerLink="master/tc-entry" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-file-text-line"></i> Add T&amp;C Entry</a></li>
+      </ul>
+    </div>
+
+    <!-- APPROVAL SECTION -->
+    <div class="tree-container" [class.open]="isTreeOpen('approval')">
+      <div class="tree-toggle" (click)="toggleTreeMenu('approval')">
+        <span class="toggle-label"><i class="ri-shield-check-line tree-icon approval-icon"></i> Approval Section</span>
+        <i class="ri-arrow-right-s-line arrow"></i>
+      </div>
+      <ul class="tree-menu approval">
+        <li><a routerLink="approval/approve-office" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-building-4-line"></i> Office User Requests</a></li>
+        <li><a routerLink="approval/approve-supervisor" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-shield-star-line"></i> Supervisor Requests</a></li>
+        <li><a routerLink="approval/approval-logs" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-history-line"></i> Approval History</a></li>
+      </ul>
+    </div>
+
+    <!-- EMPLOYEE SECTION -->
+    <div class="tree-container" [class.open]="isTreeOpen('employee')">
+      <div class="tree-toggle" (click)="toggleTreeMenu('employee')">
+        <span class="toggle-label"><i class="ri-team-line tree-icon employee-icon"></i> Employee Section</span>
+        <i class="ri-arrow-right-s-line arrow"></i>
+      </div>
+      <ul class="tree-menu employee">
+        <li><a routerLink="employee/employee-category" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-award-line"></i> Position Category</a></li>
+        <li><a routerLink="employee/registered-employees" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-user-received-line"></i> Employee Joining</a></li>
+        <li><a routerLink="employee/site-tagging" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-map-pin-line"></i> Site Tagging</a></li>
+        <li><a routerLink="employee/employee-sub-id" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-id-card-line"></i> Sub ID Create</a></li>
+        <li><a routerLink="employee/payment-list" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-receipt-line"></i> Payment List</a></li>
+        <li><a routerLink="employee/employee-attendance" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-calendar-check-line"></i> Attendance</a></li>
+        <li><a routerLink="employee/site-leave-entry" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-door-open-line"></i> Site Leave Entry</a></li>
+        <li><a routerLink="employee/employee-ledger" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-book-open-line"></i> Employee Ledger</a></li>
+      </ul>
+    </div>
+
+    <!-- CONTRACTOR SECTION -->
+    <div class="tree-container" [class.open]="isTreeOpen('contractor')">
+      <div class="tree-toggle" (click)="toggleTreeMenu('contractor')">
+        <span class="toggle-label"><i class="ri-user-settings-line tree-icon contractor-icon"></i> Contractor Section</span>
+        <i class="ri-arrow-right-s-line arrow"></i>
+      </div>
+      <ul class="tree-menu contractor">
+        <li><a routerLink="contractor/add-contractor" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-user-star-line"></i> Add Contractor</a></li>
+        <li><a routerLink="contractor/site-order-entry" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-file-add-line"></i> Site Order Entry</a></li>
+        <li><a routerLink="contractor/product-entry" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-grid-line"></i> Product Entry</a></li>
+        <li><a routerLink="contractor/contractor-ledger" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-book-2-line"></i> Contractor Ledger</a></li>
+      </ul>
+    </div>
+
+    <!-- MOBILIZATION SECTION -->
+    <div class="tree-container" [class.open]="isTreeOpen('mobilization')">
+      <div class="tree-toggle" (click)="toggleTreeMenu('mobilization')">
+        <span class="toggle-label"><i class="ri-truck-line tree-icon mobil-icon"></i> Mobilization Section</span>
+        <i class="ri-arrow-right-s-line arrow"></i>
+      </div>
+      <ul class="tree-menu mobilization">
+        <li><a routerLink="mobilization/add-equipment" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-tools-line"></i> Add Equipment</a></li>
+        <li><a routerLink="mobilization/site-order-equipment" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-file-list-2-line"></i> Site Order Equipment</a></li>
+        <li><a routerLink="mobilization/equipment-leave" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-time-line"></i> Equipment Leave</a></li>
+        <li><a routerLink="mobilization/site-tagging-equipment" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-map-pin-line"></i> Site Tagging Equipment</a></li>
+      </ul>
+    </div>
+
+    <!-- COMPANY SECTION -->
+    <div class="tree-container" [class.open]="isTreeOpen('company')">
+      <div class="tree-toggle" (click)="toggleTreeMenu('company')">
+        <span class="toggle-label"><i class="ri-building-line tree-icon company-icon"></i> Company Section</span>
+        <i class="ri-arrow-right-s-line arrow"></i>
+      </div>
+      <ul class="tree-menu company">
+        <li><a routerLink="company/add-company" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-building-2-line"></i> Add Company</a></li>
+        <li><a routerLink="company/balance-received" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-money-dollar-circle-line"></i> Balance Received</a></li>
+        <li><a routerLink="company/company-ledger" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-line-chart-line"></i> Company Ledger</a></li>
+        <li><a routerLink="company/company-loan-management" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-bank-card-line"></i> Company Loan Management</a></li>
+        <li><a routerLink="company/vehicle-management" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-car-line"></i> Vehicle Management</a></li>
+        <li><a routerLink="company/income-expense-entry" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-exchange-dollar-line"></i> Income Expense Entry</a></li>
+        <li><a routerLink="company/bank-statement" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-file-chart-line"></i> Bank Statement</a></li>
+      </ul>
+    </div>
+
+    <!-- SUPERVISOR SECTION -->
+    <div class="tree-container" [class.open]="isTreeOpen('supervisor')">
+      <div class="tree-toggle" (click)="toggleTreeMenu('supervisor')">
+        <span class="toggle-label"><i class="ri-shield-user-line tree-icon supervisor-icon"></i> Supervisor Section</span>
+        <i class="ri-arrow-right-s-line arrow"></i>
+      </div>
+      <ul class="tree-menu supervisor-tree">
+        <li><a routerLink="supervisor/add-supervisor" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-user-add-line"></i> Add Supervisor</a></li>
+        <li><a routerLink="supervisor/site-tagging-supervisor" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-map-pin-2-line"></i> Site Tagging Supervisor</a></li>
+        <li><a routerLink="supervisor/supervisor-ledger" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-book-line"></i> Supervisor Ledger</a></li>
+      </ul>
+    </div>
+
+    <!-- SALES SECTION -->
+    <div class="tree-container" [class.open]="isTreeOpen('sales')">
+      <div class="tree-toggle" (click)="toggleTreeMenu('sales')">
+        <span class="toggle-label"><i class="ri-shopping-bag-line tree-icon sales-icon"></i> Sales Section</span>
+        <i class="ri-arrow-right-s-line arrow"></i>
+      </div>
+      <ul class="tree-menu sales">
+        <li><a routerLink="sales/purchase-order-entry" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-file-paper-2-line"></i> Purchase Order Entry</a></li>
+        <li><a routerLink="sales/invoice-entry" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-bill-line"></i> Invoice Entry</a></li>
+        <li><a routerLink="sales/view-site" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-map-pin-line"></i> Site Management</a></li>
+      </ul>
+    </div>
+
+    <!-- PURCHASE SECTION -->
+    <div class="tree-container" [class.open]="isTreeOpen('purchase')">
+      <div class="tree-toggle" (click)="toggleTreeMenu('purchase')">
+        <span class="toggle-label"><i class="ri-store-line tree-icon purchase-icon"></i> Purchase Section</span>
+        <i class="ri-arrow-right-s-line arrow"></i>
+      </div>
+      <ul class="tree-menu purchase">
+        <li><a routerLink="purchase/add-retailer" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-store-2-line"></i> Add Retailer</a></li>
+        <li><a routerLink="purchase/retail-site-invoice" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-receipt-line"></i> Retail Site Invoice</a></li>
+        <li><a routerLink="purchase/gst-report" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-line-chart-line"></i> GST Report</a></li>
+        <li><a routerLink="purchase/non-gst-report" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-bar-chart-line"></i> Non GST Report</a></li>
+        <li><a routerLink="purchase/retail-ledger" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-book-open-line"></i> Retail Ledger</a></li>
+      </ul>
+    </div>
+
+    <!-- PAYMENT SECTION -->
+    <div class="tree-container" [class.open]="isTreeOpen('payment')">
+      <div class="tree-toggle" (click)="toggleTreeMenu('payment')">
+        <span class="toggle-label"><i class="ri-send-plane-line tree-icon payment-icon"></i> Payment Section</span>
+        <i class="ri-arrow-right-s-line arrow"></i>
+      </div>
+      <ul class="tree-menu payment">
+        <li><a routerLink="payment/all-type-payment" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-money-cny-circle-line"></i> All Type Payment</a></li>
+      </ul>
+    </div>
+
+    <!-- REPORT SECTION -->
+    <div class="tree-container" [class.open]="isTreeOpen('report')">
+      <div class="tree-toggle" (click)="toggleTreeMenu('report')">
+        <span class="toggle-label"><i class="ri-bar-chart-box-line tree-icon report-icon"></i> Report Section</span>
+        <i class="ri-arrow-right-s-line arrow"></i>
+      </div>
+      <ul class="tree-menu report">
+        <li><a routerLink="reports/mobilization-report" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-truck-line"></i> Mobilization Report</a></li>
+        <li><a routerLink="reports/employee-report" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-group-line"></i> Employee Report</a></li>
+        <li><a routerLink="reports/contractor-report" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-user-star-line"></i> Contractor Report</a></li>
+        <li><a routerLink="reports/company-report" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-building-line"></i> Company Report</a></li>
+        <li><a routerLink="reports/supervisor-report" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-shield-line"></i> Supervisor Report</a></li>
+        <li><a routerLink="reports/sales-report" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-coin-line"></i> Sales Report</a></li>
+        <li><a routerLink="reports/purchase-report" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-shopping-bag-3-line"></i> Purchase Report</a></li>
+        <li><a routerLink="reports/gst-bill-download" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-download-cloud-line"></i> GST Bill Download</a></li>
+        <li><a routerLink="reports/non-gst-bill-download" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-download-2-line"></i> Non GST Bill Download</a></li>
+        <li><a routerLink="reports/full-site-ledger" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-pie-chart-2-line"></i> Full Site Report Ledger</a></li>
+      </ul>
+    </div>
+
+    <!-- STOCK MANAGEMENT -->
+    <div class="tree-container" [class.open]="isTreeOpen('stock')">
+      <div class="tree-toggle" (click)="toggleTreeMenu('stock')">
+        <span class="toggle-label"><i class="ri-stack-line tree-icon stock-icon"></i> Stock Management</span>
+        <i class="ri-arrow-right-s-line arrow"></i>
+      </div>
+      <ul class="tree-menu stock">
+        <li><a routerLink="stock/stock-view" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-search-eye-line"></i> Add / View Stock</a></li>
+        <li><a routerLink="stock/current-stock" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-archive-line"></i> Current Stock</a></li>
+        <li><a routerLink="stock/stock-transfer" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-arrow-left-right-line"></i> Stock Transfer</a></li>
+        <li><a routerLink="stock/stock-report" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-clipboard-line"></i> Stock Report</a></li>
+      </ul>
+    </div>
+
+    <!-- COMPANY DOCUMENT -->
+    <div class="tree-container" [class.open]="isTreeOpen('doc')">
+      <div class="tree-toggle" (click)="toggleTreeMenu('doc')">
+        <span class="toggle-label"><i class="ri-folder-open-line tree-icon doc-icon"></i> Company Document</span>
+        <i class="ri-arrow-right-s-line arrow"></i>
+      </div>
+      <ul class="tree-menu doc">
+        <li><a routerLink="documents/create-doc-list" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-folder-add-line"></i> Create Doc List</a></li>
+        <li><a routerLink="documents/backup" routerLinkActive="active" (click)="closeDropdowns()"><i class="ri-save-line"></i> Company Full Backup</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main-content">
+
+    <!-- HEADER -->
+    <div class="header">
+      <div class="header-left">
+        <button class="icon-btn" (click)="toggleSidebar()" title="Toggle Sidebar">
+          <i class="ri-menu-line"></i>
+        </button>
+        <h1>ATR Administration</h1>
+      </div>
+
+      <div class="header-right">
+        <button class="icon-btn" (click)="toggleTheme()" title="Switch Light/Dark Mode">
+          <i class="ri-contrast-2-line"></i>
+        </button>
+
+        <div class="notification-wrapper" [class.active]="notifMenuOpen()">
+          <button class="icon-btn" (click)="toggleNotification($event)" title="Pending Approvals">
+            <i class="ri-notification-3-line"></i>
+            @if (notifCount() > 0) {
+              <span class="notif-badge">{{ notifCount() }}</span>
+            }
+          </button>
+          <div class="notif-dropdown-menu">
+            <h4>Pending Approvals</h4>
+            @for (item of notifItems(); track item.route) {
+              <a [routerLink]="item.route" class="notif-item" (click)="closeDropdowns()">
+                <i [class]="item.icon"></i> {{ item.label }}
+              </a>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROUTER OUTLET -->
+    <div class="content-area">
+      <router-outlet />
+    </div>
+  </div>
+</div>

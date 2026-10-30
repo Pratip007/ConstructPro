@@ -1,0 +1,66 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1><i class="ri-group-line"></i> Employee Report</h1>
+    <div class="header-actions">
+      <button class="btn-secondary" (click)="exportExcel()" [disabled]="!rows().length">
+        <i class="ri-file-excel-2-line"></i> Export Excel
+      </button>
+      <button class="btn-secondary" (click)="printReport()" [disabled]="!rows().length">
+        <i class="ri-printer-line"></i> Print
+      </button>
+      <button class="btn-primary" (click)="load()" [disabled]="loading()">
+        <i class="ri-refresh-line"></i> Refresh
+      </button>
+    </div>
+  </div>
+
+  @if (rows().length) {
+    <app-summary-cards [cards]="summaryCards" />
+  }
+
+  <div class="card-container">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Category</label>
+        <select [(ngModel)]="categoryFilter">
+          <option value="">All Categories</option>
+          @for (cat of categories; track cat) {
+            <option [value]="cat">{{ cat }}</option>
+          }
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Site</label>
+        <select [(ngModel)]="siteFilter">
+          <option value="">All Sites</option>
+          @for (site of sites; track site.id) {
+            <option [value]="site.id">{{ site.name }}</option>
+          }
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select [(ngModel)]="statusFilter">
+          <option value="">All</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </div>
+      <div class="form-group" style="align-self: end;">
+        <button class="btn-primary" (click)="load()" [disabled]="loading()">
+          @if (loading()) { Loading... } @else { <i class="ri-search-line"></i> Search }
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="employee-report-table">
+    <app-data-table
+      [columns]="columns"
+      [data]="rows()"
+      [loading]="loading()"
+      fileName="employee-report"
+      emptyMessage="No employees found."
+    />
+  </div>
+</div>

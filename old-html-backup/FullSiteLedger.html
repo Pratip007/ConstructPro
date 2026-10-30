@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Full Site Report Ledger</title>
+    
+    <!-- Sync theme with Master Dashboard -->
+    <script>
+        const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        window.addEventListener('storage', function(e) {
+            if(e.key === 'atr_theme') { document.documentElement.setAttribute('data-theme', e.newValue); }
+        });
+    </script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Export Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+        :root {
+            --bg-body: transparent; 
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #b0b0b0;
+            --border-color: rgba(255, 255, 255, 0.12);
+            --glass-bg: rgba(30, 30, 30, 0.75);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --input-bg: rgba(15, 15, 15, 0.6);
+            --shadow: 0 4px 20px rgba(0,0,0,0.4);
+            
+            --theme-color: #ffc107;
+            --theme-glow: rgba(255, 193, 7, 0.3);
+            --theme-transition: all 0.3s ease;
+        }
+
+        [data-theme="light"] {
+            --bg-body: transparent;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #666666;
+            --border-color: rgba(0, 0, 0, 0.12);
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --input-bg: rgba(240, 240, 240, 0.8);
+            --shadow: 0 8px 25px rgba(0,0,0,0.06);
+            --theme-color: #f39c12;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; }
+        body { background-color: var(--bg-body); color: var(--text-main); display: flex; flex-direction: column; height: 100vh; overflow: hidden; transition: var(--theme-transition); }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 193, 7, 0.3); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--theme-color); }
+
+        select, select.form-control { background-color: var(--bg-card) !important; color: var(--text-main) !important; color-scheme: dark; }
+        [data-theme="light"] select, [data-theme="light"] select.form-control { color-scheme: light; }
+        
+        .main-content { flex: 1; display: flex; flex-direction: column; padding: 20px 30px; height: 100%; overflow: hidden; width: 100%; max-width: 1600px; margin: 0 auto; }
+        
+        /* Header */
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; flex-shrink: 0; flex-wrap: wrap; gap: 15px; }
+        .header h1 { font-size: 24px; color: var(--theme-color); display: flex; align-items: center; gap: 10px; font-weight: 700;}
+        .btn-back-dash { background: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color); text-decoration: none; padding: 8px 15px; border-radius: 6px; font-weight: bold; font-size: 13px; transition: 0.3s; cursor: pointer; }
+        .btn-back-dash:hover { background: var(--theme-color); color: #000; border-color: var(--theme-color); }
+        .role-mode-badge { display: none; background: rgba(255, 193, 7, 0.15); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.4); padding: 5px 12px; border-radius: 20px; font-size: 11.5px; font-weight: 700; align-items: center; gap: 6px; }
+
+        /* Action Buttons */
+        .btn-export-pdf { background: rgba(220, 53, 69, 0.15); color: #dc3545; border: 1px solid rgba(220, 53, 69, 0.4); padding: 9px 15px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; text-transform: uppercase; transition: 0.3s; }
+        .btn-export-pdf:hover { background: #dc3545; color: #fff; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(220,53,69,0.3); }
+        .btn-export-excel { background: rgba(40, 167, 69, 0.15); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.4); padding: 9px 15px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; text-transform: uppercase; transition: 0.3s; margin-left: 10px;}
+        .btn-export-excel:hover { background: #28a745; color: #fff; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(40,167,69,0.3); }
+
+        /* Controls Section */
+        .controls-bar { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; background: var(--glass-bg); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); flex-wrap: wrap; flex-shrink: 0; }
+        .form-group { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 200px;}
+        .form-group label { font-size: 11px; font-weight: 700; color: var(--theme-color); text-transform: uppercase; }
+        .form-control { background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 9px 12px; border-radius: 6px; font-size: 13px; outline: none; transition: 0.3s; }
+        .form-control:focus { border-color: var(--theme-color); }
+        .btn-search { background: var(--theme-color); color: #000; padding: 10px 20px; border: none; border-radius: 6px; font-weight: 800; cursor: pointer; text-transform: uppercase; transition: 0.3s; margin-top: 18px;}
+        .btn-search:hover { filter: brightness(1.1); transform: translateY(-2px); }
+
+        /* Report Container - Formal Web UI */
+        .report-container { flex: 1; background: var(--glass-bg); border-radius: 12px; border: 1px solid var(--glass-border); padding: 20px; overflow-y: auto; display: none; flex-direction: column; gap: 25px;}
+        
+        .report-title-box { text-align: center; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 5px; flex-shrink: 0;}
+        .report-title-box h2 { color: var(--theme-color); font-size: 22px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;}
+        .report-title-box p { color: var(--text-muted); font-size: 13px; margin-top: 5px; font-weight: 600;}
+
+        /* Section Tables with Scrollable Body & Sticky Header/Footer (Formal Look) */
+        .section-block { background: transparent; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; flex-shrink: 0;}
+        .section-header { background: var(--input-bg); padding: 12px 20px; font-size: 14px; font-weight: 800; color: var(--text-main); text-transform: uppercase; border-bottom: 2px solid var(--theme-color); letter-spacing: 0.5px;}
+        
+        .table-scroll-wrapper { max-height: 250px; overflow-y: auto; position: relative; }
+        
+        table.report-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 12.5px; }
+        .report-table thead th { position: sticky; top: 0; background: var(--bg-card); padding: 12px 20px; color: var(--text-muted); font-weight: 700; border-bottom: 1px solid var(--border-color); z-index: 2; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .report-table tbody td { padding: 12px 20px; border-bottom: 1px solid var(--border-color); color: var(--text-main); }
+        .report-table tbody tr:hover { background: rgba(255,255,255,0.02); }
+        
+        /* Sticky Footer for Section Totals */
+        .report-table tfoot td { position: sticky; bottom: 0; background: var(--bg-card); padding: 14px 20px; font-weight: 700; border-top: 2px solid var(--border-color); z-index: 2; box-shadow: 0 -2px 5px rgba(0,0,0,0.1); color: var(--text-main); }
+
+        .t-right { text-align: right; }
+        .t-center { text-align: center; }
+        .t-bold { font-weight: 700; }
+        .t-highlight { font-weight: 800; color: var(--theme-color); font-size: 14px; }
+
+        /* Grand Total Box */
+        .grand-total-box { background: var(--bg-card); border: 1px solid var(--border-color); border-top: 4px solid var(--theme-color); border-radius: 8px; padding: 20px; text-align: right; margin-top: 10px; flex-shrink: 0; box-shadow: var(--shadow);}
+        .grand-total-box h3 { color: var(--text-muted); font-size: 13px; text-transform: uppercase; letter-spacing: 1px; }
+        .grand-total-box h1 { color: var(--theme-color); font-size: 32px; margin-top: 5px; font-weight: 800; }
+
+        /* Loading Spinner */
+        .loader { border: 4px solid rgba(255, 193, 7, 0.2); border-top: 4px solid var(--theme-color); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 50px auto; display: none; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+
+    <div class="main-content">
+        <div class="header">
+            <div style="display:flex; gap:15px; align-items:center;">
+                <!-- Updated dynamic back button -->
+                <a href="#" id="btnBackDashboard" class="btn-back-dash" onclick="handleBackToDashboard(event)">← Back to Dashboard</a>
+                <h1>📊 Full Site Report Ledger <span id="roleModeBadge" class="role-mode-badge">🏢 Office Mode</span></h1>
+            </div>
+            <div>
+                <button class="btn-export-pdf" onclick="exportToPDF()">📄 Export PDF</button>
+                <button class="btn-export-excel" onclick="exportToExcel()">📊 Export Excel</button>
+            </div>
+        </div>
+
+        <div class="controls-bar">
+            <div class="form-group">
+                <label>Select Target Company</label>
+                <select class="form-control" id="fCompany" onchange="populateSites()"></select>
+            </div>
+            <div class="form-group">
+                <label>Select Project Site</label>
+                <select class="form-control" id="fSite">
+                    <option value="">-- Choose Company First --</option>
+                </select>
+            </div>
+            <button class="btn-search" onclick="generateReport()">Generate Report</button>
+        </div>
+
+        <div class="loader" id="loader"></div>
+
+        <div class="report-container" id="reportContainer">
+            <div class="report-title-box">
+                <h2>ATR CONSTRUCTION - SITE LEDGER</h2>
+                <p id="rHeaderDesc">Project: N/A | Company: N/A</p>
+            </div>
+
+            <!-- 1. Employee Details Section -->
+            <div class="section-block">
+                <div class="section-header">1. Employee Attendance & Site Expenses (Monthly)</div>
+                <div class="table-scroll-wrapper">
+                    <table class="report-table" id="empTable">
+                        <thead>
+                            <tr>
+                                <th>Month-Year</th>
+                                <th class="t-center">Total Present (Days)</th>
+                                <th class="t-center">Total OT (Hours)</th>
+                                <th class="t-right">Site Expenses (₹)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="empTableBody"></tbody>
+                        <tfoot id="empTableFoot"></tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 2. Mobilization Details Section -->
+            <div class="section-block">
+                <div class="section-header">2. Mobilization / Equipment Expenses (Monthly)</div>
+                <div class="table-scroll-wrapper">
+                    <table class="report-table" id="mobTable">
+                        <thead>
+                            <tr>
+                                <th>Month-Year</th>
+                                <th>Equipment / Vehicle</th>
+                                <th class="t-right">Total Expense (₹)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mobTableBody"></tbody>
+                        <tfoot id="mobTableFoot"></tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 3. Retailer Bills Section -->
+            <div class="section-block">
+                <div class="section-header">3. Retailer Purchases & Expenses (Monthly)</div>
+                <div class="table-scroll-wrapper">
+                    <table class="report-table" id="retTable">
+                        <thead>
+                            <tr>
+                                <th>Month-Year</th>
+                                <th>Expense Category</th>
+                                <th class="t-right">Total Purchase (₹)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="retTableBody"></tbody>
+                        <tfoot id="retTableFoot"></tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 4. Contractor Payments Section -->
+            <div class="section-block">
+                <div class="section-header">4. Assigned Contractor Payments (Monthly)</div>
+                <div class="table-scroll-wrapper">
+                    <table class="report-table" id="contTable">
+                        <thead>
+                            <tr>
+                                <th>Month-Year</th>
+                                <th>Contractor Name</th>
+                                <th class="t-right">Amount Paid (₹)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="contTableBody"></tbody>
+                        <tfoot id="contTableFoot"></tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <!-- GRAND TOTAL SECTION -->
+            <div class="grand-total-box" id="grandTotalBox">
+                <h3>Overall Project Expenditure</h3>
+                <h1 id="grandTotalValue">₹ 0.00</h1>
+            </div>
+
+            <div style="font-size: 10.5px; color: var(--text-muted); text-align: center; margin-top: 5px; flex-shrink: 0; padding-bottom: 20px;">
+                * This is an automated system-generated report. Calculations are based on master database entries.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================================================
+        // 1. PORTAL ROLE DETECTION & NAVIGATION
+        // =========================================================================================
+        let currentPortalMode = "admin";
+
+        function checkPortalPermissions() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewParam = (urlParams.get('view') || '').toLowerCase();
+            const badge = document.getElementById('roleModeBadge');
+            
+            let parentPath = "";
+            try {
+                if (window.parent && window.parent !== window) {
+                    parentPath = (window.parent.location.pathname || '').toLowerCase();
+                }
+            } catch (e) {}
+
+            if (viewParam === 'office' || parentPath.includes('officedashboard')) {
+                currentPortalMode = 'office';
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🏢 Office Mode (View Access)`;
+                }
+            } else if (viewParam === 'supervisor' || parentPath.includes('supervisordashboard')) {
+                currentPortalMode = 'supervisor';
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🛡️ Supervisor Mode (View Access)`;
+                }
+            } else {
+                currentPortalMode = 'admin';
+                if (badge) badge.style.display = 'none';
+            }
+        }
+
+        function handleBackToDashboard(event) {
+            event.preventDefault();
+            if (currentPortalMode === 'office') {
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.loadOfficeWorkspaceHome === 'function') {
+                        window.parent.loadOfficeWorkspaceHome();
+                        return;
+                    }
+                } catch (e) {}
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "office_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "office/office_dashboard_home.html";
+            } else if (currentPortalMode === 'supervisor') {
+                try {
+                    if (window.parent && window.parent !== window) {
+                        const parentHomeLink = window.parent.document.querySelector('.dashboard-home-link');
+                        if (parentHomeLink) {
+                            window.location.href = parentHomeLink.href;
+                            return;
+                        }
+                    }
+                } catch (e) {}
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "supervisor_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "supervisor/supervisor_dashboard_home.html";
+            } else {
+                window.location.href = "dashboard_home.html";
+            }
+        }
+
+        // =========================================================================================
+        // 2. EXTENDED DUMMY DATA INITIALIZATION
+        // =========================================================================================
+        const MOCK_COMPANIES = [
+            { id: 1, name: "ATR Construction Main" },
+            { id: 2, name: "ATR Infra Sub" }
+        ];
+
+        let siteList = [];
+        let empAttDb = [];
+        let mobDb = [];
+        let retailDb = [];
+        let contractorPayDb = [];
+        
+        let reportData = { emp: [], mob: [], ret: [], cont: [] };
+        let reportTotals = { emp: 0, empP: 0, empOT: 0, mob: 0, ret: 0, cont: 0, grand: 0 };
+        let reportCompany = "";
+        let reportSite = "";
+
+        function loadAllDatabases() {
+            siteList = [
+                { name: "Dum Dum Project", compId: 1 },
+                { name: "Salt Lake Sector V", compId: 1 },
+                { name: "New Town Hub", compId: 2 }
+            ];
+
+            // Extended entries for scrolling test
+            empAttDb = [
+                { date: "2026-01-10", site: "Dum Dum Project", status: "Present", ot: 2, expense: 1500 },
+                { date: "2026-02-12", site: "Dum Dum Project", status: "Present", ot: 0, expense: 5000 },
+                { date: "2026-03-05", site: "Dum Dum Project", status: "Present", ot: 4, expense: 2000 },
+                { date: "2026-04-15", site: "Dum Dum Project", status: "Present", ot: 2, expense: 3500 },
+                { date: "2026-05-20", site: "Dum Dum Project", status: "Present", ot: 5, expense: 1200 },
+                { date: "2026-06-10", site: "Dum Dum Project", status: "Present", ot: 1, expense: 4500 },
+                { date: "2026-07-12", site: "Dum Dum Project", status: "Present", ot: 6, expense: 2500 },
+                { date: "2026-08-05", site: "Dum Dum Project", status: "Present", ot: 3, expense: 3200 },
+                { date: "2026-09-18", site: "Dum Dum Project", status: "Present", ot: 0, expense: 1100 },
+                { date: "2026-10-22", site: "Dum Dum Project", status: "Present", ot: 2, expense: 5500 },
+            ];
+
+            mobDb = [
+                { date: "2026-01-15", vehicleId: "JCB-01", cost: 12500, siteAssigned: "Dum Dum Project" },
+                { date: "2026-02-02", vehicleId: "Tata Ace", cost: 4500, siteAssigned: "Dum Dum Project" },
+                { date: "2026-03-10", vehicleId: "Crane-02", cost: 22000, siteAssigned: "Dum Dum Project" },
+                { date: "2026-04-20", vehicleId: "JCB-01", cost: 8500, siteAssigned: "Dum Dum Project" },
+                { date: "2026-05-05", vehicleId: "Concrete Mixer", cost: 15000, siteAssigned: "Dum Dum Project" },
+                { date: "2026-06-18", vehicleId: "Tata Ace", cost: 3000, siteAssigned: "Dum Dum Project" },
+                { date: "2026-07-22", vehicleId: "JCB-01", cost: 14000, siteAssigned: "Dum Dum Project" },
+                { date: "2026-08-11", vehicleId: "Crane-02", cost: 19500, siteAssigned: "Dum Dum Project" },
+            ];
+
+            retailDb = [
+                { date: "2026-01-20", site: "Dum Dum Project", category: "Hardware", amount: 25000 },
+                { date: "2026-02-22", site: "Dum Dum Project", category: "Cement", amount: 45000 },
+                { date: "2026-03-10", site: "Dum Dum Project", category: "Steel", amount: 150000 },
+                { date: "2026-04-15", site: "Dum Dum Project", category: "Hardware", amount: 35000 },
+                { date: "2026-05-18", site: "Dum Dum Project", category: "Paint", amount: 22000 },
+                { date: "2026-06-25", site: "Dum Dum Project", category: "Cement", amount: 65000 },
+                { date: "2026-07-10", site: "Dum Dum Project", category: "Plumbing", amount: 18000 },
+                { date: "2026-08-05", site: "Dum Dum Project", category: "Steel", amount: 120000 },
+            ];
+
+            contractorPayDb = [
+                { date: "2026-01-30", site: "Dum Dum Project", contName: "ABC Builders", amount: 150000 },
+                { date: "2026-02-28", site: "Dum Dum Project", contName: "XYZ Foundations", amount: 80000 },
+                { date: "2026-03-31", site: "Dum Dum Project", contName: "ABC Builders", amount: 120000 },
+                { date: "2026-04-30", site: "Dum Dum Project", contName: "XYZ Foundations", amount: 95000 },
+                { date: "2026-05-31", site: "Dum Dum Project", contName: "ABC Builders", amount: 200000 },
+                { date: "2026-06-30", site: "Dum Dum Project", contName: "SteelWorks LLC", amount: 50000 },
+            ];
+        }
+
+        window.onload = function() {
+            checkPortalPermissions();
+            loadAllDatabases();
+            
+            const cSelect = document.getElementById('fCompany');
+            cSelect.innerHTML = '<option value="">-- Select Company --</option>';
+            MOCK_COMPANIES.forEach(c => {
+                cSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+            });
+        };
+
+        function populateSites() {
+            const compId = document.getElementById('fCompany').value;
+            const sSelect = document.getElementById('fSite');
+            sSelect.innerHTML = '<option value="">-- Select Project Site --</option>';
+            
+            if(!compId) return;
+
+            const filteredSites = siteList.filter(s => s.compId == compId);
+            filteredSites.forEach(s => {
+                sSelect.innerHTML += `<option value="${s.name}">${s.name}</option>`;
+            });
+        }
+
+        // =========================================================================================
+        // 3. REPORT GENERATION ENGINE (MONTHLY GROUPING & TOTALS)
+        // =========================================================================================
+        function getMonthYear(dateStr) {
+            if(!dateStr) return "Unknown";
+            const d = new Date(dateStr);
+            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            return `${months[d.getMonth()]}-${d.getFullYear()}`;
+        }
+
+        function generateReport() {
+            const compId = document.getElementById('fCompany').value;
+            const siteName = document.getElementById('fSite').value;
+
+            if(!compId || !siteName) { alert("Please select both Company and Site!"); return; }
+
+            const compName = MOCK_COMPANIES.find(c => c.id == compId).name;
+            reportCompany = compName; reportSite = siteName;
+
+            document.getElementById('reportContainer').style.display = 'none';
+            document.getElementById('loader').style.display = 'block';
+
+            setTimeout(() => {
+                document.getElementById('rHeaderDesc').innerText = `Project Site: ${siteName}  |  Company: ${compName}`;
+                reportTotals = { emp: 0, empP: 0, empOT: 0, mob: 0, ret: 0, cont: 0, grand: 0 };
+                
+                // 1. Employee Data
+                let empMap = {};
+                empAttDb.forEach(e => {
+                    if(e.site === siteName || siteName === "Dum Dum Project") { 
+                        const my = getMonthYear(e.date);
+                        if(!empMap[my]) empMap[my] = { p: 0, ot: 0, exp: 0 };
+                        if(e.status === 'Present') empMap[my].p++;
+                        empMap[my].ot += parseFloat(e.ot || 0);
+                        empMap[my].exp += parseFloat(e.expense || 0);
+                    }
+                });
+                
+                let empHtml = ''; reportData.emp = [];
+                Object.keys(empMap).sort((a,b) => new Date('01-'+b) - new Date('01-'+a)).forEach(my => {
+                    const d = empMap[my];
+                    reportTotals.emp += d.exp;
+                    reportTotals.empP += d.p;
+                    reportTotals.empOT += d.ot;
+                    empHtml += `<tr><td><b style="color:var(--theme-color);">${my}</b></td><td class="t-center">${d.p}</td><td class="t-center">${d.ot}</td><td class="t-right t-bold">₹${d.exp.toLocaleString('en-IN', {minimumFractionDigits:2})}</td></tr>`;
+                    reportData.emp.push([my, d.p, d.ot, `Rs. ${d.exp}`]);
+                });
+                if(!empHtml) empHtml = `<tr><td colspan="4" class="t-center" style="color:var(--text-muted);">No records found</td></tr>`;
+                document.getElementById('empTableBody').innerHTML = empHtml;
+                document.getElementById('empTableFoot').innerHTML = `<tr><td class="t-right t-bold">Total:</td><td class="t-center t-bold">${reportTotals.empP}</td><td class="t-center t-bold">${reportTotals.empOT}</td><td class="t-right t-highlight">₹${reportTotals.emp.toLocaleString('en-IN', {minimumFractionDigits:2})}</td></tr>`;
+
+                // 2. Mobilization
+                let mobMap = {};
+                mobDb.forEach(m => {
+                    if(m.siteAssigned === siteName || siteName === "Dum Dum Project") {
+                        const my = getMonthYear(m.date);
+                        const key = `${my}_${m.vehicleId || 'Unknown'}`;
+                        if(!mobMap[key]) mobMap[key] = { my: my, v: m.vehicleId || 'Unknown', cost: 0 };
+                        mobMap[key].cost += parseFloat(m.cost || 0);
+                    }
+                });
+                
+                let mobHtml = ''; reportData.mob = [];
+                Object.values(mobMap).sort((a,b) => new Date('01-'+b.my) - new Date('01-'+a.my)).forEach(d => {
+                    reportTotals.mob += d.cost;
+                    mobHtml += `<tr><td><b style="color:var(--theme-color);">${d.my}</b></td><td>${d.v}</td><td class="t-right t-bold">₹${d.cost.toLocaleString('en-IN', {minimumFractionDigits:2})}</td></tr>`;
+                    reportData.mob.push([d.my, d.v, `Rs. ${d.cost}`]);
+                });
+                if(!mobHtml) mobHtml = `<tr><td colspan="3" class="t-center" style="color:var(--text-muted);">No records found</td></tr>`;
+                document.getElementById('mobTableBody').innerHTML = mobHtml;
+                document.getElementById('mobTableFoot').innerHTML = `<tr><td colspan="2" class="t-right t-bold">Total Mobilization Expenses:</td><td class="t-right t-highlight">₹${reportTotals.mob.toLocaleString('en-IN', {minimumFractionDigits:2})}</td></tr>`;
+
+                // 3. Retailer
+                let retMap = {};
+                retailDb.forEach(r => {
+                    if(r.site === siteName || siteName === "Dum Dum Project") {
+                        const my = getMonthYear(r.date);
+                        const key = `${my}_${r.category || 'General'}`;
+                        if(!retMap[key]) retMap[key] = { my: my, cat: r.category || 'General', amt: 0 };
+                        retMap[key].amt += parseFloat(r.amount || 0);
+                    }
+                });
+                
+                let retHtml = ''; reportData.ret = [];
+                Object.values(retMap).sort((a,b) => new Date('01-'+b.my) - new Date('01-'+a.my)).forEach(d => {
+                    reportTotals.ret += d.amt;
+                    retHtml += `<tr><td><b style="color:var(--theme-color);">${d.my}</b></td><td>${d.cat}</td><td class="t-right t-bold">₹${d.amt.toLocaleString('en-IN', {minimumFractionDigits:2})}</td></tr>`;
+                    reportData.ret.push([d.my, d.cat, `Rs. ${d.amt}`]);
+                });
+                if(!retHtml) retHtml = `<tr><td colspan="3" class="t-center" style="color:var(--text-muted);">No records found</td></tr>`;
+                document.getElementById('retTableBody').innerHTML = retHtml;
+                document.getElementById('retTableFoot').innerHTML = `<tr><td colspan="2" class="t-right t-bold">Total Retail Purchases:</td><td class="t-right t-highlight">₹${reportTotals.ret.toLocaleString('en-IN', {minimumFractionDigits:2})}</td></tr>`;
+
+                // 4. Contractor
+                let contMap = {};
+                contractorPayDb.forEach(c => {
+                    if(c.site === siteName || siteName === "Dum Dum Project") {
+                        const my = getMonthYear(c.date);
+                        const key = `${my}_${c.contName}`;
+                        if(!contMap[key]) contMap[key] = { my: my, name: c.contName, amt: 0 };
+                        contMap[key].amt += parseFloat(c.amount || 0);
+                    }
+                });
+                
+                let contHtml = ''; reportData.cont = [];
+                Object.values(contMap).sort((a,b) => new Date('01-'+b.my) - new Date('01-'+a.my)).forEach(d => {
+                    reportTotals.cont += d.amt;
+                    contHtml += `<tr><td><b style="color:var(--theme-color);">${d.my}</b></td><td>${d.name}</td><td class="t-right t-bold">₹${d.amt.toLocaleString('en-IN', {minimumFractionDigits:2})}</td></tr>`;
+                    reportData.cont.push([d.my, d.name, `Rs. ${d.amt}`]);
+                });
+                if(!contHtml) contHtml = `<tr><td colspan="3" class="t-center" style="color:var(--text-muted);">No records found</td></tr>`;
+                document.getElementById('contTableBody').innerHTML = contHtml;
+                document.getElementById('contTableFoot').innerHTML = `<tr><td colspan="2" class="t-right t-bold">Total Contractor Payments:</td><td class="t-right t-highlight">₹${reportTotals.cont.toLocaleString('en-IN', {minimumFractionDigits:2})}</td></tr>`;
+
+                // GRAND TOTAL
+                reportTotals.grand = reportTotals.emp + reportTotals.mob + reportTotals.ret + reportTotals.cont;
+                document.getElementById('grandTotalValue').innerText = `₹ ${reportTotals.grand.toLocaleString('en-IN', {minimumFractionDigits:2})}`;
+
+                document.getElementById('loader').style.display = 'none';
+                document.getElementById('reportContainer').style.display = 'flex';
+            }, 600);
+        }
+
+        // =========================================================================================
+        // 4. EXPORT TO PDF (FORMAL CORPORATE STYLE)
+        // =========================================================================================
+        function exportToPDF() {
+            if(!reportSite) { alert("Please generate a report first."); return; }
+            if (typeof window.jspdf === 'undefined') { alert("PDF Library loading. Please try again."); return; }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+
+            // Formal Corporate Header
+            doc.setFontSize(18);
+            doc.setTextColor(20, 20, 20); 
+            doc.text("ATR CONSTRUCTION - FULL SITE REPORT LEDGER", 148, 15, { align: "center" });
+            
+            doc.setFontSize(11);
+            doc.setTextColor(80, 80, 80);
+            doc.text(`Company: ${reportCompany}`, 14, 25);
+            doc.text(`Project Site: ${reportSite}`, 14, 31);
+            doc.text(`Report Date: ${new Date().toLocaleDateString('en-IN')}`, 280, 25, { align: "right" });
+
+            let currentY = 40;
+            const formalHeadStyle = { fillColor: [230, 230, 230], textColor: [20, 20, 20], fontStyle: 'bold' };
+            const formalFootStyle = { fillColor: [245, 245, 245], textColor: [0, 0, 0], fontStyle: 'bold' };
+
+            // 1. Employee
+            doc.setFontSize(12); doc.setTextColor(20, 20, 20); doc.text("1. Employee Attendance & Site Expenses", 14, currentY);
+            doc.autoTable({
+                startY: currentY + 4,
+                head: [['Month-Year', 'Total Present (Days)', 'Total OT (Hours)', 'Site Expenses']],
+                body: reportData.emp.length > 0 ? reportData.emp : [['No records', '-', '-', '-']],
+                foot: [['Total:', reportTotals.empP.toString(), reportTotals.empOT.toString(), `Rs. ${reportTotals.emp.toLocaleString('en-IN', {minimumFractionDigits:2})}`]],
+                theme: 'grid', headStyles: formalHeadStyle, footStyles: formalFootStyle,
+                styles: { fontSize: 9 }, columnStyles: { 1: { halign: 'center' }, 2: { halign: 'center' }, 3: { halign: 'right', fontStyle: 'bold' } }
+            });
+
+            // 2. Mobilization
+            currentY = doc.lastAutoTable.finalY + 15;
+            if(currentY > 170) { doc.addPage(); currentY = 20; }
+            doc.setFontSize(12); doc.text("2. Mobilization / Equipment Expenses", 14, currentY);
+            doc.autoTable({
+                startY: currentY + 4,
+                head: [['Month-Year', 'Equipment / Vehicle', 'Total Expense']],
+                body: reportData.mob.length > 0 ? reportData.mob : [['No records', '-', '-']],
+                foot: [['', 'Total Mobilization Expenses:', `Rs. ${reportTotals.mob.toLocaleString('en-IN', {minimumFractionDigits:2})}`]],
+                theme: 'grid', headStyles: formalHeadStyle, footStyles: formalFootStyle,
+                styles: { fontSize: 9 }, columnStyles: { 2: { halign: 'right', fontStyle: 'bold' } }
+            });
+
+            // 3. Retailer
+            currentY = doc.lastAutoTable.finalY + 15;
+            if(currentY > 170) { doc.addPage(); currentY = 20; }
+            doc.setFontSize(12); doc.text("3. Retailer Purchases", 14, currentY);
+            doc.autoTable({
+                startY: currentY + 4,
+                head: [['Month-Year', 'Expense Category', 'Total Purchase']],
+                body: reportData.ret.length > 0 ? reportData.ret : [['No records', '-', '-']],
+                foot: [['', 'Total Retail Purchases:', `Rs. ${reportTotals.ret.toLocaleString('en-IN', {minimumFractionDigits:2})}`]],
+                theme: 'grid', headStyles: formalHeadStyle, footStyles: formalFootStyle,
+                styles: { fontSize: 9 }, columnStyles: { 2: { halign: 'right', fontStyle: 'bold' } }
+            });
+
+            // 4. Contractor
+            currentY = doc.lastAutoTable.finalY + 15;
+            if(currentY > 170) { doc.addPage(); currentY = 20; }
+            doc.setFontSize(12); doc.text("4. Contractor Payments", 14, currentY);
+            doc.autoTable({
+                startY: currentY + 4,
+                head: [['Month-Year', 'Contractor Name', 'Amount Paid']],
+                body: reportData.cont.length > 0 ? reportData.cont : [['No records', '-', '-']],
+                foot: [['', 'Total Contractor Payments:', `Rs. ${reportTotals.cont.toLocaleString('en-IN', {minimumFractionDigits:2})}`]],
+                theme: 'grid', headStyles: formalHeadStyle, footStyles: formalFootStyle,
+                styles: { fontSize: 9 }, columnStyles: { 2: { halign: 'right', fontStyle: 'bold' } }
+            });
+
+            // GRAND TOTAL AT THE END
+            currentY = doc.lastAutoTable.finalY + 20;
+            if(currentY > 180) { doc.addPage(); currentY = 30; }
+            doc.setFontSize(14);
+            doc.setTextColor(0, 0, 0);
+            doc.text(`GRAND TOTAL EXPENSE: Rs. ${reportTotals.grand.toLocaleString('en-IN', {minimumFractionDigits:2})}`, 280, currentY, { align: "right" });
+
+            doc.save(`Site_Ledger_${reportSite.replace(/\s+/g, '_')}.pdf`);
+        }
+
+        // =========================================================================================
+        // 5. EXPORT TO EXCEL (MULTI-SHEET WITH TOTALS)
+        // =========================================================================================
+        function exportToExcel() {
+            if(!reportSite) { alert("Please generate a report first."); return; }
+            
+            const wb = XLSX.utils.book_new();
+
+            const empData = [...reportData.emp, ['TOTAL', reportTotals.empP, reportTotals.empOT, `Rs. ${reportTotals.emp}`]];
+            const eWs = XLSX.utils.aoa_to_sheet([['Month-Year', 'Total Present', 'Total OT', 'Site Expenses'], ...empData]);
+            XLSX.utils.book_append_sheet(wb, eWs, "Employee & Expenses");
+
+            const mobData = [...reportData.mob, ['TOTAL', '', `Rs. ${reportTotals.mob}`]];
+            const mWs = XLSX.utils.aoa_to_sheet([['Month-Year', 'Equipment/Vehicle', 'Total Expense'], ...mobData]);
+            XLSX.utils.book_append_sheet(wb, mWs, "Mobilization");
+
+            const retData = [...reportData.ret, ['TOTAL', '', `Rs. ${reportTotals.ret}`]];
+            const rWs = XLSX.utils.aoa_to_sheet([['Month-Year', 'Expense Category', 'Total Purchase'], ...retData]);
+            XLSX.utils.book_append_sheet(wb, rWs, "Retail Purchases");
+
+            const contData = [...reportData.cont, ['TOTAL', '', `Rs. ${reportTotals.cont}`]];
+            const cWs = XLSX.utils.aoa_to_sheet([['Month-Year', 'Contractor Name', 'Amount Paid'], ...contData]);
+            XLSX.utils.book_append_sheet(wb, cWs, "Contractor Payments");
+
+            const grandData = [['GRAND TOTAL EXPENSE:', `Rs. ${reportTotals.grand}`]];
+            const gWs = XLSX.utils.aoa_to_sheet(grandData);
+            XLSX.utils.book_append_sheet(wb, gWs, "Overall Summary");
+
+            XLSX.writeFile(wb, `Site_Ledger_${reportSite.replace(/\s+/g, '_')}.xlsx`);
+        }
+    </script>
+</body>
+</html>

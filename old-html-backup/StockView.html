@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Stock Management</title>
+    
+    <!-- Sync theme with Master Dashboard -->
+    <script>
+        function applyDashboardTheme() {
+            const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        }
+        applyDashboardTheme();
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'atr_theme' || !e.key) {
+                applyDashboardTheme();
+            }
+        });
+    </script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- SheetJS CDN for XLSX Import, Export & Template Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        :root {
+            --bg-body: transparent; 
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #b0b0b0;
+            --border-color: rgba(255, 255, 255, 0.12);
+            
+            /* Dynamic Glass & Input Variables */
+            --glass-bg: rgba(30, 30, 30, 0.75);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --input-bg: rgba(15, 15, 15, 0.6);
+            --input-focus-bg: rgba(20, 20, 20, 0.9);
+            
+            --shadow: 0 4px 20px rgba(0,0,0,0.4);
+            
+            /* Primary Theme Color (Purple kept as requested) */
+            --theme-color: #9c27b0;
+            --theme-glow: rgba(156, 39, 176, 0.3);
+            --theme-transition: all 0.3s ease;
+        }
+
+        [data-theme="light"] {
+            --bg-body: transparent;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #666666;
+            --border-color: rgba(0, 0, 0, 0.12);
+            
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(0, 0, 0, 0.1);
+            --input-bg: rgba(240, 240, 240, 0.8);
+            --input-focus-bg: #ffffff;
+            
+            --shadow: 0 8px 25px rgba(0,0,0,0.06);
+        }
+
+        /* Crisp Font Rendering */
+        * { 
+            margin: 0; padding: 0; box-sizing: border-box; 
+            font-family: 'Montserrat', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+        }
+        
+        body { background-color: var(--bg-body); color: var(--text-main); height: 100vh; overflow: hidden; display: flex; flex-direction: column; transition: var(--theme-transition); }
+        .main-content { padding: 20px 40px; width: 100%; max-width: 1600px; margin: 0 auto; flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* FIXED HEADER */
+        .header { flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; flex-wrap: wrap; gap: 15px; transition: var(--theme-transition); }
+        .header h1 { font-size: 26px; color: var(--theme-color); display: flex; align-items: center; gap: 12px; margin-top: 8px; font-weight: 700; flex-wrap: wrap; }
+        .header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+        .role-mode-badge {
+            display: none;
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 700;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-back-dash { 
+            background-color: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color); 
+            text-decoration: none; padding: 9px 16px; border-radius: 6px; font-weight: bold; font-size: 13px; 
+            transition: all 0.3s; display: inline-flex; align-items: center; width: max-content; margin-bottom: 6px; cursor: pointer;
+        }
+        .btn-back-dash:hover { background-color: var(--theme-color); color: #ffffff; border-color: var(--theme-color); transform: translateY(-2px); box-shadow: 0 4px 10px var(--theme-glow); }
+        
+        .search-input { background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 10px 15px; border-radius: 6px; font-size: 13px; font-weight: 500; outline: none; transition: 0.3s; width: 250px; height: 41px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); }
+        .search-input:focus { border-color: var(--theme-color); box-shadow: 0 0 8px var(--theme-glow); }
+
+        /* BUTTONS */
+        .btn { padding: 10px 18px; border-radius: 6px; font-weight: 700; font-size: 12px; cursor: pointer; border: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-transform: uppercase; transition: all 0.3s; height: 41px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .btn:hover { transform: translateY(-2px); }
+        .btn-primary { background-color: var(--theme-color); color: #ffffff; box-shadow: 0 4px 10px var(--theme-glow); }
+        .btn-primary:hover { filter: brightness(1.1); box-shadow: 0 6px 15px var(--theme-glow); }
+        
+        .btn-submit { background-color: #28a745; color: #ffffff; padding: 12px 30px; font-size: 14px; height: auto; box-shadow: 0 4px 10px rgba(40,167,69,0.3); }
+        .btn-submit:hover { background-color: #218838; box-shadow: 0 6px 15px rgba(40,167,69,0.4); }
+        
+        .btn-export { background: rgba(25, 135, 84, 0.15); color: #198754; border: 1px solid rgba(25, 135, 84, 0.4); }
+        .btn-export:hover { background-color: #198754; color: #ffffff; }
+        
+        .btn-import { background: rgba(13, 202, 240, 0.15); color: #0dcaf0; border: 1px solid rgba(13, 202, 240, 0.4); }
+        .btn-import:hover { background-color: #0dcaf0; color: #121212; }
+        
+        .btn-template { background: rgba(255, 193, 7, 0.15); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.4); }
+        .btn-template:hover { background-color: #ffc107; color: #121212; }
+        
+        /* SCROLLABLE TABLE PANEL (With Proper Z-Index Layering) */
+        .filter-section { background: var(--bg-card); padding: 15px 20px; border-radius: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color); border-left: 4px solid var(--theme-color); box-shadow: var(--shadow); flex-shrink: 0; gap: 15px; flex-wrap: wrap; transition: var(--theme-transition); position: relative; z-index: 50; }
+        .filter-title { font-size: 14px; font-weight: bold; color: var(--theme-color); text-transform: uppercase; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+
+        .table-container { flex: 1; background: var(--bg-card); border-radius: 10px 10px 0 0; border: 1px solid var(--border-color); border-top: 4px solid var(--theme-color); box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: hidden; min-height: 0; transition: var(--theme-transition); position: relative; z-index: 1; }
+        .table-scroll { flex: 1; overflow-y: auto; padding: 0 15px; }
+        
+        .table-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+        .table-scroll::-webkit-scrollbar-track { background: transparent; }
+        .table-scroll::-webkit-scrollbar-thumb { background: rgba(156, 39, 176, 0.3); border-radius: 4px; }
+        .table-scroll::-webkit-scrollbar-thumb:hover { background: var(--theme-color); }
+
+        /* TABLES */
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        thead th { position: sticky; top: 0; background-color: var(--input-bg); z-index: 5; padding: 15px 10px; color: var(--theme-color); font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; border-bottom: 2px solid var(--theme-color); white-space: nowrap; transition: var(--theme-transition); }
+        tbody td { padding: 12px 10px; border-bottom: 1px solid var(--border-color); font-size: 13px; color: var(--text-main); vertical-align: middle; transition: var(--theme-transition); font-weight: 500; }
+        tbody tr:hover { background: var(--glass-bg); }
+        .empty-row { text-align: center; padding: 40px; color: var(--text-muted); font-size: 14px; font-weight: 600; }
+
+        .pending-status-pill {
+            display: inline-block;
+            background: rgba(255, 193, 7, 0.16);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.45);
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            margin-top: 4px;
+            text-transform: uppercase;
+        }
+
+        /* ACTION BUTTONS IN TABLE */
+        .btn-action-edit { background: rgba(255, 193, 7, 0.15); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.4); padding: 6px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: 0.2s; text-transform: uppercase; }
+        .btn-action-edit:hover { background: #ffc107; color: #121212; }
+        .btn-action-delete { background: rgba(220, 53, 69, 0.15); color: #dc3545; border: 1px solid rgba(220, 53, 69, 0.4); padding: 6px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer; margin-left: 5px; transition: 0.2s; text-transform: uppercase; }
+        .btn-action-delete:hover { background: #dc3545; color: #ffffff; }
+
+        /* CUSTOM ULTRA-SMOOTH SEARCHABLE DROPDOWN */
+        .custom-select { position: relative; min-width: 250px; user-select: none; }
+        .select-header { background: var(--input-bg); border: 1px solid var(--border-color); padding: 10px 15px; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s ease; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); font-size: 13px; font-weight: 600; color: var(--text-main); height: 41px; }
+        .select-header:hover { border-color: rgba(156, 39, 176, 0.5); }
+        .select-header.active { border-color: var(--theme-color); box-shadow: 0 0 8px var(--theme-glow); background: var(--input-focus-bg); }
+        .select-header .arrow { transition: transform 0.3s ease; font-size: 14px; }
+        .select-header.active .arrow { transform: rotate(180deg); color: var(--theme-color); }
+        .select-header.locked-dropdown {
+            background: rgba(255, 193, 7, 0.08);
+            border-color: rgba(255, 193, 7, 0.4);
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        
+        .select-options-container { position: absolute; top: calc(100% + 8px); left: 0; width: 100%; background: var(--bg-card); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--theme-color); border-radius: 8px; box-shadow: 0 15px 35px rgba(0,0,0,0.65); z-index: 999; opacity: 0; visibility: hidden; transform: translateY(-10px); transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); overflow: hidden; }
+        [data-theme="light"] .select-options-container { box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
+        .select-options-container.active { opacity: 1; visibility: visible; transform: translateY(0); }
+        
+        .select-search { padding: 10px; border-bottom: 1px solid var(--border-color); background: rgba(0,0,0,0.2); }
+        [data-theme="light"] .select-search { background: rgba(255,255,255,0.5); }
+        .select-search input { width: 100%; padding: 8px 12px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-main); font-size: 13px; font-weight: 500; outline: none; transition: 0.3s; }
+        .select-search input:focus { border-color: var(--theme-color); }
+        
+        .select-options { max-height: 220px; overflow-y: auto; list-style: none; margin: 0; padding: 5px 0; }
+        .select-options::-webkit-scrollbar { width: 6px; }
+        .select-options::-webkit-scrollbar-thumb { background: rgba(156, 39, 176, 0.4); border-radius: 3px; }
+        .select-options li, .option-div { padding: 10px 15px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text-main); transition: background 0.2s; border-bottom: 1px solid rgba(255,255,255,0.02); }
+        .select-options li:hover, .option-div:hover { background: var(--theme-color); color: #ffffff; }
+        
+        .option-office { color: #ffc107; font-weight: bold; }
+        .item-meta { display: block; font-size: 10px; color: var(--text-muted); margin-top: 3px; }
+        .option-div:hover .item-meta, .select-options li:hover .item-meta { color: rgba(255,255,255,0.8); }
+
+        /* MODAL OVERLAY & CONTAINER */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 1000; display: none; justify-content: center; align-items: center; padding: 20px; }
+        .modal-overlay.show { display: flex; }
+        
+        .modal-container { background: var(--bg-card); width: 100%; max-width: 1000px; max-height: 95vh; overflow-y: auto; border-radius: 12px; border: 1px solid var(--theme-color); box-shadow: 0 15px 40px rgba(0,0,0,0.5); position: relative; display: flex; flex-direction: column; transition: var(--theme-transition); }
+        .modal-header { position: sticky; top: 0; background: var(--bg-card); padding: 20px 25px; border-bottom: 1px solid var(--border-color); z-index: 20; display: flex; justify-content: space-between; align-items: center; border-radius: 12px 12px 0 0; }
+        .modal-header h2 { font-size: 18px; color: var(--theme-color); margin: 0; font-weight: 700; }
+        .close-btn { font-size: 28px; color: var(--text-muted); cursor: pointer; line-height: 1; transition: 0.2s; }
+        .close-btn:hover { color: #dc3545; }
+        .modal-body { padding: 25px; flex: 1; overflow-y: auto; }
+        .modal-body::-webkit-scrollbar { width: 8px; }
+        .modal-body::-webkit-scrollbar-thumb { background: rgba(156, 39, 176, 0.4); border-radius: 4px; }
+
+        /* FORM ELEMENTS IN MODAL (Stacking Context Fixed for Dropdowns) */
+        .panel { background: var(--glass-bg); padding: 25px; border-radius: 10px; margin-bottom: 25px; border: 1px solid var(--border-color); border-top: 3px solid var(--theme-color); box-shadow: var(--shadow); position: relative; overflow: visible; }
+        .panel.panel-basic { z-index: 40; }
+        .panel.panel-item { z-index: 30; }
+        .panel.panel-cart { z-index: 10; padding: 0; overflow: hidden; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .form-group { display: flex; flex-direction: column; gap: 8px; position: relative; }
+        .form-group label { font-size: 12px; color: var(--text-muted); font-weight: bold; text-transform: uppercase; }
+        
+        .form-control { background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 10px 15px; border-radius: 6px; font-size: 13px; font-weight: 500; outline: none; transition: all 0.3s; width: 100%; height: 41px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); color-scheme: dark; }
+        [data-theme="light"] .form-control { color-scheme: light; }
+        .form-control:focus { border-color: var(--theme-color); box-shadow: 0 0 8px var(--theme-glow); }
+        .form-control[readonly] { background-color: rgba(0,0,0,0.1); color: var(--text-muted); cursor: not-allowed; }
+        
+        .form-control[type="date"] { cursor: pointer; }
+        ::-webkit-calendar-picker-indicator { filter: invert(0.8); cursor: pointer; }
+        [data-theme="light"] ::-webkit-calendar-picker-indicator { filter: invert(0); }
+
+        .item-row-grid { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 15px; align-items: start; }
+        @media(max-width: 900px) { .item-row-grid { grid-template-columns: 1fr; } }
+        
+        .item-fetched-info { font-size: 11px; color: var(--theme-color); margin-top: 6px; display: block; font-weight: 600; }
+        
+        /* CART ACTION BUTTONS */
+        .btn-pick { background: rgba(23, 162, 184, 0.15); color: #17a2b8; border: 1px solid rgba(23, 162, 184, 0.4); padding: 6px 12px; font-size: 11px; font-weight: bold; border-radius: 4px; margin-right: 5px; cursor: pointer; text-transform: uppercase; transition: 0.2s; }
+        .btn-pick:hover { background: #17a2b8; color: #ffffff; }
+        .btn-remove { background: rgba(220, 53, 69, 0.15); color: #dc3545; border: 1px solid rgba(220, 53, 69, 0.4); padding: 6px 12px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: 0.2s; }
+        .btn-remove:hover { background: #dc3545; color: #ffffff; }
+    </style>
+</head>
+<body>
+
+    <!-- ================= MAIN VIEW PAGE ================= -->
+    <div class="main-content">
+        <!-- FIXED HEADER -->
+        <div class="header">
+            <div>
+                <a href="dashboard_home.html" id="btnBackDashboard" class="btn-back-dash" onclick="handleBackToDashboard(event)">← Back to Dashboard</a>
+                <h1>
+                    📊 Stock Management View
+                    <span id="roleModeBadge" class="role-mode-badge">🏢 Office Mode</span>
+                </h1>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-template" onclick="downloadTemplate()">📋 Template</button>
+                <input type="file" id="importFile" accept=".xlsx, .xls, .csv" style="display: none;" onchange="importFromExcel(event)">
+                <button class="btn btn-import" onclick="document.getElementById('importFile').click()">📥 Import</button>
+                <button class="btn btn-export" onclick="exportToExcel()">📤 Export</button>
+                <button class="btn btn-primary" onclick="openAddModal()">➕ Add New Stock</button>
+            </div>
+        </div>
+
+        <!-- FILTER SECTION -->
+        <div class="filter-section">
+            <div class="filter-title">📜 Item-Wise Stock Ledger</div>
+            
+            <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                
+                <!-- CUSTOM SITE FILTER DROPDOWN -->
+                <div class="custom-select" id="viewSiteDropdown">
+                    <div class="select-header" id="viewSiteSelectHeader">
+                        <span class="selected-text" id="viewSiteSelectedText">🌍 All Sites</span>
+                        <span class="arrow" id="viewSiteSelectArrow">▼</span>
+                    </div>
+                    <div class="select-options-container">
+                        <div class="select-search">
+                            <input type="text" placeholder="Filter site..." class="search-input-dropdown">
+                        </div>
+                        <ul class="select-options" id="viewSiteList">
+                            <!-- Populated via JS -->
+                        </ul>
+                    </div>
+                </div>
+                <input type="hidden" id="selectedViewSiteFilter" value="">
+
+                <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search ID, Item..." onkeyup="applyFilters()">
+            </div>
+        </div>
+            
+        <!-- TABLE CONTAINER -->
+        <div class="table-container">
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Item Entry ID</th>
+                            <th>Date</th>
+                            <th>Location / Site</th>
+                            <th>Item Name</th>
+                            <th>Unit</th>
+                            <th>Qty</th>
+                            <th>Source Bill Ref.</th>
+                            <th style="text-align: center;">🛡️ Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="viewTableBody">
+                        <!-- Data populated via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ================= ADD / EDIT STOCK MODAL ================= -->
+    <div class="modal-overlay" id="entryModal">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2 id="modalTitle">📦 Add Stock Entry</h2>
+                <span class="close-btn" onclick="closeEntryModal()">&times;</span>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Basic Details -->
+                <div class="panel panel-basic">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Entry Date</label>
+                            <input type="date" id="entryDate" class="form-control">
+                        </div>
+                        
+                        <!-- CUSTOM SEARCHABLE SITE DROPDOWN FOR MODAL -->
+                        <div class="form-group">
+                            <label id="modalSiteLabel">Select Site / Office</label>
+                            <div class="custom-select" id="modalSiteDropdown" style="width: 100%;">
+                                <div class="select-header" id="modalSiteSelectHeader">
+                                    <span class="selected-text" id="modalSiteSelectedText" style="color: var(--text-muted);">-- Choose Location --</span>
+                                    <span class="arrow" id="modalSiteSelectArrow">▼</span>
+                                </div>
+                                <div class="select-options-container">
+                                    <div class="select-search">
+                                        <input type="text" placeholder="Search location..." class="search-input-dropdown">
+                                    </div>
+                                    <ul class="select-options" id="modalSiteList">
+                                        <!-- Populated via JS -->
+                                    </ul>
+                                </div>
+                            </div>
+                            <input type="hidden" id="selectedSiteValue">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Item Selection & Auto-Fetched Fields -->
+                <div class="panel panel-item">
+                    <div class="item-row-grid">
+                        <div class="form-group">
+                            <label>Item Name (Search or Type)</label>
+                            
+                            <div class="custom-select" id="itemDropdownWrapper" style="width: 100%; height: auto;">
+                                <input type="text" id="itemInput" class="form-control" placeholder="Search items..." oninput="showSuggestions(this.value)" onfocus="showSuggestions(this.value)" autocomplete="off">
+                                
+                                <div id="suggestionsBox" class="select-options-container" style="top: 100%;">
+                                    <ul class="select-options" id="suggestionsList" style="padding: 0;">
+                                        <!-- Populated by JS -->
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <span id="fetchedInfo" class="item-fetched-info">Fields auto-populated from item master</span>
+
+                            <input type="hidden" id="selectedItemId">
+                            <input type="hidden" id="selectedItemName">
+                            <input type="hidden" id="selectedBillNo">
+                            <input type="hidden" id="selectedVendor">
+                            <input type="hidden" id="selectedAvailable">
+                        </div>
+                        <div class="form-group">
+                            <label>Unit (Auto/Edit)</label>
+                            <input type="text" id="itemUnit" class="form-control" placeholder="Unit">
+                        </div>
+                        <div class="form-group">
+                            <label>Qty</label>
+                            <input type="number" id="itemQty" class="form-control" placeholder="Qty" min="0.01" step="any">
+                        </div>
+                        <div class="form-group" style="justify-content: flex-end;">
+                            <label style="visibility: hidden; display: block; margin-bottom: 8px;">Action</label>
+                            <button type="button" class="btn btn-primary" onclick="addToCart()" style="width: 100%;">➕ Add</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cart Table -->
+                <div class="panel panel-cart">
+                    <table style="margin-top: 0; border: none; box-shadow: none;">
+                        <thead style="background: rgba(0,0,0,0.2);">
+                            <tr>
+                                <th style="border-top: none;">Item</th>
+                                <th style="border-top: none;">Source Bill Ref.</th>
+                                <th style="border-top: none;">Qty</th>
+                                <th style="border-top: none;">Unit</th>
+                                <th style="text-align: center; border-top: none;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cartTableBody">
+                            <tr><td colspan="5" class="empty-row">Cart is empty. Add items.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Continuous Submit / Update -->
+                <div style="text-align: right; margin-bottom: 10px;">
+                    <button type="button" class="btn btn-submit" id="submitBtn" onclick="submitStock()">✅ Final Submit Stock</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= OFFICE / SUPERVISOR APPROVAL MODAL ================= -->
+    <div class="modal-overlay" id="roleApprovalModal" style="z-index: 2500;">
+        <div class="modal-container" style="max-width: 480px; border-color: #ffc107;">
+            <div class="modal-header">
+                <h2 id="roleApprovalTitle" style="color: #ffc107;">🏢 Send Request to ApproveOffice.html</h2>
+                <span class="close-btn" onclick="closeRoleApprovalModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p id="roleApprovalDesc" style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.5;">
+                    অফিস পোর্টাল থেকে নতুন স্টক এন্ট্রি, এডিট বা ডিলিট করলে তা অ্যাডমিনের <strong>ApproveOffice.html</strong>-এ পাঠানো হবে। অ্যাডমিন অ্যাপ্রুভ করলেই এটি চূড়ান্ত হবে।
+                </p>
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label>Stock Action Summary</label>
+                    <input type="text" id="roleApprovalSummary" class="form-control" readonly style="color: #ffc107; font-weight: 700;">
+                </div>
+                <div class="form-group" style="margin-bottom: 18px;">
+                    <label>Reason / Remarks for Approval <span style="color: #dc3545;">*</span></label>
+                    <textarea id="roleApprovalReason" class="form-control" rows="3" placeholder="Write a short note or reason for this stock action..." style="height: auto; resize: none;"></textarea>
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" class="btn btn-action-delete" style="height: 40px; padding: 0 18px;" onclick="closeRoleApprovalModal()">Cancel</button>
+                    <button type="button" class="btn" style="height: 40px; background: #ffc107; color: #121212;" onclick="confirmRoleApprovalRequest()">📤 Send for Approval</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================================================
+        // 1. PORTAL ROLE DETECTION (ADMIN / OFFICE STAFF / SUPERVISOR) & LOCALSTORAGE ENGINE
+        // =========================================================================================
+        const ADMIN_PASSWORD = "admin"; // Accepts both 'admin' and 'admin123'
+        let currentPortalMode = "admin"; // 'admin', 'office', or 'supervisor'
+        let isSupervisorMode = false;
+        let loggedUserId = "ADMIN";
+        let loggedUserName = "Super Admin";
+        let assignedSite = "";
+
+        let editingRecordId = null; 
+        let cart = [];
+        let pendingRolePayload = null;
+
+        const defaultSubmittedStocks = [
+            { id: "STK-1001-1", date: "01-08-2026", site: "🏢 Office Stock (Main)", itemName: "Ambuja Cement PPC", unit: "Bags", qty: 50, billNo: "INV-2026/01", pendingStatus: null },
+            { id: "STK-1001-2", date: "01-08-2026", site: "🏢 Office Stock (Main)", itemName: "Tata Tiscon TMT Bar 8mm", unit: "Kg", qty: 200, billNo: "INV-2026/01", pendingStatus: null },
+            { id: "STK-1002-1", date: "03-08-2026", site: "Dum Dum Project", itemName: "Red Bricks", unit: "Pcs", qty: 5000, billNo: "MEMO-45", pendingStatus: null }
+        ];
+
+        const sites = [
+            "🏢 Office Stock (Main)", 
+            "Dum Dum Project", 
+            "Commercial Complex B3", 
+            "Barasat Highway", 
+            "Rajarhat Extension",
+            "Salt Lake Sector V",
+            "New Town Action Area 1"
+        ];
+
+        const defaultRetailItems = [
+            { id: "ITM-01", name: "Ambuja Cement PPC", billNo: "INV-2026/01", vendor: "Ambuja Traders", unit: "Bags", available: 500 },
+            { id: "ITM-02", name: "Tata Tiscon TMT Bar 8mm", billNo: "INV-2026/01", vendor: "Ambuja Traders", unit: "Kg", available: 2000 },
+            { id: "ITM-03", name: "Red Bricks", billNo: "MEMO-45", vendor: "Local Brick Kiln", unit: "Pcs", available: 10000 }
+        ];
+
+        let submittedStocks = [];
+        let retailItems = [];
+
+        function loadAndSyncDatabases() {
+            const storedStocks = JSON.parse(localStorage.getItem('atr_submitted_stocks_db'));
+            if (Array.isArray(storedStocks) && storedStocks.length > 0) {
+                submittedStocks = storedStocks;
+            } else {
+                submittedStocks = JSON.parse(JSON.stringify(defaultSubmittedStocks));
+                saveStocksToStorage();
+            }
+
+            retailItems = JSON.parse(JSON.stringify(defaultRetailItems));
+            // Sync items marked for stock in RetailSiteInvoice.html (atr_retailer_bills_db)
+            const storedRetailBills = JSON.parse(localStorage.getItem('atr_retailer_bills_db')) || [];
+            storedRetailBills.forEach(bill => {
+                if (Array.isArray(bill.cartItems)) {
+                    bill.cartItems.forEach((ci, idx) => {
+                        if (ci.addToStock && ci.item) {
+                            const exists = retailItems.some(ri => ri.name.toLowerCase() === ci.item.toLowerCase() && ri.billNo === bill.invNo);
+                            if (!exists) {
+                                retailItems.push({
+                                    id: `ITM-RBL-${idx}`,
+                                    name: ci.item,
+                                    billNo: bill.invNo || "BILL",
+                                    vendor: bill.ret || "Retailer",
+                                    unit: ci.unit || "Unit",
+                                    available: Number(ci.qty) || 100
+                                });
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        function saveStocksToStorage() {
+            localStorage.setItem('atr_submitted_stocks_db', JSON.stringify(submittedStocks));
+        }
+
+        function checkPortalPermissions() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewParam = (urlParams.get('view') || '').toLowerCase();
+            const siteParam = urlParams.get('site');
+
+            let parentPath = "";
+            try {
+                if (window.parent && window.parent !== window) {
+                    parentPath = (window.parent.location.pathname || '').toLowerCase();
+                }
+            } catch (e) {}
+
+            const badge = document.getElementById('roleModeBadge');
+            const backBtn = document.getElementById('btnBackDashboard');
+            const viewHeader = document.getElementById('viewSiteSelectHeader');
+            const viewText = document.getElementById('viewSiteSelectedText');
+            const viewArrow = document.getElementById('viewSiteSelectArrow');
+            const viewHidden = document.getElementById('selectedViewSiteFilter');
+
+            if (viewParam === 'supervisor' || parentPath.includes('supervisordashboard')) {
+                currentPortalMode = 'supervisor';
+                isSupervisorMode = true;
+                assignedSite = (siteParam || sessionStorage.getItem('atr_supervisor_site') || "Salt Lake Sector V").trim();
+                loggedUserId = urlParams.get('supId') || "SUP-003";
+                loggedUserName = urlParams.get('supName') || "Supervisor";
+
+                if (!sites.includes(assignedSite)) sites.push(assignedSite);
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🔒 Site Locked: ${assignedSite}`;
+                }
+                if (viewHidden && viewText && viewHeader) {
+                    viewHidden.value = assignedSite;
+                    viewText.innerText = `📍 ${assignedSite}`;
+                    viewText.style.color = "#ffc107";
+                    viewHeader.classList.add('locked-dropdown');
+                    if (viewArrow) viewArrow.innerText = "🔒";
+                }
+                if (backBtn) {
+                    backBtn.href = "supervisor/supervisor_dashboard_home.html";
+                }
+            } else if (viewParam === 'office' || parentPath.includes('officedashboard')) {
+                currentPortalMode = 'office';
+                isSupervisorMode = false;
+                assignedSite = "";
+                loggedUserId = urlParams.get('userId') || sessionStorage.getItem('atr_logged_office_id') || localStorage.getItem('atr_logged_office_id') || "OFF-101";
+                loggedUserName = urlParams.get('userName') || "Office Staff";
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🏢 Office Mode (${loggedUserName}) — Synced with ApproveOffice.html`;
+                }
+                if (backBtn) {
+                    backBtn.href = "office/office_dashboard_home.html";
+                }
+            } else {
+                currentPortalMode = 'admin';
+                isSupervisorMode = false;
+                assignedSite = "";
+                if (backBtn) {
+                    backBtn.href = "dashboard_home.html";
+                }
+            }
+        }
+
+        function handleBackToDashboard(event) {
+            if (currentPortalMode === 'office') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.loadOfficeWorkspaceHome === 'function') {
+                        window.parent.loadOfficeWorkspaceHome();
+                        return;
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "office_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "office/office_dashboard_home.html";
+            } else if (currentPortalMode === 'supervisor') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window) {
+                        const parentHomeLink = window.parent.document.querySelector('.dashboard-home-link');
+                        if (parentHomeLink) {
+                            if (typeof window.parent.clearTreeActiveLinks === 'function') {
+                                window.parent.clearTreeActiveLinks();
+                            }
+                            window.location.href = parentHomeLink.href;
+                            return;
+                        }
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "supervisor_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "supervisor/supervisor_dashboard_home.html";
+            }
+        }
+
+        window.onload = () => {
+            checkPortalPermissions();
+            loadAndSyncDatabases();
+            populateSitesLists();
+            initCustomDropdowns();
+            applyFilters();
+        };
+
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'atr_submitted_stocks_db' || e.key === 'atr_retailer_bills_db') {
+                loadAndSyncDatabases();
+                applyFilters();
+            }
+        });
+
+        // --- ROBUST DATE FORMAT UTILITY ---
+        function parseExcelDate(rawDate) {
+            if (!rawDate) return new Date().toLocaleDateString('en-GB').split('/').join('-');
+            if (!isNaN(rawDate) && typeof rawDate === 'number') {
+                const excelEpoch = new Date(1899, 11, 30);
+                const jsDate = new Date(excelEpoch.getTime() + rawDate * 86400000);
+                const day = String(jsDate.getDate()).padStart(2, '0');
+                const month = String(jsDate.getMonth() + 1).padStart(2, '0');
+                const year = jsDate.getFullYear();
+                return `${day}-${month}-${year}`;
+            }
+            let dateStr = String(rawDate).trim();
+            if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/.test(dateStr)) {
+                const parts = dateStr.split(/[-/]/);
+                return `${parts[2].padStart(2, '0')}-${parts[1].padStart(2, '0')}-${parts[0]}`;
+            }
+            if (/^\d{1,2}[-/]\d{1,2}[-/]\d{4}$/.test(dateStr)) {
+                const parts = dateStr.split(/[-/]/);
+                return `${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}-${parts[2]}`;
+            }
+            return dateStr;
+        }
+
+        function formatDateToDDMMYYYY(dateStr) {
+            return parseExcelDate(dateStr);
+        }
+
+        function formatDateToYYYYMMDD(dateStr) {
+            if (!dateStr) return "";
+            if (dateStr.includes('-') && dateStr.split('-')[0].length === 4) return dateStr;
+            const parts = dateStr.split('-');
+            if (parts.length === 3 && parts[0].length === 2) {
+                return `${parts[2]}-${parts[1]}-${parts[0]}`; 
+            }
+            return dateStr;
+        }
+
+        // ================= CUSTOM DROPDOWN LOGIC =================
+        function initCustomDropdowns() {
+            setupDropdown('viewSiteDropdown', 'selectedViewSiteFilter', applyFilters);
+            setupDropdown('modalSiteDropdown', 'selectedSiteValue', null);
+            
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.custom-select')) {
+                    document.querySelectorAll('.select-options-container.active').forEach(c => c.classList.remove('active'));
+                    document.querySelectorAll('.select-header.active').forEach(h => h.classList.remove('active'));
+                }
+                
+                if (!e.target.closest('#itemDropdownWrapper')) {
+                    document.getElementById('suggestionsBox').classList.remove('active');
+                }
+            });
+        }
+
+        function setupDropdown(dropdownId, hiddenInputId, callback) {
+            const dropdown = document.getElementById(dropdownId);
+            const header = dropdown.querySelector('.select-header');
+            const container = dropdown.querySelector('.select-options-container');
+            const searchInput = dropdown.querySelector('.search-input-dropdown');
+            const optionsList = dropdown.querySelector('.select-options');
+            const selectedText = dropdown.querySelector('.selected-text');
+            const hiddenInput = document.getElementById(hiddenInputId);
+
+            header.addEventListener('click', () => {
+                if (isSupervisorMode && (dropdownId === 'viewSiteDropdown' || dropdownId === 'modalSiteDropdown')) {
+                    return;
+                }
+
+                document.querySelectorAll('.select-options-container.active').forEach(c => {
+                    if (c !== container && c.id !== 'suggestionsBox') {
+                        c.classList.remove('active');
+                        if(c.parentElement.querySelector('.select-header')) {
+                            c.parentElement.querySelector('.select-header').classList.remove('active');
+                        }
+                    }
+                });
+                
+                container.classList.toggle('active');
+                header.classList.toggle('active');
+                
+                if(container.classList.contains('active')) {
+                    searchInput.value = ''; 
+                    filterDropdownOptions('', optionsList);
+                    setTimeout(() => searchInput.focus(), 100);
+                }
+            });
+
+            searchInput.addEventListener('keyup', (e) => {
+                filterDropdownOptions(e.target.value, optionsList);
+            });
+
+            optionsList.addEventListener('click', (e) => {
+                const li = e.target.closest('li');
+                if(li) {
+                    if (isSupervisorMode && (dropdownId === 'viewSiteDropdown' || dropdownId === 'modalSiteDropdown')) return;
+
+                    const value = li.getAttribute('data-value');
+                    const text = li.innerText;
+                    
+                    selectedText.innerText = text;
+                    selectedText.style.color = value === "" ? "var(--text-main)" : "var(--theme-color)";
+                    if(text.includes("Office")) selectedText.style.color = "#ffc107";
+                    
+                    selectedText.style.fontWeight = value === "" ? "600" : "700";
+                    
+                    hiddenInput.value = value;
+                    
+                    container.classList.remove('active');
+                    header.classList.remove('active');
+                    
+                    if(callback) callback();
+                }
+            });
+        }
+
+        function filterDropdownOptions(term, list) {
+            const searchTerm = term.toLowerCase();
+            const items = list.querySelectorAll('li');
+            items.forEach(item => {
+                const text = item.innerText.toLowerCase();
+                if (text.includes(searchTerm)) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        function populateSitesLists() {
+            const viewList = document.getElementById('viewSiteList');
+            viewList.innerHTML = `<li data-value="">🌍 All Sites</li>`;
+            
+            const modalList = document.getElementById('modalSiteList');
+            modalList.innerHTML = '';
+            
+            sites.forEach(s => {
+                let html = `<li data-value="${s}" ${s.includes('Office') ? 'class="option-office"' : ''}>${s}</li>`;
+                viewList.innerHTML += html;
+                modalList.innerHTML += html;
+            });
+        }
+
+
+        // ================= MAIN VIEW PAGE LOGIC =================
+        function renderViewTable(data) {
+            const tbody = document.getElementById('viewTableBody');
+            tbody.innerHTML = '';
+            
+            if(data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="empty-row">No stock records found.</td></tr>`;
+                return;
+            }
+
+            [...data].reverse().forEach((record) => {
+                const pendingBadge = record.pendingStatus
+                    ? `<br><span class="pending-status-pill">⏳ ${record.pendingStatus}</span>`
+                    : '';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="color:var(--theme-color); font-weight:bold;">
+                        ${record.id}
+                        ${pendingBadge}
+                    </td>
+                    <td>${formatDateToDDMMYYYY(record.date)}</td>
+                    <td style="color: ${record.site.includes('Office') ? '#ffc107' : 'var(--text-main)'}; font-weight: 600;">${record.site}</td>
+                    <td style="color:var(--text-main); font-weight:bold;">${record.itemName}</td>
+                    <td>${record.unit}</td>
+                    <td style="color:#28a745; font-weight:bold; font-size: 14px;">${record.qty}</td>
+                    <td style="font-size:11px; color:var(--text-muted);">${record.billNo}</td>
+                    <td style="text-align: center; white-space: nowrap;">
+                        <button class="btn-action-edit" onclick="adminAction('edit', '${record.id}')">✏️ Edit</button>
+                        <button class="btn-action-delete" onclick="adminAction('delete', '${record.id}')">🗑️ Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function applyFilters() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const selectedSite = (isSupervisorMode && assignedSite)
+                ? assignedSite.toLowerCase()
+                : document.getElementById('selectedViewSiteFilter').value.toLowerCase();
+
+            const filteredData = submittedStocks.filter(s => {
+                const matchesSearch = 
+                    s.id.toLowerCase().includes(query) || 
+                    s.site.toLowerCase().includes(query) || 
+                    s.itemName.toLowerCase().includes(query) ||
+                    s.billNo.toLowerCase().includes(query) ||
+                    formatDateToDDMMYYYY(s.date).toLowerCase().includes(query);
+
+                const matchesSite = !selectedSite || s.site.toLowerCase() === selectedSite;
+
+                return matchesSearch && matchesSite;
+            });
+
+            renderViewTable(filteredData);
+        }
+
+        // --- EXCEL LOGIC ---
+        function downloadTemplate() {
+            const templateData = [
+                ["Date", "Site", "Item Name", "Unit", "Qty", "Bill Ref"]
+            ];
+            const ws = XLSX.utils.aoa_to_sheet(templateData);
+            
+            for (let cell in ws) {
+                if (cell[0] === '!') continue; 
+                ws[cell].t = 's'; ws[cell].z = '@'; 
+            }
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Stock_Template");
+            XLSX.writeFile(wb, "ATR_Stock_Template.xlsx");
+        }
+
+        function exportToExcel() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const selectedSite = (isSupervisorMode && assignedSite)
+                ? assignedSite.toLowerCase()
+                : document.getElementById('selectedViewSiteFilter').value.toLowerCase();
+
+            const dataToExport = submittedStocks.filter(s => {
+                const matchesSearch = 
+                    s.id.toLowerCase().includes(query) || 
+                    s.site.toLowerCase().includes(query) || 
+                    s.itemName.toLowerCase().includes(query) ||
+                    s.billNo.toLowerCase().includes(query) ||
+                    formatDateToDDMMYYYY(s.date).toLowerCase().includes(query);
+                const matchesSite = !selectedSite || s.site.toLowerCase() === selectedSite;
+                return matchesSearch && matchesSite;
+            });
+
+            if (dataToExport.length === 0) {
+                alert("No data available to export!");
+                return;
+            }
+
+            const ws_data = [["Item Entry ID", "Date", "Site", "Item Name", "Unit", "Qty", "Source Bill Ref"]];
+            
+            [...dataToExport].reverse().forEach(record => {
+                ws_data.push([
+                    record.id, 
+                    formatDateToDDMMYYYY(record.date), 
+                    record.site, 
+                    record.itemName, 
+                    record.unit, 
+                    record.qty.toString(), 
+                    record.billNo 
+                ]);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(ws_data);
+            for (let cell in ws) {
+                if (cell[0] === '!') continue; 
+                ws[cell].t = 's'; ws[cell].z = '@'; 
+            }
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Stock_Ledger");
+            XLSX.writeFile(wb, "ATR_Stock_Ledger_Export.xlsx");
+        }
+
+        function importFromExcel(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                    
+                    if (rows.length <= 1) {
+                        alert("⚠️ The uploaded Excel file is empty or missing data.");
+                        return;
+                    }
+
+                    let addedCount = 0;
+                    let updatedCount = 0;
+                    for (let i = 1; i < rows.length; i++) {
+                        let row = rows[i];
+                        if (!row || row.length < 5) continue;
+
+                        let rawDate = row[0]; 
+                        let site = isSupervisorMode && assignedSite ? assignedSite : String(row[1] || '').trim();
+                        let itemName = String(row[2] || '').trim();
+                        let unit = String(row[3] || '').trim();
+                        let qty = parseFloat(row[4]) || 0;
+                        let billRef = row[5] ? String(row[5]).trim() : "Excel Import";
+
+                        if (!itemName || qty <= 0) continue;
+
+                        let formattedDate = parseExcelDate(rawDate);
+                        let safeSite = site || "🏢 Office Stock (Main)";
+
+                        let existingRecord = submittedStocks.find(s => 
+                            s.date === formattedDate && 
+                            s.site.toLowerCase() === safeSite.toLowerCase() && 
+                            s.itemName.toLowerCase() === itemName.toLowerCase() && 
+                            s.billNo.toLowerCase() === billRef.toLowerCase()
+                        );
+
+                        if (existingRecord) {
+                            existingRecord.qty += qty;
+                            if (currentPortalMode !== 'admin') existingRecord.pendingStatus = "Import Pending";
+                            updatedCount++;
+                        } else {
+                            let uniqueId = "STK-" + Math.floor(1000 + Math.random() * 9000) + "-" + Math.floor(10 + Math.random() * 90);
+                            submittedStocks.push({
+                                id: uniqueId,
+                                date: formattedDate,
+                                site: safeSite,
+                                itemName: itemName,
+                                unit: unit,
+                                qty: qty,
+                                billNo: billRef,
+                                pendingStatus: currentPortalMode !== 'admin' ? "Import Pending" : null
+                            });
+                            addedCount++;
+                        }
+                    }
+
+                    saveStocksToStorage();
+                    applyFilters();
+
+                    if (currentPortalMode === 'office' && (addedCount > 0 || updatedCount > 0)) {
+                        pushRequestToApproveOffice(
+                            "BULK EXCEL STOCK IMPORT",
+                            `Imported ${addedCount} new stock item(s) and updated ${updatedCount} existing item(s) from ${file.name}`,
+                            null,
+                            { fileName: file.name, addedCount, updatedCount },
+                            `Excel stock sheet imported by ${loggedUserName}`
+                        );
+                    }
+
+                    alert(`✅ Excel Import Complete!\n- Added: ${addedCount} new record(s)\n- Qty Updated (No Duplicate): ${updatedCount} record(s)`);
+                } catch (error) {
+                    console.error(error);
+                    alert("❌ Failed to parse Excel file. Please ensure it matches the template format.");
+                } finally {
+                    event.target.value = ""; 
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function adminAction(actionType, recordId) {
+            const record = submittedStocks.find(s => s.id === recordId);
+            if (!record) return;
+
+            // Office & Supervisor Mode: Route Edit/Delete through Approval Workflow without asking for Admin password
+            if (currentPortalMode !== 'admin') {
+                if (actionType === 'edit') {
+                    openEditModal(record);
+                } else if (actionType === 'delete') {
+                    openRoleApprovalModal({
+                        type: 'DELETE_STOCK',
+                        targetId: record.id,
+                        actionLabel: "DELETE STOCK RECORD",
+                        summary: `Delete Stock ${record.id}: ${record.itemName} (${record.qty} ${record.unit}) @ ${record.site}`,
+                        oldData: { ...record },
+                        newData: null
+                    });
+                }
+                return;
+            }
+
+            const pass = prompt(`🛡️ ADMIN PROTECTED ACTION\n\nPlease enter admin password to ${actionType} record ${recordId}:`);
+            if (pass === null) return; 
+            
+            if (pass === ADMIN_PASSWORD || pass === "admin123") {
+                if (actionType === 'delete') {
+                    if(confirm(`Are you sure you want to permanently delete record ${recordId}?`)) {
+                        submittedStocks = submittedStocks.filter(s => s.id !== recordId);
+                        saveStocksToStorage();
+                        applyFilters(); 
+                    }
+                } else if (actionType === 'edit') {
+                    openEditModal(record);
+                }
+            } else {
+                alert("❌ Incorrect Password! Access Denied.");
+            }
+        }
+
+        // ================= MODAL LOGIC =================
+        function openAddModal() {
+            editingRecordId = null;
+            document.getElementById('modalTitle').innerText = "📦 Add Stock Entry";
+            document.getElementById('submitBtn').innerText = currentPortalMode === 'office'
+                ? "📤 Submit Stock for Approval"
+                : "✅ Final Submit Stock";
+            
+            document.getElementById('entryDate').value = new Date().toISOString().split('T')[0];
+            
+            const modalSiteHeader = document.getElementById('modalSiteSelectHeader');
+            const modalSiteText = document.getElementById('modalSiteSelectedText');
+            const modalSiteArrow = document.getElementById('modalSiteSelectArrow');
+
+            if (isSupervisorMode && assignedSite) {
+                modalSiteText.innerText = `📍 ${assignedSite}`;
+                modalSiteText.style.color = "#ffc107";
+                modalSiteHeader.classList.add('locked-dropdown');
+                if (modalSiteArrow) modalSiteArrow.innerText = "🔒";
+                document.getElementById('selectedSiteValue').value = assignedSite;
+            } else {
+                modalSiteText.innerText = "-- Choose Location --";
+                modalSiteText.style.color = "var(--text-muted)";
+                modalSiteHeader.classList.remove('locked-dropdown');
+                if (modalSiteArrow) modalSiteArrow.innerText = "▼";
+                document.getElementById('selectedSiteValue').value = "";
+            }
+            
+            clearInputs();
+            cart = [];
+            renderCart();
+            
+            document.getElementById('entryModal').classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function openEditModal(record) {
+            editingRecordId = record.id;
+            document.getElementById('modalTitle').innerText = currentPortalMode !== 'admin'
+                ? `✏️ Edit Item Record (${record.id} - Requires Approval)`
+                : `✏️ Edit Item Record (${record.id})`;
+            document.getElementById('submitBtn').innerText = currentPortalMode !== 'admin'
+                ? "📤 Send Update for Approval"
+                : "🔄 Update Item Record";
+            
+            document.getElementById('entryDate').value = formatDateToYYYYMMDD(record.date);
+            
+            const modalSiteText = document.getElementById('modalSiteSelectedText');
+            const targetSite = (isSupervisorMode && assignedSite) ? assignedSite : record.site;
+            modalSiteText.innerText = targetSite;
+            modalSiteText.style.color = targetSite.includes("Office") ? "#ffc107" : "var(--theme-color)";
+            document.getElementById('selectedSiteValue').value = targetSite;
+            
+            clearInputs();
+            cart = [{
+                id: record.id,
+                name: record.itemName,
+                billNo: record.billNo,
+                vendor: "N/A",
+                available: Infinity,
+                qty: record.qty,
+                unit: record.unit
+            }];
+            renderCart();
+            
+            document.getElementById('entryModal').classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeEntryModal() {
+            document.getElementById('entryModal').classList.remove('show');
+            document.body.style.overflow = 'auto';
+        }
+
+        function clearInputs() {
+            document.getElementById('itemInput').value = ""; 
+            document.getElementById('itemUnit').value = ""; 
+            document.getElementById('itemQty').value = "";
+            document.getElementById('selectedItemName').value = "";
+            document.getElementById('selectedBillNo').value = "";
+            document.getElementById('selectedVendor').value = "";
+            document.getElementById('selectedAvailable').value = "";
+            document.getElementById('selectedItemId').value = "";
+            document.getElementById('fetchedInfo').innerText = "Fields auto-populated from item master";
+        }
+
+
+        // --- AUTOCOMPLETE FOR ITEMS (Glassy Structure) ---
+        function showSuggestions(val) {
+            const container = document.getElementById('suggestionsBox'); 
+            const list = document.getElementById('suggestionsList');
+            list.innerHTML = '';
+            
+            const filter = val.toLowerCase().trim();
+            if (!filter) { container.classList.remove('active'); return; }
+
+            let matches = retailItems.filter(i => i.name.toLowerCase().includes(filter) || i.billNo.toLowerCase().includes(filter));
+            if (matches.length > 0) {
+                matches.forEach(item => {
+                    const li = document.createElement('li');
+                    li.className = 'option-div';
+                    li.innerHTML = `<strong>${item.name}</strong><span class="item-meta">Bill: ${item.billNo} | Vendor: ${item.vendor} | Max: ${item.available} ${item.unit}</span>`;
+                    
+                    li.onclick = (e) => {
+                        e.stopPropagation();
+                        document.getElementById('itemInput').value = item.name;
+                        document.getElementById('selectedItemId').value = item.id;
+                        document.getElementById('selectedItemName').value = item.name;
+                        document.getElementById('selectedBillNo').value = item.billNo;
+                        document.getElementById('selectedVendor').value = item.vendor;
+                        document.getElementById('selectedAvailable').value = item.available;
+                        document.getElementById('itemUnit').value = item.unit;
+
+                        document.getElementById('fetchedInfo').innerText = `🔗 Pulled: Bill [${item.billNo}] | Vendor [${item.vendor}]`;
+
+                        container.classList.remove('active');
+                        document.getElementById('itemQty').focus();
+                    };
+                    list.appendChild(li);
+                });
+                container.classList.add('active');
+            } else { 
+                container.classList.remove('active');
+                document.getElementById('selectedBillNo').value = "Direct/Manual";
+                document.getElementById('selectedVendor').value = "N/A";
+                document.getElementById('selectedAvailable').value = "Infinity";
+                document.getElementById('fetchedInfo').innerText = "✨ New direct manual item";
+            }
+        }
+
+
+        // ================= CART LOGIC =================
+        function addToCart() {
+            const itemName = document.getElementById('itemInput').value.trim();
+            const customUnit = document.getElementById('itemUnit').value.trim();
+            const qty = parseFloat(document.getElementById('itemQty').value);
+
+            if (!itemName || !customUnit || !qty || qty <= 0) { alert("⚠️️ Fill valid Name, Unit and Qty."); return; }
+
+            let billNo = document.getElementById('selectedBillNo').value || "Direct/Manual";
+            let vendor = document.getElementById('selectedVendor').value || "N/A";
+            let itemId = document.getElementById('selectedItemId').value || "ITM-NEW-" + Math.floor(Math.random() * 1000);
+            let maxAvailable = parseFloat(document.getElementById('selectedAvailable').value);
+            if(isNaN(maxAvailable)) maxAvailable = Infinity;
+
+            if(maxAvailable !== Infinity && qty > maxAvailable) {
+                if(!confirm(`⚠️ Adding more (${qty}) than available in bill (${maxAvailable}). Proceed?`)) return;
+            }
+
+            const existingCartItem = cart.find(c => c.name.toLowerCase() === itemName.toLowerCase() && c.billNo === billNo);
+            if (existingCartItem) {
+                existingCartItem.qty += qty;
+            } else {
+                cart.push({ 
+                    id: itemId, name: itemName, billNo: billNo, vendor: vendor,
+                    available: maxAvailable, qty: qty, unit: customUnit 
+                });
+            }
+
+            clearInputs(); 
+            renderCart();
+        }
+
+        function pickFromCart(index) {
+            const item = cart[index];
+            document.getElementById('itemInput').value = item.name;
+            document.getElementById('itemUnit').value = item.unit;
+            document.getElementById('itemQty').value = item.qty;
+
+            document.getElementById('selectedItemId').value = item.id || "";
+            document.getElementById('selectedItemName').value = item.name || "";
+            document.getElementById('selectedBillNo').value = item.billNo || "Direct/Manual";
+            document.getElementById('selectedVendor').value = item.vendor || "N/A";
+            document.getElementById('selectedAvailable').value = item.available || "Infinity";
+            
+            document.getElementById('fetchedInfo').innerText = `🔗 Pulled: Bill [${item.billNo}] | Vendor [${item.vendor}]`;
+
+            cart.splice(index, 1);
+            renderCart();
+            document.getElementById('itemInput').focus();
+        }
+
+        function renderCart() {
+            const tbody = document.getElementById('cartTableBody'); tbody.innerHTML = '';
+            if (cart.length === 0) { tbody.innerHTML = `<tr><td colspan="5" class="empty-row">Cart is empty. Add items.</td></tr>`; return; }
+
+            cart.forEach((item, idx) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="color:var(--text-main); font-weight:bold;">${item.name}</td>
+                    <td style="font-size:11px; color:var(--text-muted);">${item.billNo}</td>
+                    <td style="color:var(--theme-color); font-weight:bold; font-size:14px;">${item.qty}</td>
+                    <td style="color:var(--text-main);">${item.unit}</td> 
+                    <td style="text-align: center; white-space: nowrap;">
+                        <button type="button" class="btn-pick" onclick="pickFromCart(${idx})">✏️ Edit</button>
+                        <button type="button" class="btn-remove" onclick="cart.splice(${idx}, 1); renderCart();">🗑️</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // ================= CONTINUOUS SUBMIT & ROLE APPROVAL ROUTING =================
+        function submitStock() {
+            const site = (isSupervisorMode && assignedSite) ? assignedSite : document.getElementById('selectedSiteValue').value;
+            const rawDate = document.getElementById('entryDate').value; 
+            const formattedDate = formatDateToDDMMYYYY(rawDate); 
+
+            if (!site) { alert("⚠️ Select a Site/Location."); return; }
+            if (!rawDate) { alert("⚠️ Select a Date."); return; }
+            if (cart.length === 0) { alert("⚠️ Cart is empty!"); return; }
+
+            if (editingRecordId) {
+                const recordIndex = submittedStocks.findIndex(s => s.id === editingRecordId);
+                if (recordIndex === -1) return;
+
+                const oldRec = { ...submittedStocks[recordIndex] };
+                const updatedRec = {
+                    ...oldRec,
+                    date: formattedDate,
+                    site: site,
+                    itemName: cart[0].name,
+                    unit: cart[0].unit,
+                    qty: cart[0].qty,
+                    billNo: cart[0].billNo,
+                    pendingStatus: null
+                };
+
+                // OFFICE OR SUPERVISOR EDIT: Route to Approval Modal
+                if (currentPortalMode !== 'admin') {
+                    closeEntryModal();
+                    openRoleApprovalModal({
+                        type: 'EDIT_STOCK',
+                        targetId: oldRec.id,
+                        actionLabel: "EDIT STOCK ENTRY",
+                        summary: `${updatedRec.id} (${updatedRec.site}): ${updatedRec.itemName} — Qty: ${oldRec.qty} → ${updatedRec.qty} ${updatedRec.unit}`,
+                        oldData: oldRec,
+                        newData: updatedRec
+                    });
+                    return;
+                }
+
+                // ADMIN DIRECT UPDATE
+                submittedStocks[recordIndex] = updatedRec;
+                saveStocksToStorage();
+                alert(`✅ Item Record ${editingRecordId} Updated Successfully!`);
+                closeEntryModal(); 
+                applyFilters();
+            } else {
+                // OFFICE PORTAL NEW STOCK ENTRY: Route to ApproveOffice.html
+                if (currentPortalMode === 'office') {
+                    const batchClone = cart.map(c => ({ ...c }));
+                    const itemsText = batchClone.map(c => `${c.name} (${c.qty} ${c.unit})`).join(', ');
+                    closeEntryModal();
+                    openRoleApprovalModal({
+                        type: 'CREATE_STOCK_BATCH',
+                        date: formattedDate,
+                        site: site,
+                        batchItems: batchClone,
+                        actionLabel: "ADD NEW STOCK ENTRY",
+                        summary: `Site: ${site} (${formattedDate}) — ${batchClone.length} Item(s): ${itemsText}`,
+                        oldData: null,
+                        newData: { date: formattedDate, site: site, items: batchClone }
+                    });
+                    return;
+                }
+
+                // ADMIN (OR SUPERVISOR DIRECT ADD) EXECUTION
+                let addedCount = 0;
+                let updatedCount = 0;
+
+                cart.forEach((item) => {
+                    let existingStockItem = submittedStocks.find(s => 
+                        s.date === formattedDate && 
+                        s.site.toLowerCase() === site.toLowerCase() && 
+                        s.itemName.toLowerCase() === item.name.toLowerCase() && 
+                        s.billNo.toLowerCase() === item.billNo.toLowerCase()
+                    );
+
+                    if (existingStockItem) {
+                        existingStockItem.qty += item.qty;
+                        updatedCount++;
+                    } else {
+                        const uniquePerItemId = "STK-" + Math.floor(1000 + Math.random() * 9000) + "-" + Math.floor(10 + Math.random() * 90);
+                        submittedStocks.push({
+                            id: uniquePerItemId,
+                            date: formattedDate,
+                            site: site,
+                            itemName: item.name,
+                            unit: item.unit,
+                            qty: item.qty,
+                            billNo: item.billNo,
+                            pendingStatus: null
+                        });
+                        addedCount++;
+                    }
+                });
+                
+                saveStocksToStorage();
+                alert(`✅ Process Completed!\n- Newly Added: ${addedCount} item(s)\n- Quantity Updated (No Duplicate): ${updatedCount} item(s)\n(Form remains open for continuous entries)`);
+                
+                cart = [];
+                renderCart();
+                clearInputs();
+                applyFilters();
+            }
+        }
+
+        // =========================================================================================
+        // OFFICE & SUPERVISOR APPROVAL MODAL ENGINE (ROUTES TO ApproveOffice / ApproveSupervisor)
+        // =========================================================================================
+        function openRoleApprovalModal(payload) {
+            pendingRolePayload = payload;
+            document.getElementById('roleApprovalSummary').value = `${payload.actionLabel}: ${payload.summary}`;
+            document.getElementById('roleApprovalReason').value = '';
+
+            const titleEl = document.getElementById('roleApprovalTitle');
+            const descEl = document.getElementById('roleApprovalDesc');
+
+            if (currentPortalMode === 'supervisor') {
+                titleEl.innerText = "🛡️ Send Request to ApproveSupervisor.html";
+                descEl.innerHTML = "সুপারভাইজার পোর্টাল থেকে স্টক রেকর্ড এডিট বা ডিলিট করার রিকোয়েস্টটি অ্যাডমিনের <strong>ApproveSupervisor.html</strong>-এ পাঠানো হবে।";
+            } else {
+                titleEl.innerText = "🏢 Send Request to ApproveOffice.html";
+                descEl.innerHTML = "অফিস পোর্টাল থেকে নতুন স্টক এন্ট্রি, এডিট বা ডিলিট করলে তা অ্যাডমিনের <strong>ApproveOffice.html</strong>-এ পাঠানো হবে। অ্যাডমিন অ্যাপ্রুভ করলেই এটি চূড়ান্ত হবে।";
+            }
+
+            document.getElementById('roleApprovalModal').classList.add('show');
+            setTimeout(() => document.getElementById('roleApprovalReason').focus(), 50);
+        }
+
+        function closeRoleApprovalModal() {
+            document.getElementById('roleApprovalModal').classList.remove('show');
+            pendingRolePayload = null;
+        }
+
+        function confirmRoleApprovalRequest() {
+            const reason = document.getElementById('roleApprovalReason').value.trim();
+            if (!reason) {
+                alert("⚠️ Please enter a valid reason/remark for Admin Approval.");
+                return;
+            }
+            if (!pendingRolePayload) return;
+
+            const targetApprovalPage = currentPortalMode === 'supervisor' ? 'ApproveSupervisor.html' : 'ApproveOffice.html';
+
+            if (pendingRolePayload.type === 'CREATE_STOCK_BATCH') {
+                (pendingRolePayload.batchItems || []).forEach(item => {
+                    const uniquePerItemId = "STK-" + Math.floor(1000 + Math.random() * 9000) + "-" + Math.floor(10 + Math.random() * 90);
+                    submittedStocks.push({
+                        id: uniquePerItemId,
+                        date: pendingRolePayload.date,
+                        site: pendingRolePayload.site,
+                        itemName: item.name,
+                        unit: item.unit,
+                        qty: item.qty,
+                        billNo: item.billNo,
+                        pendingStatus: `Pending in ${targetApprovalPage}`
+                    });
+                });
+                cart = [];
+                renderCart();
+                clearInputs();
+            } else if (pendingRolePayload.type === 'EDIT_STOCK') {
+                const idx = submittedStocks.findIndex(s => s.id === pendingRolePayload.targetId);
+                if (idx > -1) {
+                    submittedStocks[idx].pendingStatus = "Edit Pending";
+                }
+            } else if (pendingRolePayload.type === 'DELETE_STOCK') {
+                const idx = submittedStocks.findIndex(s => s.id === pendingRolePayload.targetId);
+                if (idx > -1) {
+                    submittedStocks[idx].pendingStatus = "Delete Pending";
+                }
+            }
+
+            saveStocksToStorage();
+            applyFilters();
+
+            if (currentPortalMode === 'supervisor') {
+                const supQueue = JSON.parse(localStorage.getItem('atr_supervisor_approvals')) || [];
+                supQueue.unshift({
+                    id: "SUP-STK-" + Date.now().toString().slice(-5),
+                    module: "StockView.html",
+                    action: pendingRolePayload.actionLabel,
+                    site: assignedSite,
+                    reason: reason,
+                    summary: pendingRolePayload.summary,
+                    requestedAt: new Date().toISOString(),
+                    status: "Pending",
+                    oldData: pendingRolePayload.oldData,
+                    newData: pendingRolePayload.newData
+                });
+                localStorage.setItem('atr_supervisor_approvals', JSON.stringify(supQueue));
+            } else {
+                pushRequestToApproveOffice(
+                    pendingRolePayload.actionLabel,
+                    pendingRolePayload.summary,
+                    pendingRolePayload.oldData,
+                    pendingRolePayload.newData,
+                    reason
+                );
+            }
+
+            editingRecordId = null;
+            closeRoleApprovalModal();
+            alert(`📤 Request sent to ${targetApprovalPage} for Admin Approval!`);
+        }
+
+        function pushRequestToApproveOffice(actionLabel, summaryText, oldDataObj, newDataObj, reasonText) {
+            const newReq = {
+                reqId: "OFF-STK-" + Date.now().toString().slice(-5),
+                userId: loggedUserId,
+                userName: loggedUserName,
+                designation: "Office Staff",
+                module: "StockView.html",
+                action: actionLabel,
+                summary: summaryText,
+                oldData: oldDataObj,
+                newData: newDataObj,
+                reason: reasonText,
+                timestamp: new Date().toLocaleString('en-IN'),
+                status: "Pending"
+            };
+
+            const officeQueue = JSON.parse(localStorage.getItem('atr_office_approvals')) || [];
+            officeQueue.unshift(newReq);
+            localStorage.setItem('atr_office_approvals', JSON.stringify(officeQueue));
+            localStorage.setItem('approve_office_requests', JSON.stringify(officeQueue));
+            localStorage.setItem('ApproveOffice_requests', JSON.stringify(officeQueue));
+
+            // Log in Office Daily Work Report (office_dashboard_home.html)
+            const workLogs = JSON.parse(localStorage.getItem('atr_office_daily_work')) || [];
+            const todayStr = new Date().toISOString().split('T')[0];
+            const nowTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+            workLogs.unshift({
+                id: "WRK-" + Date.now().toString().slice(-5),
+                userId: loggedUserId,
+                userName: loggedUserName,
+                date: todayStr,
+                time: nowTime,
+                module: "Stock Management (StockView.html)",
+                refNo: newReq.reqId,
+                desc: `${actionLabel}: ${summaryText}`,
+                status: "Sent for Approval"
+            });
+            localStorage.setItem('atr_office_daily_work', JSON.stringify(workLogs));
+
+            try {
+                if (window.parent && window.parent !== window && typeof window.parent.refreshNotificationsUI === 'function') {
+                    window.parent.refreshNotificationsUI();
+                }
+            } catch (e) {}
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1><i class="ri-line-chart-line"></i> Sales Report</h1>
+    <div class="header-actions">
+      <button class="btn-secondary" (click)="exportExcel()" [disabled]="!monthlyData().length">
+        <i class="ri-file-excel-2-line"></i> Export Excel
+      </button>
+      <button class="btn-secondary" (click)="printReport()" [disabled]="!monthlyData().length">
+        <i class="ri-printer-line"></i> Print
+      </button>
+    </div>
+  </div>
+
+  <div class="card-container">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Company</label>
+        <select [(ngModel)]="companyId">
+          <option value="">All Companies</option>
+          @for (c of companies; track c.id) {
+            <option [value]="c.id">{{ c.name }}</option>
+          }
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Fiscal Year (e.g. 2024-25)</label>
+        <input type="text" [(ngModel)]="fiscalYear" placeholder="2024-25" />
+      </div>
+      <div class="form-group" style="align-self: end;">
+        <button class="btn-primary" (click)="generate()" [disabled]="loading()">
+          @if (loading()) { Loading... } @else { <i class="ri-bar-chart-line"></i> Generate Report }
+        </button>
+      </div>
+    </div>
+    @if (error()) {
+      <p class="error-text" style="color:red;margin-top:8px;">{{ error() }}</p>
+    }
+  </div>
+
+  @if (grandTotal()) {
+    <app-summary-cards [cards]="summaryCards" />
+  }
+
+  @if (monthlyData().length > 0) {
+    <div class="card-container" id="sales-report-table">
+      <h3 style="margin:0 0 12px;color:var(--text-main);">Monthly Breakdown</h3>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Month</th>
+              <th style="text-align:right;">Invoices</th>
+              <th style="text-align:right;">Base Amount</th>
+              <th style="text-align:right;">GST</th>
+              <th style="text-align:right;">Gross Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of monthlyData(); track row.month) {
+              <tr>
+                <td>{{ row.month }}</td>
+                <td style="text-align:right;">{{ row.invoices }}</td>
+                <td style="text-align:right;">{{ row.total_base | number:'1.2-2' }}</td>
+                <td style="text-align:right;">{{ row.total_gst | number:'1.2-2' }}</td>
+                <td style="text-align:right;font-weight:600;">{{ row.total_gross | number:'1.2-2' }}</td>
+              </tr>
+            }
+          </tbody>
+          @if (grandTotal()) {
+            <tfoot>
+              <tr style="font-weight:800;background:var(--bg-card);border-top:2px solid var(--border-color);">
+                <td>Grand Total</td>
+                <td style="text-align:right;">{{ grandTotal().invoices }}</td>
+                <td style="text-align:right;">{{ grandTotal().total_base | number:'1.2-2' }}</td>
+                <td style="text-align:right;">{{ grandTotal().total_gst | number:'1.2-2' }}</td>
+                <td style="text-align:right;">{{ grandTotal().total_gross | number:'1.2-2' }}</td>
+              </tr>
+            </tfoot>
+          }
+        </table>
+      </div>
+    </div>
+  } @else if (!loading()) {
+    <div class="card-container">
+      <p class="empty-state">Select a company and fiscal year, then generate the report.</p>
+    </div>
+  }
+</div>

@@ -1,0 +1,174 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Site Tagging — Equipment</h1>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      @if (!role.isAdmin()) {
+        <span class="badge badge-warning">{{ role.getCurrentRole() | titlecase }} Mode</span>
+      }
+    </div>
+  </div>
+
+  <app-summary-cards [cards]="summaryCards()" />
+
+  <!-- Filters -->
+  <div class="card-container" style="margin-top: 16px;">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Filter by Equipment</label>
+        <app-searchable-dropdown [items]="equipmentItems()" [ngModel]="filterEquipment()" (ngModelChange)="filterEquipment.set($event)" placeholder="All Equipment" />
+      </div>
+      <div class="form-group">
+        <label>Filter by Site</label>
+        <app-searchable-dropdown [items]="siteItems()" [ngModel]="filterSite()" (ngModelChange)="filterSite.set($event)" placeholder="All Sites" />
+      </div>
+      <div class="form-group" style="align-self: end;">
+        <button class="btn-primary" (click)="loadAssignments()">Search</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div style="display: flex; gap: 8px; margin: 16px 0;">
+    <button [class]="activeTab() === 'active' ? 'btn-primary' : 'btn-secondary'" (click)="activeTab.set('active')">
+      Active ({{ activeAssignments().length }})
+    </button>
+    <button [class]="activeTab() === 'released' ? 'btn-primary' : 'btn-secondary'" (click)="activeTab.set('released')">
+      Released ({{ completedAssignments().length }})
+    </button>
+  </div>
+
+  @if (loading()) {
+    <div class="skeleton" style="height: 200px;"></div>
+  }
+
+  <!-- Active Tab -->
+  @if (activeTab() === 'active') {
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Equipment</th>
+            <th>Current Site</th>
+            <th>Since</th>
+            <th>Rate</th>
+            <th>Purpose</th>
+            <th>Status</th>
+            <th style="text-align: center;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (a of activeAssignments(); track a.id; let i = $index) {
+            <tr>
+              <td>{{ i + 1 }}</td>
+              <td style="font-weight: 600;">{{ a.equipment_name }}</td>
+              <td>{{ a.site_name }}</td>
+              <td>{{ a.start_date }}</td>
+              <td>{{ a.rate ? '₹' + a.rate + '/' + (a.rate_unit === 'per_month' ? 'mo' : 'day') : '-' }}</td>
+              <td>{{ a.purpose }}</td>
+              <td>
+                @if (a.pending_status) {
+                  <span class="badge badge-warning">{{ a.pending_status }}</span>
+                } @else {
+                  <span class="badge badge-success">Active</span>
+                }
+              </td>
+              <td style="text-align: center;">
+                @if (reassigningId() === a.id) {
+                  <div style="display: flex; gap: 8px; align-items: center; justify-content: center;">
+                    <app-searchable-dropdown
+                      [items]="siteItems()"
+                      [ngModel]="reassigningSiteId()"
+                      (ngModelChange)="reassigningSiteId.set($event)"
+                      placeholder="New Site"
+                      style="width: 180px;"
+                    />
+                    <button class="btn-primary" style="padding: 4px 10px; font-size: 12px;" (click)="confirmReassign(a)">Confirm</button>
+                    <button class="btn-secondary" style="padding: 4px 10px; font-size: 12px;" (click)="cancelReassign()">Cancel</button>
+                  </div>
+                } @else {
+                  <div style="display: flex; gap: 6px; justify-content: center;">
+                    <button class="btn-primary" style="padding: 4px 10px; font-size: 12px;" (click)="startReassign(a)">Reassign</button>
+                    <button class="btn-danger" style="padding: 4px 10px; font-size: 12px;" (click)="openReleaseModal(a)">Release</button>
+                  </div>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="8" class="empty-state">No active equipment assignments.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- Released Tab -->
+  @if (activeTab() === 'released') {
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Equipment</th>
+            <th>Site</th>
+            <th>Start Date</th>
+            <th>Released Date</th>
+            <th>Condition</th>
+            <th>Remarks</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (a of completedAssignments(); track a.id; let i = $index) {
+            <tr style="opacity: 0.85;">
+              <td>{{ i + 1 }}</td>
+              <td>{{ a.equipment_name }}</td>
+              <td>{{ a.site_name }}</td>
+              <td>{{ a.start_date }}</td>
+              <td>{{ a.released_date }}</td>
+              <td><span [class]="getConditionClass(a.condition ?? 'Good')">{{ a.condition ?? 'Good' }}</span></td>
+              <td>{{ a.purpose ?? '-' }}</td>
+            </tr>
+          } @empty {
+            <tr><td colspan="7" class="empty-state">No released equipment records.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>
+
+<!-- Release Modal -->
+<app-modal-dialog [isOpen]="showReleaseModal()" title="Release Equipment" size="md" (closed)="showReleaseModal.set(false)">
+  @if (releaseTarget(); as a) {
+    <div class="form-grid" style="grid-template-columns: 1fr;">
+      <div class="form-group">
+        <label>Equipment</label>
+        <input type="text" [value]="a.equipment_name" disabled />
+      </div>
+      <div class="form-group">
+        <label>Current Site</label>
+        <input type="text" [value]="a.site_name" disabled />
+      </div>
+      <div class="form-group">
+        <label>Release Date *</label>
+        <input type="date" [ngModel]="releaseDate()" (ngModelChange)="releaseDate.set($event)" />
+      </div>
+      <div class="form-group">
+        <label>Condition *</label>
+        <select [ngModel]="releaseCondition()" (ngModelChange)="releaseCondition.set($event)">
+          <option value="Good">Good</option>
+          <option value="Needs Repair">Needs Repair</option>
+          <option value="Damaged">Damaged</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Remarks</label>
+        <textarea [ngModel]="releaseRemarks()" (ngModelChange)="releaseRemarks.set($event)" rows="2" placeholder="Release notes..."></textarea>
+      </div>
+    </div>
+  }
+  <div modal-footer>
+    <button class="btn-secondary" (click)="showReleaseModal.set(false)">Cancel</button>
+    <button class="btn-danger" (click)="confirmRelease()">Confirm Release</button>
+  </div>
+</app-modal-dialog>

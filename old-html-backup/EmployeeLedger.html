@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATR Construction - Employee Full Ledger</title>
+    
+    <!-- Sync theme with Master Dashboard -->
+    <script>
+        const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        window.addEventListener('storage', function(e) {
+            if(e.key === 'atr_theme') { document.documentElement.setAttribute('data-theme', e.newValue); }
+        });
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
+
+        :root {
+            --bg-body: #121212;
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --hover-bg: rgba(255, 255, 255, 0.08);
+            --shadow: 0 4px 15px rgba(0,0,0,0.3);
+            
+            /* Theme Color (Green Accent for Employee Section) */
+            --theme-color: #28a745;
+            --theme-glow: rgba(40, 167, 69, 0.4);
+            
+            --accent: #ffc107;
+            --success: #28a745;
+            --danger: #dc3545;
+            --info: #17a2b8;
+            --theme-transition: all 0.4s ease;
+        }
+
+        [data-theme="light"] {
+            --bg-body: #f0f2f5;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #666666;
+            --border-color: rgba(0, 0, 0, 0.1);
+            --glass-bg: rgba(0, 0, 0, 0.02);
+            --hover-bg: rgba(0, 0, 0, 0.05);
+            --shadow: 0 8px 25px rgba(0,0,0,0.05);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; scroll-behavior: smooth; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(136, 136, 136, 0.3); border-radius: 10px; }
+
+        body { background-color: var(--bg-body); color: var(--text-main); display: flex; flex-direction: column; min-height: 100vh; transition: var(--theme-transition); }
+        .web-container { flex: 1; padding: 30px 40px; overflow-y: auto; max-width: 1400px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; gap: 25px; }
+
+        /* Header styling */
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 20px; flex-wrap: wrap; gap: 15px; }
+        .header h1 { font-size: 24px; color: var(--text-main); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        
+        .sup-site-badge {
+            display: none;
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-back {
+            background-color: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color); text-decoration: none; padding: 9px 16px; border-radius: 6px; font-weight: bold; font-size: 13px; transition: all 0.3s; cursor: pointer;
+        }
+        .btn-back:hover { background-color: var(--theme-color); color: #fff; border-color: var(--theme-color); transform: translateY(-2px); box-shadow: 0 4px 10px var(--theme-glow); }
+
+        .section-box { 
+            background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 25px; box-shadow: var(--shadow); transition: var(--theme-transition);
+        }
+
+        /* Filter Section */
+        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; align-items: end; }
+        .form-group { display: flex; flex-direction: column; gap: 8px; position: relative; }
+        .form-group label { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; transition: color 0.3s; }
+        
+        select, input[type="text"] {
+            background-color: var(--bg-body); border: 1px solid var(--border-color); padding: 12px 15px; border-radius: 6px; color: var(--text-main); font-size: 14px; width: 100%; transition: all 0.3s ease; outline: none;
+        }
+        select:focus, input:focus { border-color: var(--theme-color); box-shadow: 0 0 10px var(--theme-glow); }
+        .form-group:focus-within label { color: var(--theme-color); }
+
+        /* Searchable Custom Dropdown */
+        .custom-select-wrapper { position: relative; width: 100%; }
+        .custom-select-input { cursor: text; }
+        .custom-select-list {
+            position: absolute; top: 100%; left: 0; right: 0; background-color: var(--bg-card); border: 1px solid var(--theme-color); border-radius: 6px; max-height: 220px; overflow-y: auto; z-index: 1000; display: none; list-style: none; margin-top: 5px; box-shadow: var(--shadow);
+        }
+        .custom-select-list li { padding: 12px 15px; color: var(--text-main); cursor: pointer; font-size: 13px; border-bottom: 1px solid var(--border-color); transition: background 0.2s; display: flex; justify-content: space-between; align-items: center; }
+        .custom-select-list li:last-child { border-bottom: none; }
+        .custom-select-list li:hover { background-color: var(--theme-color); color: #ffffff; font-weight: 600; }
+        .custom-select-list.show { display: block; }
+
+        .emp-site-tag { font-size: 10px; background: var(--glass-bg); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; color: var(--accent); }
+        .custom-select-list li:hover .emp-site-tag { background: rgba(0,0,0,0.25); color: #fff; border-color: transparent; }
+
+        .btn-generate { 
+            background-color: var(--theme-color); color: white; border: none; padding: 12px 25px; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; text-transform: uppercase; transition: all 0.3s; height: 43px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); 
+        }
+        .btn-generate:hover { transform: translateY(-2px); box-shadow: 0 8px 20px var(--theme-glow); filter: brightness(1.1); }
+
+        /* Summary Cards */
+        .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .summary-card { background: var(--bg-card); padding: 20px; border-radius: 10px; border: 1px solid var(--border-color); border-left: 5px solid; text-align: center; box-shadow: var(--shadow); }
+        .summary-card.credit { border-left-color: #28a745; }
+        .summary-card.debit { border-left-color: #dc3545; }
+        .summary-card.balance { border-left-color: #ffc107; }
+        .summary-title { font-size: 12px; color: var(--text-muted); text-transform: uppercase; font-weight: 600; margin-bottom: 10px; }
+        .summary-amount { font-size: 24px; font-weight: 700; color: var(--text-main); }
+        .summary-card.credit .summary-amount { color: #28a745; }
+        .summary-card.debit .summary-amount { color: #dc3545; }
+        .summary-card.balance .summary-amount { color: #ffc107; }
+
+        /* Employee Ledger Table */
+        .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 15px; }
+        .table-header h3 { color: var(--theme-color); font-size: 18px; }
+        
+        .table-responsive { overflow-x: auto; width: 100%; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); }
+        table { width: 100%; border-collapse: collapse; text-align: center; font-size: 12px; }
+        thead { background: var(--glass-bg); border-bottom: 2px solid var(--theme-color); }
+        th, td { padding: 12px 10px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+        th { color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 11px; }
+        tr:hover { background: var(--hover-bg); }
+
+        .highlight { color: var(--accent); font-weight: bold; font-size: 13px;}
+        .due { color: var(--danger); font-weight: bold; font-size: 13px;}
+        .sub-id-label { background: var(--glass-bg); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border-color); font-size: 11px; color: var(--info); }
+
+        .payment-box { text-align: left; background: var(--glass-bg); padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); min-width: 140px; margin: 0 auto; }
+        .payment-list { list-style: none; margin: 0; padding: 0; }
+        .payment-list li { display: flex; justify-content: space-between; font-size: 11px; padding: 3px 0; border-bottom: 1px dashed var(--border-color); }
+        .payment-list li:last-child { border-bottom: none; }
+        .payment-total { margin-top: 5px; padding-top: 5px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; font-weight: bold; font-size: 12px; color: var(--accent); }
+
+        /* ================= PRINT LAYOUT (A4, OFFICE & EMPLOYEE COPY) ================= */
+        #printContainer { display: none; }
+        
+        @media print {
+            @page { size: A4 portrait; margin: 10mm; }
+            body { background: white !important; color: black !important; margin: 0; padding: 0; }
+            * { -webkit-print-color-adjust: exact !important; color-adjust: exact !important; }
+            
+            .web-container { display: none !important; }
+            
+            #printContainer { display: flex !important; flex-direction: column; width: 100%; min-height: 100vh; }
+            
+            .print-copy { flex: 1; padding: 10px; display: flex; flex-direction: column; page-break-inside: avoid; margin-bottom: 10px;}
+            
+            .print-header { text-align: center; margin-bottom: 10px; border-bottom: 2px solid #000; padding-bottom: 8px; }
+            .print-header h2 { margin: 0; font-size: 18px; text-transform: uppercase; font-weight: bold; }
+            .print-header p { margin: 3px 0; font-size: 11px; font-weight: bold; }
+            .copy-badge { display: inline-block; background: #000; color: #fff; padding: 3px 10px; border-radius: 12px; font-size: 9px; margin-top: 5px; text-transform: uppercase; font-weight: bold;}
+
+            .print-emp-details { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 10px; }
+            .print-emp-details div { width: 48%; }
+
+            /* Print Table Styles - Custom 7 Columns */
+            .print-table { width: 100%; border-collapse: collapse; font-size: 9px; text-align: center; margin-bottom: 8px;}
+            .print-table th, .print-table td { border: 1px solid #000; padding: 5px 3px; background: transparent; color: black; vertical-align: middle; }
+            .print-table th { background: #f2f2f2 !important; font-weight: bold; }
+            
+            .print-table .payment-box { border: none; padding: 0; min-width: auto; background: transparent; }
+            .print-table .payment-list li { border-bottom: 1px dashed #ccc; padding: 2px 0; font-size: 8px; justify-content: space-between; display: flex; }
+            .print-table .payment-list li:last-child { border-bottom: none; }
+            .print-table .payment-total { color: black !important; font-size: 9px; border-top: 1px solid #000; margin-top: 2px; padding-top: 2px;}
+
+            .print-footer { display: flex; justify-content: space-between; margin-top: auto; font-size: 10px; font-weight: bold; padding-top: 15px;}
+            .print-footer div { border-top: 1px solid #000; padding-top: 5px; width: 30%; text-align: center; }
+
+            .cut-line { text-align: center; border-top: 1px dashed #000; position: relative; margin: 10px 0; page-break-inside: avoid; }
+            .cut-line span { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: white; padding: 0 10px; font-size: 14px; color: #000; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ================= WEB VIEW CONTAINER ================= -->
+    <div class="web-container">
+        <div class="header">
+            <h1>
+                Employee Full Ledger
+                <span id="supSiteBadge" class="sup-site-badge">🔒 Site Locked</span>
+            </h1>
+            <a href="dashboard_home.html" id="btnBackDashboard" class="btn-back" onclick="handleBackToDashboard(event)">← Back to Dashboard</a>
+        </div>
+
+        <div class="section-box">
+            <div class="filter-grid">
+                <div class="form-group">
+                    <label id="empSelectLabel">Select Employee</label>
+                    <div class="custom-select-wrapper" id="empSelectWrapper">
+                        <input type="text" id="empSearchInput" class="custom-select-input" placeholder="🔍 Search Employee Name / ID..." autocomplete="off">
+                        <input type="hidden" id="empSelect">
+                        <ul class="custom-select-list" id="empSelectList"></ul>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Select Sub ID / Ledger Type</label>
+                    <select id="subIdSelect">
+                        <option value="ALL">📋 All Sub-IDs (Consolidated)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <button class="btn-generate" onclick="generateLedger()">📄 Generate Ledger</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="summary-grid" id="summaryGrid" style="display: none;">
+            <div class="summary-card credit">
+                <div class="summary-title">Total Earned</div>
+                <div class="summary-amount" id="sumTotalEarned">₹ 0.00</div>
+            </div>
+            <div class="summary-card debit">
+                <div class="summary-title">Total Payments (Adv + Office)</div>
+                <div class="summary-amount" id="sumTotalPayments">₹ 0.00</div>
+            </div>
+            <div class="summary-card balance">
+                <div class="summary-title">Total Due Balance</div>
+                <div class="summary-amount" id="sumTotalDue">₹ 0.00</div>
+            </div>
+        </div>
+
+        <div class="section-box" id="ledgerSection" style="display: none;">
+            <div class="table-header">
+                <h3 id="ledgerTitle">Ledger Statement</h3>
+                <button class="btn-generate" style="background: #17a2b8; height: 38px; padding: 8px 15px;" onclick="printReport()">📥 Download / Print A4 Report</button>
+            </div>
+            
+            <div class="table-responsive">
+                <table id="mainTable">
+                    <thead>
+                        <tr>
+                            <th>Month / Year</th>
+                            <th>Sub-ID</th>
+                            <th>Present Days</th>
+                            <th>OT (Hrs)</th>
+                            <th>OT Amt (₹)</th>
+                            <th>Total Earning (₹)</th>
+                            <th>Site Advance (₹)</th>
+                            <th>Office Pymt (Date & Amt)</th>
+                            <th>Due Balance (₹)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ledgerBody"></tbody>
+                    <tfoot>
+                        <tr style="background: var(--glass-bg); font-weight: bold; font-size: 14px;">
+                            <td colspan="8" style="text-align: right; color: var(--accent);">Net Outstanding Due:</td>
+                            <td id="totalDueFooter" class="due">₹ 0.00</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= PRINT VIEW CONTAINER (A4) ================= -->
+    <div id="printContainer"></div>
+
+    <script>
+        // ================= ROLE & SITE LOCKING VARIABLES =================
+        let isSupervisorMode = false;
+        let assignedSite = "";
+
+        // --- Demo Database with Site Tagging & Designations ---
+        const defaultEmployees = [
+            // Salt Lake Sector V Employees (Supervisor Subrata Roy's Site)
+            { id: "EMP-005", name: "Bikash Roy", designation: "Head Mason", site: "Salt Lake Sector V", subIds: ["SUB-SL-01", "SUB-SL-05"] },
+            { id: "EMP-008", name: "Ratan Das", designation: "Site Helper", site: "Salt Lake Sector V", subIds: ["SUB-SL-02"] },
+            { id: "EMP-012", name: "Sujoy Halder", designation: "Senior Mason", site: "Salt Lake Sector V", subIds: ["SUB-SL-03"] },
+            { id: "EMP-019", name: "Koushik Mondal", designation: "Steel Fitter", site: "Salt Lake Sector V", subIds: ["SUB-SL-04"] },
+
+            // Dum Dum Project Employees
+            { id: "ATR-1025", name: "Rahul Sk", designation: "Master Supervisor", site: "Dum Dum Project", subIds: ["SUB-001", "SUB-002"] },
+            { id: "ATR-1026", name: "Sumi Khatun", designation: "Site Engineer", site: "Dum Dum Project", subIds: ["SUB-003"] },
+
+            // Barasat Highway Employees
+            { id: "EMP-014", name: "Tarun Debnath", designation: "Roller Operator", site: "Barasat Highway", subIds: ["SUB-BH-01"] }
+        ];
+
+        // Merge with any localStorage employees while ensuring demo employees & site tags remain intact
+        const storedEmployees = JSON.parse(localStorage.getItem('atr_employees')) || [];
+        const employees = [...defaultEmployees];
+        storedEmployees.forEach(stEmp => {
+            if (!employees.some(e => e.id === stEmp.id)) {
+                employees.push({
+                    ...stEmp,
+                    site: stEmp.site || "Dum Dum Project",
+                    subIds: stEmp.subIds || []
+                });
+            }
+        });
+
+        // Complex Ledger Data matching the table structure across multiple sites
+        const subIdDataDB = {
+            // ================= SALT LAKE SECTOR V RECORDS =================
+            "SUB-SL-01": {
+                name: "Day Mason Shift", type: "Per Day", rate: 800, empId: "EMP-005", site: "Salt Lake Sector V",
+                records: [
+                    { month: "September 2026", present: 24, otHrs: 10, advance: 4500, officePayments: [ { date: "12-Sep", amount: 5000 }, { date: "25-Sep", amount: 3000 } ] },
+                    { month: "August 2026", present: 26, otHrs: 16, advance: 6000, officePayments: [ { date: "10-Aug", amount: 8000 }, { date: "28-Aug", amount: 6400 } ] },
+                    { month: "July 2026", present: 25, otHrs: 8, advance: 3000, officePayments: [ { date: "15-Jul", amount: 15000 } ] }
+                ]
+            },
+            "SUB-SL-05": {
+                name: "Night Concrete Shift", type: "Per Day", rate: 900, empId: "EMP-005", site: "Salt Lake Sector V",
+                records: [
+                    { month: "September 2026", present: 6, otHrs: 4, advance: 1500, officePayments: [ { date: "20-Sep", amount: 2000 } ] }
+                ]
+            },
+            "SUB-SL-02": {
+                name: "Helper Regular Shift", type: "Per Day", rate: 550, empId: "EMP-008", site: "Salt Lake Sector V",
+                records: [
+                    { month: "September 2026", present: 25, otHrs: 8, advance: 3500, officePayments: [ { date: "14-Sep", amount: 4000 }, { date: "26-Sep", amount: 2600 } ] },
+                    { month: "August 2026", present: 27, otHrs: 12, advance: 4000, officePayments: [ { date: "11-Aug", amount: 6000 }, { date: "29-Aug", amount: 5675 } ] }
+                ]
+            },
+            "SUB-SL-03": {
+                name: "Plaster & Brickwork", type: "Per Day", rate: 850, empId: "EMP-012", site: "Salt Lake Sector V",
+                records: [
+                    { month: "September 2026", present: 22, otHrs: 8, advance: 5000, officePayments: [ { date: "18-Sep", amount: 8450 } ] },
+                    { month: "August 2026", present: 24, otHrs: 6, advance: 4500, officePayments: [ { date: "10-Aug", amount: 10000 }, { date: "27-Aug", amount: 6538 } ] }
+                ]
+            },
+            "SUB-SL-04": {
+                name: "Structural Fitter Monthly", type: "Monthly", rate: 22000, empId: "EMP-019", site: "Salt Lake Sector V",
+                records: [
+                    { month: "September 2026", present: 26, otHrs: 12, advance: 3200, officePayments: [ { date: "15-Sep", amount: 9000 } ] },
+                    { month: "August 2026", present: 28, otHrs: 10, advance: 2000, officePayments: [ { date: "10-Aug", amount: 10000 }, { date: "30-Aug", amount: 10000 } ] }
+                ]
+            },
+
+            // ================= DUM DUM PROJECT RECORDS =================
+            "SUB-001": {
+                name: "Main Shift", type: "Per Day", rate: 850, empId: "ATR-1025", site: "Dum Dum Project",
+                records: [
+                    { month: "September 2026", present: 26, otHrs: 12, advance: 4000, officePayments: [ { date: "10-Sep", amount: 8000 }, { date: "25-Sep", amount: 6000 } ] },
+                    { month: "May 2026", present: 26, otHrs: 12, advance: 2000, officePayments: [ { date: "10-May", amount: 5000 }, { date: "25-May", amount: 10000 } ] },
+                    { month: "April 2026", present: 24, otHrs: 8, advance: 1500, officePayments: [ { date: "05-Apr", amount: 18000 } ] }
+                ]
+            },
+            "SUB-002": {
+                name: "Night Guard", type: "Monthly", rate: 18000, empId: "ATR-1025", site: "Dum Dum Project",
+                records: [
+                    { month: "May 2026", present: 31, otHrs: 20, advance: 1000, officePayments: [ { date: "12-May", amount: 6000 }, { date: "28-May", amount: 6000 } ] },
+                    { month: "April 2026", present: 30, otHrs: 15, advance: 0, officePayments: [ { date: "10-Apr", amount: 18000 } ] }
+                ]
+            },
+            "SUB-003": {
+                name: "Engineer Monthly Scale", type: "Monthly", rate: 28000, empId: "ATR-1026", site: "Dum Dum Project",
+                records: [
+                    { month: "September 2026", present: 27, otHrs: 6, advance: 5000, officePayments: [ { date: "15-Sep", amount: 15000 } ] },
+                    { month: "August 2026", present: 28, otHrs: 4, advance: 3000, officePayments: [ { date: "07-Aug", amount: 25000 } ] }
+                ]
+            },
+
+            // ================= BARASAT HIGHWAY RECORDS =================
+            "SUB-BH-01": {
+                name: "Heavy Machine Shift", type: "Per Day", rate: 950, empId: "EMP-014", site: "Barasat Highway",
+                records: [
+                    { month: "September 2026", present: 24, otHrs: 15, advance: 6000, officePayments: [ { date: "16-Sep", amount: 10000 } ] }
+                ]
+            }
+        };
+
+        window.onload = function() {
+            checkUrlPermissions();
+            populateCustomSelect();
+        };
+
+        // ================= CHECK ADMIN VS SUPERVISOR PERMISSIONS =================
+        function checkUrlPermissions() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewParam = urlParams.get('view');
+            const siteParam = urlParams.get('site');
+
+            const backBtn = document.getElementById('btnBackDashboard');
+            const badge = document.getElementById('supSiteBadge');
+            const searchInput = document.getElementById('empSearchInput');
+            const empLabel = document.getElementById('empSelectLabel');
+
+            if (viewParam === 'supervisor' && siteParam) {
+                isSupervisorMode = true;
+                assignedSite = siteParam.trim();
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🔒 Site Locked: ${assignedSite}`;
+                }
+
+                if (empLabel) {
+                    empLabel.innerText = `Select Employee (${assignedSite} Only)`;
+                }
+
+                if (searchInput) {
+                    searchInput.placeholder = `🔍 Search ${assignedSite} Employees...`;
+                }
+
+                if (backBtn) {
+                    backBtn.href = "supervisor/supervisor_dashboard_home.html";
+                }
+            } else {
+                isSupervisorMode = false;
+                assignedSite = "";
+                if (backBtn) {
+                    backBtn.href = "dashboard_home.html";
+                }
+            }
+        }
+
+        // ================= SMART BACK TO DASHBOARD NAVIGATION =================
+        function handleBackToDashboard(event) {
+            if (isSupervisorMode) {
+                event.preventDefault();
+                
+                // 1. If loaded inside SupervisorDashboard iframe and same-origin allows access
+                try {
+                    if (window.parent && window.parent !== window) {
+                        const parentHomeLink = window.parent.document.querySelector('.dashboard-home-link');
+                        if (parentHomeLink) {
+                            if (typeof window.parent.clearTreeActiveLinks === 'function') {
+                                window.parent.clearTreeActiveLinks();
+                            }
+                            window.location.href = parentHomeLink.href;
+                            return;
+                        }
+                    }
+                } catch (err) {
+                    // Fallback handled below
+                }
+
+                // 2. Fallback using document.referrer directory if available
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "supervisor_dashboard_home.html";
+                    return;
+                }
+
+                // 3. Standard relative path from root to supervisor folder
+                window.location.href = "supervisor/supervisor_dashboard_home.html";
+            }
+        }
+
+        // Helper: Return all employees for Admin, or strictly site-tagged employees for Supervisor
+        function getAccessibleEmployees() {
+            if (isSupervisorMode && assignedSite) {
+                return employees.filter(emp => emp.site === assignedSite);
+            }
+            return employees;
+        }
+
+        // ================= Custom Searchable Dropdown Logic =================
+        const searchInput = document.getElementById('empSearchInput');
+        const selectList = document.getElementById('empSelectList');
+        const hiddenEmpSelect = document.getElementById('empSelect');
+        const selectWrapper = document.getElementById('empSelectWrapper');
+
+        function populateCustomSelect() {
+            selectList.innerHTML = '';
+            const allowedEmployees = getAccessibleEmployees();
+
+            if (allowedEmployees.length === 0) {
+                const li = document.createElement('li');
+                li.style.color = 'var(--text-muted)';
+                li.style.cursor = 'default';
+                li.innerText = `No employees tagged to ${assignedSite}`;
+                selectList.appendChild(li);
+                return;
+            }
+
+            allowedEmployees.forEach(emp => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <span><strong>${emp.name}</strong> (${emp.id}) - <small style="opacity:0.8;">${emp.designation}</small></span>
+                    <span class="emp-site-tag">📍 ${emp.site}</span>
+                `;
+                li.onclick = () => selectEmployee(emp.id, `${emp.name} (${emp.id})`);
+                selectList.appendChild(li);
+            });
+        }
+
+        searchInput.addEventListener('click', () => { selectList.classList.add('show'); searchInput.select(); });
+
+        searchInput.addEventListener('input', (e) => {
+            selectList.classList.add('show');
+            const filter = e.target.value.toLowerCase();
+            const items = selectList.getElementsByTagName('li');
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].innerText.toLowerCase().includes(filter)) {
+                    items[i].style.display = "flex"; 
+                } else { items[i].style.display = "none"; }
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!selectWrapper.contains(e.target)) {
+                selectList.classList.remove('show');
+            }
+        });
+
+        function selectEmployee(id, displayName) {
+            const allowedEmployees = getAccessibleEmployees();
+            const emp = allowedEmployees.find(e => e.id === id);
+
+            // Prevent unauthorized selection if Supervisor
+            if (!emp) return;
+
+            hiddenEmpSelect.value = id;
+            searchInput.value = displayName;
+            selectList.classList.remove('show');
+            
+            const subIdSelect = document.getElementById('subIdSelect');
+            subIdSelect.innerHTML = '<option value="ALL">📋 All Sub-IDs (Consolidated)</option>';
+            
+            if (emp && emp.subIds && emp.subIds.length > 0) {
+                emp.subIds.forEach(sub => {
+                    // If Supervisor, only show Sub-IDs belonging to their site
+                    if (isSupervisorMode && subIdDataDB[sub] && subIdDataDB[sub].site !== assignedSite) {
+                        return;
+                    }
+                    const opt = document.createElement('option');
+                    opt.value = sub;
+                    const shiftName = subIdDataDB[sub] ? ` - ${subIdDataDB[sub].name}` : '';
+                    opt.innerText = `${sub}${shiftName}`;
+                    subIdSelect.appendChild(opt);
+                });
+            }
+        }
+
+        // Store calculated data globally for printing
+        let globalCalculatedData = {};
+
+        function generateLedger() {
+            const empId = document.getElementById('empSelect').value;
+            const subIdFilter = document.getElementById('subIdSelect').value;
+
+            if (!empId) return alert("⚠️ Please select an Employee first.");
+
+            const allowedEmployees = getAccessibleEmployees();
+            const empObj = allowedEmployees.find(e => e.id === empId);
+
+            if (!empObj) {
+                return alert("❌ Unauthorized: You can only view ledgers for employees assigned to your site.");
+            }
+
+            const empName = empObj.name;
+            const designation = empObj.designation || "Employee";
+
+            document.getElementById('ledgerTitle').innerText = subIdFilter === 'ALL' ? `Consolidated Ledger: ${empName} (${empObj.site})` : `Ledger Statement: ${empName} (${subIdFilter})`;
+
+            let displayRecords = [];
+            
+            for (let key in subIdDataDB) {
+                if (subIdDataDB[key].empId === empId) {
+                    // Extra site lock check for Supervisor mode
+                    if (isSupervisorMode && subIdDataDB[key].site !== assignedSite) {
+                        continue;
+                    }
+                    if (subIdFilter === "ALL" || subIdFilter === key) {
+                        subIdDataDB[key].records.forEach(rec => {
+                            displayRecords.push({ subId: key, type: subIdDataDB[key].type, rate: subIdDataDB[key].rate, ...rec });
+                        });
+                    }
+                }
+            }
+
+            // Salary Type Logic: Use the rate and type from the first matched record
+            let empType = displayRecords.length > 0 ? displayRecords[0].type : "N/A";
+            let empRate = displayRecords.length > 0 ? displayRecords[0].rate : 0;
+            let salaryText = `₹ ${empRate} (${empType})`;
+
+            let grandTotalEarned = 0;
+            let grandTotalPayments = 0;
+            let grandTotalDue = 0;
+
+            let calculatedRows = displayRecords.map(row => {
+                let baseEarning = 0;
+                let otAmount = 0;
+                let totalOfficePay = 0;
+                let paymentList = [];
+
+                if (row.officePayments && row.officePayments.length > 0) {
+                    row.officePayments.forEach(pay => {
+                        totalOfficePay += pay.amount;
+                        paymentList.push({ date: pay.date, amount: pay.amount });
+                    });
+                }
+
+                if(row.type === "Per Day") {
+                    baseEarning = row.present * row.rate;
+                    let otRatePerHour = row.rate / 8; 
+                    otAmount = Math.round(row.otHrs * otRatePerHour);
+                } else if(row.type === "Monthly") {
+                    baseEarning = row.rate; 
+                    // OT amount is 0 for Monthly, but hours are kept
+                    otAmount = 0; 
+                }
+
+                let totalEarning = baseEarning + otAmount;
+                let totalDeductions = row.advance + totalOfficePay;
+                let dueBalance = totalEarning - totalDeductions;
+                
+                grandTotalEarned += totalEarning;
+                grandTotalPayments += totalDeductions;
+                grandTotalDue += dueBalance;
+
+                return { ...row, otAmount, totalEarning, totalOfficePay, paymentList, dueBalance };
+            });
+
+            globalCalculatedData = { empName, empId, designation, empType, salaryText, subIdFilter, rows: calculatedRows, grandTotalDue };
+
+            // Render Web UI (No Changes in Web Columns)
+            const tbody = document.getElementById('ledgerBody');
+            tbody.innerHTML = '';
+            
+            if (calculatedRows.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding: 30px; color: var(--text-muted);">No records found for the selected criteria.</td></tr>`;
+                document.getElementById('summaryGrid').style.display = 'none';
+                document.getElementById('ledgerSection').style.display = 'block';
+                return;
+            }
+
+            calculatedRows.forEach(row => {
+                let paymentHTML = `<div class="payment-box"><ul class="payment-list">`;
+                if (row.paymentList.length > 0) {
+                    row.paymentList.forEach(pay => { paymentHTML += `<li><span>${pay.date}</span> <span>₹${pay.amount.toLocaleString('en-IN')}</span></li>`; });
+                } else {
+                    paymentHTML += `<li><span>No Payment</span> <span>₹0</span></li>`;
+                }
+                paymentHTML += `</ul><div class="payment-total"><span>Total:</span> <span>₹${row.totalOfficePay.toLocaleString('en-IN')}</span></div></div>`;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${row.month}</strong></td>
+                    <td><span class="sub-id-label">${row.subId}</span></td>
+                    <td>${row.present}</td>
+                    <td>${row.otHrs > 0 ? row.otHrs + ' Hrs' : '-'}</td>
+                    <td>${row.type === "Monthly" ? "N/A" : '₹' + row.otAmount.toLocaleString('en-IN')}</td>
+                    <td class="highlight">₹ ${row.totalEarning.toLocaleString('en-IN')}</td>
+                    <td>₹ ${row.advance.toLocaleString('en-IN')}</td>
+                    <td>${paymentHTML}</td>
+                    <td class="due">₹ ${row.dueBalance.toLocaleString('en-IN')}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('sumTotalEarned').innerText = `₹ ${grandTotalEarned.toLocaleString('en-IN')}`;
+            document.getElementById('sumTotalPayments').innerText = `₹ ${grandTotalPayments.toLocaleString('en-IN')}`;
+            document.getElementById('sumTotalDue').innerText = `₹ ${grandTotalDue.toLocaleString('en-IN')}`;
+            document.getElementById('totalDueFooter').innerText = `₹ ${grandTotalDue.toLocaleString('en-IN')}`;
+            
+            document.getElementById('summaryGrid').style.display = 'grid';
+            document.getElementById('ledgerSection').style.display = 'block';
+        }
+
+        // ================= Custom Print Logic (7 Columns + Footers) =================
+        function printReport() {
+            if(!globalCalculatedData.rows || globalCalculatedData.rows.length === 0) {
+                alert("⚠️ Please generate a ledger with data first.");
+                return;
+            }
+
+            const { empName, empId, designation, empType, salaryText, subIdFilter, rows, grandTotalDue } = globalCalculatedData;
+            const printDate = new Date().toLocaleDateString('en-IN');
+            const subText = subIdFilter === 'ALL' ? "All Sub-IDs (Consolidated)" : subIdFilter;
+
+            let totalPresent = 0;
+            let totalOT = 0;
+            let totalOTAmt = 0;
+            let totalAdvance = 0;
+            let totalOfficePay = 0;
+            let totalEarningSum = 0;
+
+            let tableRowsHTML = rows.map(row => {
+                totalPresent += row.present || 0;
+                totalOT += row.otHrs || 0;
+                totalOTAmt += row.otAmount || 0;
+                totalAdvance += row.advance || 0;
+                totalOfficePay += row.totalOfficePay || 0;
+                totalEarningSum += row.totalEarning || 0;
+
+                let pList = row.paymentList.map(p => `<li><span>${p.date}</span><span>₹${p.amount}</span></li>`).join('');
+                if(pList === '') pList = `<li><span>No Payment</span><span>₹0</span></li>`;
+                
+                return `
+                <tr>
+                    <td>${row.month}</td>
+                    <td>${row.subId}</td>
+                    <td>${row.present}</td>
+                    <td>${row.otHrs > 0 ? row.otHrs : '-'}</td>
+                    <td>${row.type === "Monthly" ? "N/A" : row.otAmount}</td>
+                    <td>₹ ${row.advance}</td>
+                    <td>
+                        <div class="payment-box">
+                            <ul class="payment-list">${pList}</ul>
+                            <div class="payment-total"><span>Total:</span> <span>₹${row.totalOfficePay}</span></div>
+                        </div>
+                    </td>
+                </tr>`;
+            }).join('');
+
+            let allTotalPayment = totalAdvance + totalOfficePay;
+
+            const buildCopy = (copyType) => `
+                <div class="print-copy">
+                    <div class="print-header">
+                        <h2>ATR Construction</h2>
+                        <p>Employee Ledger & Payment Statement</p>
+                        <span class="copy-badge">${copyType}</span>
+                    </div>
+                    
+                    <div class="print-emp-details">
+                        <div style="text-align: left;">
+                            <strong>Employee Name:</strong> ${empName}<br>
+                            <strong>Employee ID:</strong> ${empId}<br>
+                            <strong>Designation:</strong> ${designation}
+                        </div>
+                        <div style="text-align: right;">
+                            <strong>Report Date:</strong> ${printDate}<br>
+                            <strong>Filter:</strong> ${subText}<br>
+                            <strong>Salary:</strong> ${salaryText}
+                        </div>
+                    </div>
+
+                    <table class="print-table">
+                        <thead>
+                            <tr>
+                                <th>Month</th>
+                                <th>Sub-ID</th>
+                                <th>Present</th>
+                                <th>OT (Hrs)</th>
+                                <th>OT Amt (₹)</th>
+                                <th>Advance (₹)</th>
+                                <th>Office Pymt (₹)</th>
+                            </tr>
+                        </thead>
+                        <tbody>${tableRowsHTML}</tbody>
+                        <tfoot>
+                            <!-- Columns Totals -->
+                            <tr style="background: #f2f2f2; font-weight: bold; font-size: 10px;">
+                                <td colspan="2" style="text-align: right;">Totals:</td>
+                                <td>${totalPresent}</td>
+                                <td>${totalOT}</td>
+                                <td>${empType === "Monthly" ? "N/A" : '₹ ' + totalOTAmt.toLocaleString('en-IN')}</td>
+                                <td>₹ ${totalAdvance.toLocaleString('en-IN')}</td>
+                                <td>₹ ${totalOfficePay.toLocaleString('en-IN')}</td>
+                            </tr>
+                            
+                            <!-- Summary Calculations -->
+                            <tr>
+                                <td colspan="5" style="text-align: right; font-weight: bold; padding-top: 8px;">Total Earnings (A) :</td>
+                                <td colspan="2" style="font-weight: bold; padding-top: 8px; font-size: 11px; text-align: right;">₹ ${totalEarningSum.toLocaleString('en-IN')}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="5" style="text-align: right; font-weight: bold;">Total Payment Taken (Adv + Office) (B) :</td>
+                                <td colspan="2" style="font-weight: bold; font-size: 11px; text-align: right;">₹ ${allTotalPayment.toLocaleString('en-IN')}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="5" style="text-align: right; font-weight: bold; font-size: 12px; color: #000; padding-bottom: 8px;">Net Outstanding Due (A - B) :</td>
+                                <td colspan="2" style="font-weight: bold; font-size: 12px; color: #000; padding-bottom: 8px; text-align: right;">₹ ${grandTotalDue.toLocaleString('en-IN')}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                    <div class="print-footer">
+                        <div>Employee Signature</div>
+                        <div>Authorized Signatory</div>
+                    </div>
+                </div>
+            `;
+
+            const printContainer = document.getElementById('printContainer');
+            
+            // Create both copies with a scissor cut line in between
+            printContainer.innerHTML = buildCopy('Office Copy') + 
+                                       `<div class="cut-line"><span>✂</span></div>` + 
+                                       buildCopy('Employee Copy');
+            
+            window.print();
+        }
+    </script>
+</body>
+</html>

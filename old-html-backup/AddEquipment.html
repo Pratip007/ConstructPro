@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Equipment Management System</title>
+    
+    <!-- Sync theme with Master Dashboard -->
+    <script>
+        const savedTheme = localStorage.getItem('atr_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        window.addEventListener('storage', function(e) {
+            if(e.key === 'atr_theme') { document.documentElement.setAttribute('data-theme', e.newValue); }
+        });
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap');
+
+        :root {
+            --bg-body: transparent; 
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: rgba(255, 255, 255, 0.1);
+            
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(0, 0, 0, 0.2);
+            --input-focus-bg: rgba(0, 0, 0, 0.4);
+            
+            --shadow: 0 4px 15px rgba(0,0,0,0.3);
+            
+            /* Theme Color (Orange for Contractor / Party Section) */
+            --theme-color: #fd7e14;
+            --theme-glow: rgba(253, 126, 20, 0.4);
+            --theme-transition: all 0.4s ease;
+        }
+
+        [data-theme="light"] {
+            --bg-body: transparent;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #555555;
+            --border-color: rgba(0, 0, 0, 0.1);
+            
+            --glass-bg: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --input-bg: rgba(255, 255, 255, 0.5);
+            --input-focus-bg: #ffffff;
+            
+            --shadow: 0 8px 25px rgba(0,0,0,0.05);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; scroll-behavior: smooth; }
+        body { background-color: var(--bg-body); color: var(--text-main); display: flex; min-height: 100vh; transition: var(--theme-transition); }
+        
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(136, 136, 136, 0.3); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(136, 136, 136, 0.6); }
+
+        .main-content { flex: 1; padding: 40px; max-width: 1400px; margin: 0 auto; overflow-y: auto; width: 100%; }
+
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid var(--border-color); padding-bottom: 20px; transition: var(--theme-transition); flex-wrap: wrap; gap: 15px; }
+        .header h1 { font-size: 26px; color: var(--text-main); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+        .role-mode-badge {
+            display: none;
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 700;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-new-entry { background-color: var(--theme-color); color: #fff; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+        .btn-new-entry:hover { transform: translateY(-2px); box-shadow: 0 6px 15px var(--theme-glow); }
+
+        .btn-back-dash { background-color: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border-color); text-decoration: none; padding: 9px 16px; border-radius: 6px; font-weight: bold; font-size: 13px; transition: all 0.3s; display: flex; align-items: center; cursor: pointer; }
+        .btn-back-dash:hover { background-color: var(--theme-color); color: #fff; border-color: var(--theme-color); transform: translateY(-2px); box-shadow: 0 4px 10px var(--theme-glow); }
+
+        .box-container { background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--glass-border); border-top: 4px solid var(--theme-color); border-radius: 12px; padding: 30px; box-shadow: var(--shadow); margin-bottom: 30px; transition: var(--theme-transition); }
+
+        .list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px dashed var(--border-color); padding-bottom: 15px; flex-wrap: wrap; gap: 15px; }
+        .list-header h2 { font-size: 18px; color: var(--theme-color); text-transform: uppercase; margin: 0; }
+
+        .search-bar { padding: 10px 15px; border-radius: 20px; border: 1px solid var(--border-color); background-color: var(--input-bg); color: var(--text-main); font-size: 13px; width: 320px; transition: all 0.3s; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); outline: none; }
+        .search-bar:focus { border-color: var(--theme-color); box-shadow: 0 0 10px var(--theme-glow); width: 380px; }
+
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .form-group { display: flex; flex-direction: column; gap: 8px; }
+        .form-group.full-width { grid-column: span 2; }
+        .form-group label { font-size: 12px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; transition: color 0.3s;}
+        
+        .form-group input, .form-group select, .form-group textarea { background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 12px 15px; border-radius: 6px; font-size: 14px; transition: all 0.3s; width: 100%; outline: none; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--theme-color); background-color: var(--input-focus-bg); box-shadow: 0 0 10px var(--theme-glow); }
+        .form-group:focus-within label { color: var(--theme-color); }
+        select option { background: var(--bg-card); color: var(--text-main); }
+        
+        .btn-add-cat { background-color: var(--theme-color); color: #fff; border: none; padding: 0 15px; border-radius: 6px; font-weight: bold; font-size: 18px; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .btn-add-cat:hover { transform: translateY(-2px); box-shadow: 0 6px 15px var(--theme-glow); }
+
+        #tdsPercentBox { display: none; } 
+        #tdsPercentBox.show { display: flex; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .btn-submit { background-color: #28a745; color: white; border: none; padding: 12px 25px; border-radius: 6px; font-weight: 700; cursor: pointer; transition: 0.3s; width: 100%; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .btn-submit:hover { background-color: #218838; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(40,167,69,0.3);}
+        .btn-cancel { background-color: #6c757d; color: white; border: none; padding: 12px 25px; border-radius: 6px; font-weight: 700; cursor: pointer; transition: 0.3s; width: 100%; font-size: 14px; }
+        .btn-cancel:hover { background-color: #5a6268; transform: translateY(-2px);}
+        .button-group { display: flex; gap: 15px; margin-top: 25px; }
+
+        .table-responsive { overflow-x: auto; width: 100%; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 12px 15px; border-bottom: 1px solid var(--border-color); font-size: 13px; color: var(--text-main); transition: var(--theme-transition); vertical-align: middle; }
+        th { color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 11px; background: var(--input-bg); }
+        tr:hover { background: var(--glass-bg); }
+
+        .pending-status-pill {
+            display: inline-block;
+            background: rgba(255, 193, 7, 0.16);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.45);
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            margin-top: 4px;
+            text-transform: uppercase;
+        }
+
+        .action-btns { display: inline-flex; gap: 6px; align-items: center; flex-wrap: nowrap; white-space: nowrap; }
+        .btn-edit { background: var(--glass-bg); color: var(--theme-color); border: 1px solid var(--theme-color); padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; transition: 0.2s;}
+        .btn-delete { background: rgba(220, 53, 69, 0.1); color: #dc3545; border: 1px solid #dc3545; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; transition: 0.2s;}
+        .btn-edit:hover { background: var(--theme-color); color: #fff; }
+        .btn-delete:hover { background: #dc3545; color: white; }
+
+        /* MODAL (OVERLAY) STYLES */
+        #entryModal { 
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); z-index: 1000; 
+            justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s ease; padding: 20px;
+        }
+        #entryModal.show { display: flex; opacity: 1; }
+        #entryModal .box-container {
+            width: 100%; max-width: 650px; position: relative; transform: translateY(-30px);
+            transition: transform 0.3s ease; box-shadow: var(--shadow); margin-bottom: 0;
+        }
+        #entryModal.show .box-container { transform: translateY(0); }
+
+        .close-btn {
+            position: absolute; top: 25px; right: 25px; background: none; border: none; 
+            color: var(--text-muted); font-size: 24px; cursor: pointer; transition: color 0.2s;
+        }
+        .close-btn:hover { color: #dc3545; }
+
+        /* OFFICE APPROVAL MODAL */
+        #officeApprovalModal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.72); backdrop-filter: blur(5px); z-index: 2000;
+            justify-content: center; align-items: center; padding: 20px;
+        }
+        #officeApprovalModal.show { display: flex; }
+        #officeApprovalModal .box-container {
+            width: 100%; max-width: 480px; border-top-color: #ffc107; margin-bottom: 0; position: relative;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-content">
+        <div class="header">
+            <h1>
+                👷 Party & Equipment Master
+                <span id="roleModeBadge" class="role-mode-badge">🏢 Office Mode</span>
+            </h1>
+            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                <button class="btn-new-entry" onclick="openNewPartyModal()">➕ Add New Party</button>
+                <a href="dashboard_home.html" id="btnBackDashboard" class="btn-back-dash" onclick="handleBackToDashboard(event)">← Back to Dashboard</a>
+            </div>
+        </div>
+
+        <!-- LIST VIEW -->
+        <div id="listView" class="box-container">
+            <div class="list-header">
+                <h2>📋 Registered Parties Details</h2>
+                <input type="text" id="searchInput" class="search-bar" placeholder="🔍 Search by Name, Reg No or Site..." onkeyup="searchParty()">
+            </div>
+            
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Party Name</th>
+                            <th>Category</th>
+                            <th>Site / Project</th>
+                            <th>Days & Rate</th>
+                            <th>TDS</th>
+                            <th>Net Total (₹)</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="partyTableBody">
+                        <!-- Data loads dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ENTRY FORM (MODAL OVERLAY) -->
+    <div id="entryModal">
+        <div class="box-container">
+            <button class="close-btn" onclick="closeModal()">&times;</button>
+            <h2 id="formTitle">📝 Party Registration</h2>
+            
+            <!-- data-office-hooked="true" prevents duplicate parent interception so this page handles Office Approval cleanly -->
+            <form id="partyForm" data-office-hooked="true">
+                <input type="hidden" id="pId">
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Party / Contractor Name *</label>
+                        <input type="text" id="pName" placeholder="e.g. Amitabha Roy" required>
+                    </div>
+
+                    <!-- Dynamic Category Box -->
+                    <div class="form-group">
+                        <label>Category *</label>
+                        <div style="display: flex; gap: 10px;">
+                            <select id="pCategory" required>
+                                <!-- Categories load dynamically here -->
+                            </select>
+                            <button type="button" class="btn-add-cat" onclick="addNewCategory()" title="Add New Category">+</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Registration / PAN No *</label>
+                        <input type="text" id="pRegNo" placeholder="e.g. ABCDE1234F" required style="text-transform: uppercase;">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Site / Project Assigned *</label>
+                        <select id="pSite" required>
+                            <option value="">-- Select Site --</option>
+                            <option value="Commercial Complex B3">Commercial Complex B3</option>
+                            <option value="Residential Villa Phase 1">Residential Villa Phase 1</option>
+                            <option value="City Mall Extension">City Mall Extension</option>
+                            <option value="Highway Bridge T-4">Highway Bridge T-4</option>
+                            <option value="Salt Lake Sector V">Salt Lake Sector V</option>
+                            <option value="Kolkata Metro Project - Line 6">Kolkata Metro Project - Line 6</option>
+                            <option value="Dum Dum Warehouse Construction">Dum Dum Warehouse Construction</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Duty Days *</label>
+                        <input type="number" id="pDays" min="1" placeholder="e.g. 25" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Per Day Rate (₹) *</label>
+                        <input type="number" id="pRate" step="0.01" placeholder="e.g. 1500" required>
+                    </div>
+
+                    <!-- TDS Section -->
+                    <div class="form-group">
+                        <label>TDS Applicable?</label>
+                        <select id="pTdsApp" onchange="toggleTdsBox()" required>
+                            <option value="No">No</option>
+                            <option value="Yes">Yes</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="tdsPercentBox">
+                        <label>TDS Percentage (%) *</label>
+                        <input type="number" id="pTdsPerc" step="0.1" placeholder="e.g. 2, 5, 10">
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button type="button" class="btn-cancel" onclick="closeModal()">❌ Close</button>
+                    <button type="submit" class="btn-submit" id="btnSave">✅ Save Party Record</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- OFFICE PORTAL APPROVAL MODAL (ROUTES TO ApproveOffice.html) -->
+    <div id="officeApprovalModal">
+        <div class="box-container">
+            <button class="close-btn" onclick="closeOfficeApprovalModal()">&times;</button>
+            <h2 id="officeApprovalTitle" style="font-size: 18px; color: #ffc107; margin-bottom: 10px;">🏢 Send Request to ApproveOffice.html</h2>
+            <p id="officeApprovalDesc" style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">
+                অফিস পোর্টাল থেকে নতুন পার্টি/ইকুইপমেন্ট অ্যাড, তথ্য এডিট, ডিলিট বা নতুন ক্যাটাগরি অ্যাড করলে তা অ্যাডমিনের <strong>ApproveOffice.html</strong>-এ পাঠানো হবে। অ্যাডমিন অ্যাপ্রুভ করলেই এটি চূড়ান্ত হবে।
+            </p>
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label>Action & Party Details</label>
+                <input type="text" id="officeApprovalSummary" readonly style="color: #ffc107; font-weight: 700;">
+            </div>
+            <div class="form-group" style="margin-bottom: 18px;">
+                <label>Reason / Remarks for Admin Approval <span style="color: #ff4d4d;">*</span></label>
+                <textarea id="officeApprovalReason" rows="3" placeholder="Write a short note or reason for this party/equipment action..." style="resize: none;"></textarea>
+            </div>
+            <div class="button-group" style="margin-top: 10px;">
+                <button type="button" class="btn-cancel" onclick="closeOfficeApprovalModal()">Cancel</button>
+                <button type="button" class="btn-submit" style="background-color: #ffc107; color: #121212;" onclick="confirmOfficeApprovalRequest()">📤 Send for Approval</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================================================
+        // 1. PORTAL ROLE DETECTION & LOCALSTORAGE PERSISTENCE ENGINE
+        // =========================================================================================
+        let currentPortalMode = "admin"; // 'admin', 'office', or 'supervisor'
+        let loggedUserId = "ADMIN";
+        let loggedUserName = "Super Admin";
+        let assignedSite = "";
+        let pendingOfficePayload = null;
+
+        const defaultCategories = [
+            "Civil Contractor",
+            "Electrical Contractor",
+            "Plumbing Contractor",
+            "Labor Supplier",
+            "Material Vendor",
+            "Consultant"
+        ];
+
+        const defaultParties = [
+            { id: 1, name: 'Amitabha Roy', category: 'Civil Contractor', regNo: 'AMIT1234P', site: 'Commercial Complex B3', days: 20, rate: 2000, tdsApp: 'Yes', tdsPerc: 2, pendingStatus: null },
+            { id: 2, name: 'Maa Tara Traders', category: 'Material Vendor', regNo: 'GSTIN09876', site: 'City Mall Extension', days: 10, rate: 1200, tdsApp: 'No', tdsPerc: 0, pendingStatus: null }
+        ];
+
+        let categoryList = [];
+        let parties = [];
+        let editMode = false;
+
+        function loadAndSyncData() {
+            const storedCats = JSON.parse(localStorage.getItem('atr_equipment_categories'));
+            if (Array.isArray(storedCats) && storedCats.length > 0) {
+                categoryList = storedCats;
+            } else {
+                categoryList = [...defaultCategories];
+                localStorage.setItem('atr_equipment_categories', JSON.stringify(categoryList));
+            }
+
+            const storedParties = JSON.parse(localStorage.getItem('atr_equipment_parties'));
+            if (Array.isArray(storedParties) && storedParties.length > 0) {
+                parties = storedParties;
+            } else {
+                parties = [...defaultParties];
+                localStorage.setItem('atr_equipment_parties', JSON.stringify(parties));
+            }
+        }
+
+        function savePartiesToStorage() {
+            localStorage.setItem('atr_equipment_parties', JSON.stringify(parties));
+        }
+
+        function saveCategoriesToStorage() {
+            localStorage.setItem('atr_equipment_categories', JSON.stringify(categoryList));
+        }
+
+        function checkPortalPermissions() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewParam = (urlParams.get('view') || '').toLowerCase();
+            const badge = document.getElementById('roleModeBadge');
+            const backBtn = document.getElementById('btnBackDashboard');
+            const saveBtn = document.getElementById('btnSave');
+
+            let parentPath = "";
+            try {
+                if (window.parent && window.parent !== window) {
+                    parentPath = (window.parent.location.pathname || '').toLowerCase();
+                }
+            } catch (e) {}
+
+            if (viewParam === 'office' || parentPath.includes('officedashboard')) {
+                currentPortalMode = 'office';
+                loggedUserId = urlParams.get('userId') || sessionStorage.getItem('atr_logged_office_id') || localStorage.getItem('atr_logged_office_id') || "OFF-101";
+                loggedUserName = urlParams.get('userName') || "Office Staff";
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🏢 Office Mode (${loggedUserName}) — Synced with ApproveOffice.html`;
+                }
+                if (backBtn) {
+                    backBtn.href = "office/office_dashboard_home.html";
+                }
+                if (saveBtn) {
+                    saveBtn.innerText = "📤 Submit Party Record for Approval";
+                }
+            } else if (viewParam === 'supervisor' || parentPath.includes('supervisordashboard')) {
+                currentPortalMode = 'supervisor';
+                assignedSite = (urlParams.get('site') || sessionStorage.getItem('atr_supervisor_site') || "Salt Lake Sector V").trim();
+                loggedUserId = urlParams.get('supId') || "SUP-003";
+                loggedUserName = urlParams.get('supName') || "Supervisor";
+
+                if (badge) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerText = `🛡️️ Supervisor Mode (🔒 Site: ${assignedSite})`;
+                }
+                if (backBtn) {
+                    backBtn.href = "supervisor/supervisor_dashboard_home.html";
+                }
+            } else {
+                currentPortalMode = 'admin';
+                if (backBtn) {
+                    backBtn.href = "dashboard_home.html";
+                }
+            }
+        }
+
+        function handleBackToDashboard(event) {
+            if (currentPortalMode === 'office') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window && typeof window.parent.loadOfficeWorkspaceHome === 'function') {
+                        window.parent.loadOfficeWorkspaceHome();
+                        return;
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "office_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "office/office_dashboard_home.html";
+            } else if (currentPortalMode === 'supervisor') {
+                event.preventDefault();
+                try {
+                    if (window.parent && window.parent !== window) {
+                        const parentHomeLink = window.parent.document.querySelector('.dashboard-home-link');
+                        if (parentHomeLink) {
+                            window.location.href = parentHomeLink.href;
+                            return;
+                        }
+                    }
+                } catch (err) {}
+
+                if (document.referrer && document.referrer.includes('/')) {
+                    const baseFolder = document.referrer.substring(0, document.referrer.lastIndexOf('/') + 1);
+                    window.location.href = baseFolder + "supervisor_dashboard_home.html";
+                    return;
+                }
+                window.location.href = "supervisor/supervisor_dashboard_home.html";
+            }
+        }
+
+        window.onload = function() {
+            checkPortalPermissions();
+            loadAndSyncData();
+            renderCategoryDropdown();
+            renderTable(parties);
+        };
+
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'atr_equipment_parties' || e.key === 'atr_equipment_categories') {
+                loadAndSyncData();
+                renderCategoryDropdown();
+                searchParty();
+            }
+        });
+
+        // =========================================================================================
+        // 2. CATEGORY MANAGEMENT (ADMIN PASSWORD vs OFFICE APPROVAL)
+        // =========================================================================================
+        function renderCategoryDropdown() {
+            let catSelect = document.getElementById("pCategory");
+            let currentVal = catSelect.value; 
+            
+            catSelect.innerHTML = '<option value="">-- Select Category --</option>';
+            categoryList.forEach(cat => {
+                catSelect.innerHTML += `<option value="${cat}">${cat}</option>`;
+            });
+            
+            if (categoryList.includes(currentVal)) {
+                catSelect.value = currentVal;
+            }
+        }
+
+        function addNewCategory() {
+            if (currentPortalMode !== 'admin') {
+                let newCat = prompt("Enter new Party / Equipment Category name:");
+                if (!newCat || newCat.trim() === "") return;
+                newCat = newCat.trim();
+
+                let exists = categoryList.some(c => c.toLowerCase() === newCat.toLowerCase());
+                if (exists) {
+                    alert(`Category "${newCat}" already exists in the list!`);
+                    document.getElementById("pCategory").value = categoryList.find(c => c.toLowerCase() === newCat.toLowerCase());
+                    return;
+                }
+
+                categoryList.push(newCat);
+                saveCategoriesToStorage();
+                renderCategoryDropdown();
+                document.getElementById("pCategory").value = newCat;
+
+                // Push Category Addition to ApproveOffice.html
+                pushRequestToApproveOffice(
+                    "ADD EQUIPMENT CATEGORY",
+                    `Added New Party/Equipment Category: "${newCat}"`,
+                    null,
+                    { category: newCat },
+                    `New category added by ${loggedUserName}`
+                );
+                alert(`✅ Category "${newCat}" added and sent to ApproveOffice.html for Admin review!`);
+                return;
+            }
+
+            // Admin Mode Direct Category Addition with Password
+            let password = prompt("Security Check: \nEnter Admin Password to add a new category:");
+            
+            if (password === "admin123") {
+                let newCat = prompt("Enter new Category name:");
+                
+                if (newCat && newCat.trim() !== "") {
+                    newCat = newCat.trim();
+                    
+                    let exists = categoryList.some(c => c.toLowerCase() === newCat.toLowerCase());
+                    
+                    if (exists) {
+                        alert(`Category "${newCat}" already exists in the list!`);
+                        document.getElementById("pCategory").value = categoryList.find(c => c.toLowerCase() === newCat.toLowerCase());
+                    } else {
+                        categoryList.push(newCat);
+                        saveCategoriesToStorage();
+                        renderCategoryDropdown();
+                        document.getElementById("pCategory").value = newCat; 
+                        alert(`Category "${newCat}" has been successfully added to the list.`);
+                    }
+                }
+            } else if (password !== null) {
+                alert("❌ Incorrect Password! Access Denied.");
+            }
+        }
+
+        // =========================================================================================
+        // 3. SEARCH, MODAL & FORM SUBMISSION ENGINE
+        // =========================================================================================
+        function searchParty() {
+            let filterVal = document.getElementById("searchInput").value.toLowerCase();
+            let filtered = parties.filter(p => 
+                p.name.toLowerCase().includes(filterVal) || 
+                p.regNo.toLowerCase().includes(filterVal) ||
+                p.site.toLowerCase().includes(filterVal) ||
+                p.category.toLowerCase().includes(filterVal)
+            );
+            renderTable(filtered);
+        }
+
+        function toggleTdsBox() {
+            const tdsApp = document.getElementById("pTdsApp").value;
+            const percentBox = document.getElementById("tdsPercentBox");
+            const percentInput = document.getElementById("pTdsPerc");
+
+            if(tdsApp === "Yes") {
+                percentBox.classList.add("show");
+                percentInput.setAttribute("required", "true");
+            } else {
+                percentBox.classList.remove("show");
+                percentInput.removeAttribute("required");
+                percentInput.value = ""; 
+            }
+        }
+
+        function openNewPartyModal() {
+            editMode = false;
+            openModal();
+        }
+
+        function openModal() {
+            document.getElementById('entryModal').classList.add('show');
+            if(!editMode) {
+                document.getElementById("formTitle").innerText = "📝 Party Registration";
+                document.getElementById("btnSave").innerText = currentPortalMode === 'admin'
+                    ? "✅ Save Party Record"
+                    : "📤 Submit Party Record for Approval";
+                document.getElementById("partyForm").reset();
+                document.getElementById("pId").value = "";
+                toggleTdsBox(); 
+                setTimeout(() => { document.getElementById("pName").focus(); }, 100); 
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('entryModal').classList.remove('show');
+            editMode = false;
+        }
+
+        document.getElementById("partyForm").addEventListener("submit", function(e) {
+            e.preventDefault();
+            
+            let id = document.getElementById("pId").value;
+            let name = document.getElementById("pName").value.trim();
+            let category = document.getElementById("pCategory").value;
+            let regNo = document.getElementById("pRegNo").value.trim().toUpperCase();
+            let site = document.getElementById("pSite").value;
+            let days = parseInt(document.getElementById("pDays").value) || 0;
+            let rate = parseFloat(document.getElementById("pRate").value) || 0;
+            let tdsApp = document.getElementById("pTdsApp").value;
+            let tdsPerc = tdsApp === "Yes" ? (parseFloat(document.getElementById("pTdsPerc").value) || 0) : 0;
+
+            let isDuplicate = parties.some(p => 
+                p.regNo.toLowerCase() === regNo.toLowerCase() && 
+                p.site === site && 
+                String(p.id) !== String(id) 
+            );
+
+            if (isDuplicate) {
+                alert(`⚠️ Duplicate Entry Detected!\n\n"${name}" (Reg: ${regNo}) is already assigned to the site: "${site}". \n\nPlease select a different site or edit the existing record.`);
+                return; 
+            }
+
+            let baseAmount = days * rate;
+            let tdsAmount = tdsApp === 'Yes' ? (baseAmount * tdsPerc) / 100 : 0;
+            let netAmount = baseAmount - tdsAmount;
+
+            if (editMode) {
+                let index = parties.findIndex(p => String(p.id) === String(id));
+                if (index === -1) return;
+
+                const oldRecord = { ...parties[index] };
+                const updatedRecord = {
+                    id: parties[index].id,
+                    name,
+                    category,
+                    regNo,
+                    site,
+                    days,
+                    rate,
+                    tdsApp,
+                    tdsPerc,
+                    pendingStatus: null
+                };
+
+                // OFFICE PORTAL: Route Edit to ApproveOffice.html
+                if (currentPortalMode !== 'admin') {
+                    openOfficeApprovalModal({
+                        type: 'EDIT',
+                        targetId: parties[index].id,
+                        actionLabel: "EDIT PARTY / EQUIPMENT RECORD",
+                        summary: `${name} (${category} | ${site}) — ${days} Days @ ₹${rate}/day | Net: ₹${netAmount.toFixed(2)}`,
+                        oldData: oldRecord,
+                        newData: updatedRecord
+                    });
+                    return;
+                }
+
+                // ADMIN DIRECT UPDATE
+                parties[index] = updatedRecord;
+                savePartiesToStorage();
+                closeModal(); 
+            } else {
+                let newId = Date.now();
+                const newRecord = {
+                    id: newId,
+                    name,
+                    category,
+                    regNo,
+                    site,
+                    days,
+                    rate,
+                    tdsApp,
+                    tdsPerc,
+                    pendingStatus: null
+                };
+
+                // OFFICE PORTAL: Route New Entry to ApproveOffice.html
+                if (currentPortalMode !== 'admin') {
+                    openOfficeApprovalModal({
+                        type: 'CREATE',
+                        targetId: newId,
+                        actionLabel: "NEW PARTY / EQUIPMENT REGISTRATION",
+                        summary: `New Party: ${name} (${category} | Reg: ${regNo} | ${site}) — Net: ₹${netAmount.toFixed(2)}`,
+                        oldData: null,
+                        newData: newRecord
+                    });
+                    return;
+                }
+
+                // ADMIN DIRECT SAVE
+                parties.push(newRecord);
+                savePartiesToStorage();
+                
+                document.getElementById("partyForm").reset();
+                document.getElementById("pId").value = "";
+                toggleTdsBox();
+                document.getElementById("pName").focus(); 
+                
+                let saveBtn = document.getElementById("btnSave");
+                let origText = saveBtn.innerText;
+                saveBtn.innerText = "✅ Saved Successfully!";
+                saveBtn.style.backgroundColor = "#218838"; 
+                setTimeout(() => {
+                    saveBtn.innerText = origText;
+                    saveBtn.style.backgroundColor = "#28a745"; 
+                }, 1500);
+            }
+
+            document.getElementById("searchInput").value = "";
+            renderTable(parties); 
+        });
+
+        // =========================================================================================
+        // 4. RENDER TABLE, EDIT & DELETE ACTIONS
+        // =========================================================================================
+        function renderTable(dataToRender) {
+            let tbody = document.getElementById("partyTableBody");
+            tbody.innerHTML = ""; 
+            
+            dataToRender.forEach(p => {
+                let baseAmount = p.days * p.rate;
+                let tdsAmount = p.tdsApp === 'Yes' ? (baseAmount * p.tdsPerc) / 100 : 0;
+                let netAmount = baseAmount - tdsAmount;
+
+                let tdsDisplay = p.tdsApp === 'Yes' 
+                    ? `<span style="color:#dc3545; font-size:12px;">-${p.tdsPerc}% (₹${tdsAmount.toFixed(2)})</span>` 
+                    : `<span style="color:var(--text-muted); font-size:12px;">N/A</span>`;
+
+                let pendingBadge = p.pendingStatus
+                    ? `<br><span class="pending-status-pill">⏳ ${p.pendingStatus}</span>`
+                    : '';
+
+                let row = `<tr id="row_${p.id}">
+                    <td>
+                        <strong>${p.name}</strong><br>
+                        <span style="font-size:11px; color:var(--text-muted);">Reg: ${p.regNo}</span>
+                        ${pendingBadge}
+                    </td>
+                    <td>${p.category}</td>
+                    <td><span style="color:var(--theme-color); font-weight:600;">${p.site}</span></td>
+                    <td>${p.days} Days<br><span style="font-size:11px; color:var(--text-muted);">@ ₹${p.rate}/day</span></td>
+                    <td>${tdsDisplay}</td>
+                    <td><strong style="color:#28a745; font-size:15px;">₹${netAmount.toFixed(2)}</strong></td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="btn-edit" onclick="editParty('${p.id}')">Edit</button>
+                            <button class="btn-delete" onclick="deleteParty('${p.id}')">Delete</button>
+                        </div>
+                    </td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+
+            if(dataToRender.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding: 30px 0;">No parties registered yet.</td></tr>`;
+            }
+        }
+
+        function editParty(id) {
+            let p = parties.find(x => String(x.id) === String(id));
+            if(p) {
+                document.getElementById("pId").value = p.id;
+                document.getElementById("pName").value = p.name;
+                
+                if (!categoryList.includes(p.category)) {
+                    categoryList.push(p.category);
+                    renderCategoryDropdown();
+                }
+                document.getElementById("pCategory").value = p.category;
+                
+                document.getElementById("pRegNo").value = p.regNo;
+                document.getElementById("pSite").value = p.site;
+                document.getElementById("pDays").value = p.days;
+                document.getElementById("pRate").value = p.rate;
+                
+                document.getElementById("pTdsApp").value = p.tdsApp;
+                toggleTdsBox();
+                if(p.tdsApp === 'Yes') { document.getElementById("pTdsPerc").value = p.tdsPerc; }
+                
+                document.getElementById("formTitle").innerText = currentPortalMode === 'admin'
+                    ? "🔄 Edit Party Details"
+                    : "🔄 Edit Party Details (Requires Approval)";
+                document.getElementById("btnSave").innerText = currentPortalMode === 'admin'
+                    ? "🔄 Update Record"
+                    : "📤 Send Update for Approval";
+                editMode = true;
+                
+                openModal();
+            }
+        }
+
+        function deleteParty(id) {
+            let p = parties.find(x => String(x.id) === String(id));
+            if (!p) return;
+
+            // OFFICE PORTAL: Route Delete to ApproveOffice.html
+            if (currentPortalMode !== 'admin') {
+                openOfficeApprovalModal({
+                    type: 'DELETE',
+                    targetId: p.id,
+                    actionLabel: "DELETE PARTY / EQUIPMENT RECORD",
+                    summary: `Delete Party: ${p.name} (${p.category} | Reg: ${p.regNo} | ${p.site})`,
+                    oldData: { ...p },
+                    newData: null
+                });
+                return;
+            }
+
+            // ADMIN MODE DIRECT DELETE WITH PASSWORD
+            let password = prompt("Security Check: \nEnter Admin Password to delete this party record:");
+            if (password === "admin123") {
+                const row = document.getElementById("row_" + id);
+                if (row) {
+                    row.style.background = "rgba(220, 53, 69, 0.3)";
+                    row.style.transition = "all 0.4s";
+                }
+                
+                setTimeout(() => {
+                    parties = parties.filter(item => String(item.id) !== String(id));
+                    savePartiesToStorage();
+                    let filterVal = document.getElementById("searchInput").value.toLowerCase();
+                    if(filterVal) { searchParty(); } else { renderTable(parties); }
+                }, 300);
+            } else if (password !== null) {
+                alert("❌ Incorrect Password! Record deletion denied.");
+            }
+        }
+
+        // =========================================================================================
+        // 5. OFFICE PORTAL APPROVAL MODAL ENGINE (ROUTES TO ApproveOffice.html)
+        // =========================================================================================
+        function openOfficeApprovalModal(payload) {
+            pendingOfficePayload = payload;
+            document.getElementById('officeApprovalSummary').value = `${payload.actionLabel}: ${payload.summary}`;
+            document.getElementById('officeApprovalReason').value = '';
+            document.getElementById('officeApprovalModal').classList.add('show');
+            setTimeout(() => document.getElementById('officeApprovalReason').focus(), 50);
+        }
+
+        function closeOfficeApprovalModal() {
+            document.getElementById('officeApprovalModal').classList.remove('show');
+            pendingOfficePayload = null;
+        }
+
+        function confirmOfficeApprovalRequest() {
+            const reason = document.getElementById('officeApprovalReason').value.trim();
+            if (!reason) {
+                alert("⚠️️ Please enter a reason/remark for Admin Approval.");
+                return;
+            }
+            if (!pendingOfficePayload) return;
+
+            if (pendingOfficePayload.type === 'CREATE') {
+                parties.push({
+                    ...pendingOfficePayload.newData,
+                    pendingStatus: "Pending in ApproveOffice"
+                });
+                savePartiesToStorage();
+                closeModal();
+            } else if (pendingOfficePayload.type === 'EDIT') {
+                const idx = parties.findIndex(p => String(p.id) === String(pendingOfficePayload.targetId));
+                if (idx > -1) {
+                    parties[idx].pendingStatus = "Edit Pending";
+                    savePartiesToStorage();
+                }
+                closeModal();
+            } else if (pendingOfficePayload.type === 'DELETE') {
+                const idx = parties.findIndex(p => String(p.id) === String(pendingOfficePayload.targetId));
+                if (idx > -1) {
+                    parties[idx].pendingStatus = "Delete Pending";
+                    savePartiesToStorage();
+                }
+            }
+
+            pushRequestToApproveOffice(
+                pendingOfficePayload.actionLabel,
+                pendingOfficePayload.summary,
+                pendingOfficePayload.oldData,
+                pendingOfficePayload.newData,
+                reason
+            );
+
+            closeOfficeApprovalModal();
+            document.getElementById("searchInput").value = "";
+            renderTable(parties);
+            alert("📤 Request sent to ApproveOffice.html for Admin Approval!");
+        }
+
+        function pushRequestToApproveOffice(actionLabel, summaryText, oldDataObj, newDataObj, reasonText) {
+            const newReq = {
+                reqId: "OFF-EQP-" + Date.now().toString().slice(-5),
+                userId: loggedUserId,
+                userName: loggedUserName,
+                designation: "Office Staff",
+                module: "AddEquipment.html",
+                action: actionLabel,
+                summary: summaryText,
+                oldData: oldDataObj,
+                newData: newDataObj,
+                reason: reasonText,
+                timestamp: new Date().toLocaleString('en-IN'),
+                status: "Pending"
+            };
+
+            const officeQueue = JSON.parse(localStorage.getItem('atr_office_approvals')) || [];
+            officeQueue.unshift(newReq);
+            localStorage.setItem('atr_office_approvals', JSON.stringify(officeQueue));
+            localStorage.setItem('approve_office_requests', JSON.stringify(officeQueue));
+            localStorage.setItem('ApproveOffice_requests', JSON.stringify(officeQueue));
+
+            // Log in Office Daily Work Report (office_dashboard_home.html)
+            const workLogs = JSON.parse(localStorage.getItem('atr_office_daily_work')) || [];
+            const todayStr = new Date().toISOString().split('T')[0];
+            const nowTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+            workLogs.unshift({
+                id: "WRK-" + Date.now().toString().slice(-5),
+                userId: loggedUserId,
+                userName: loggedUserName,
+                date: todayStr,
+                time: nowTime,
+                module: "Equipment / Party Master (AddEquipment.html)",
+                refNo: newReq.reqId,
+                desc: `${actionLabel}: ${summaryText}`,
+                status: "Sent for Approval"
+            });
+            localStorage.setItem('atr_office_daily_work', JSON.stringify(workLogs));
+
+            try {
+                if (window.parent && window.parent !== window && typeof window.parent.refreshNotificationsUI === 'function') {
+                    window.parent.refreshNotificationsUI();
+                }
+            } catch (e) {}
+        }
+    </script>
+</body>
+</html>

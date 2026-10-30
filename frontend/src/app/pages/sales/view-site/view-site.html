@@ -1,0 +1,189 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1><i class="ri-building-line"></i> {{ showLedger() ? 'Site Ledger' : 'Site Management' }}</h1>
+    <div class="header-actions">
+      <button class="btn-secondary" (click)="toggleView()">
+        <i [class]="showLedger() ? 'ri-building-line' : 'ri-bar-chart-line'"></i>
+        {{ showLedger() ? 'Site Management' : 'Site Ledger' }}
+      </button>
+      @if (!showLedger() && !showForm()) {
+        <button class="btn-primary" (click)="openAddForm()"><i class="ri-add-line"></i> Add Site</button>
+        <button class="btn-export" (click)="exportSites()"><i class="ri-file-excel-2-line"></i> Export</button>
+      }
+    </div>
+  </div>
+
+  @if (!showLedger()) {
+    <app-summary-cards [cards]="summaryCards" />
+
+    @if (showForm()) {
+      <div class="card-container">
+        <h3 style="margin-bottom:16px;font-weight:700;color:var(--theme-color);">
+          {{ editingId() ? 'Edit Site' : 'Add New Site' }}
+        </h3>
+        <form (ngSubmit)="saveSite()">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Site Name *</label>
+              <input type="text" [ngModel]="siteName()" (ngModelChange)="siteName.set($event)" name="siteName" placeholder="e.g. Salt Lake Sector V Project" required />
+            </div>
+            <div class="form-group">
+              <label>Company</label>
+              <app-searchable-dropdown [items]="companyItems" placeholder="Select Company"
+                [ngModel]="siteCompanyId() === '' ? '' : '' + siteCompanyId()" (ngModelChange)="siteCompanyId.set($event ? +$event : '')" name="comp" />
+            </div>
+            <div class="form-group">
+              <label>Status</label>
+              <select [ngModel]="siteStatus()" (ngModelChange)="siteStatus.set($event)" name="siteStatus">
+                @for (s of statusOptions; track s) {
+                  <option [value]="s">{{ s }}</option>
+                }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Address</label>
+              <input type="text" [ngModel]="siteAddress()" (ngModelChange)="siteAddress.set($event)" name="siteAddress" placeholder="Full site address" />
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn-primary" [disabled]="saving()">
+              {{ saving() ? 'Saving...' : (editingId() ? 'Update Site' : 'Add Site') }}
+            </button>
+            <button type="button" class="btn-secondary" (click)="cancelForm()" [disabled]="saving()">Cancel</button>
+          </div>
+        </form>
+      </div>
+    }
+
+    <div class="card-container">
+      <div class="table-toolbar">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;">
+          <div class="form-group" style="margin-bottom:0;flex:1;min-width:180px;">
+            <label>Search</label>
+            <input type="text" [ngModel]="filterSite()" (ngModelChange)="filterSite.set($event)" placeholder="Search sites..." />
+          </div>
+          <div class="form-group" style="margin-bottom:0;min-width:140px;">
+            <label>Status</label>
+            <select [ngModel]="filterStatus()" (ngModelChange)="filterStatus.set($event)">
+              <option value="">All Statuses</option>
+              @for (s of statusOptions; track s) {
+                <option [value]="s">{{ s }}</option>
+              }
+            </select>
+          </div>
+        </div>
+      </div>
+
+      @if (loading()) {
+        <div class="skeleton" style="height:200px;"></div>
+      } @else {
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr><th>ID</th><th>Site Name</th><th>Company</th><th>Address</th><th>Status</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+              @for (site of filteredSites; track site.id) {
+                <tr>
+                  <td><span class="badge badge-info">{{ site.display_id }}</span></td>
+                  <td style="font-weight:600;">{{ site.name }}</td>
+                  <td>{{ companyName(site.company_id) }}</td>
+                  <td>{{ site.address || '—' }}</td>
+                  <td><span class="badge {{ statusBadgeClass(site.status) }}">{{ site.status | titlecase }}</span></td>
+                  <td>
+                    <div style="display:flex;gap:6px;">
+                      <button class="btn-secondary" style="padding:4px 10px;font-size:12px;" (click)="editSite(site)"><i class="ri-edit-line"></i> Edit</button>
+                      @if (site.status !== 'inactive') {
+                        <button class="btn-secondary" style="padding:4px 10px;font-size:12px;color:var(--danger);" (click)="deactivateSite(site)"><i class="ri-close-circle-line"></i></button>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="6" class="empty-state">No sites found.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+
+  @if (showLedger()) {
+    <div class="card-container">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Company</label>
+          <app-searchable-dropdown [items]="companyItems" placeholder="All Companies"
+            [ngModel]="ledgerCompany()" (ngModelChange)="ledgerCompany.set($event); ledgerSite.set('')" name="lc" />
+        </div>
+        <div class="form-group">
+          <label>Site *</label>
+          <select [ngModel]="ledgerSite()" (ngModelChange)="ledgerSite.set($event)">
+            <option value="">-- Select Site --</option>
+            @for (s of companySites; track s.id) {
+              <option [value]="s.id">{{ s.name }}</option>
+            }
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:10px;">
+        <button class="btn-primary" (click)="loadSiteLedger()" [disabled]="ledgerLoading()">
+          {{ ledgerLoading() ? 'Loading...' : 'Load Ledger' }}
+        </button>
+        @if (ledgerData()) {
+          <button class="btn-secondary" (click)="printLedger()"><i class="ri-printer-line"></i> Print</button>
+        }
+      </div>
+    </div>
+
+    @if (ledgerData()) {
+      <div id="site-ledger-print">
+        @for (section of ledgerSections; track section) {
+          <div class="card-container" style="margin-top:16px;">
+            <h3 style="font-size:15px;font-weight:700;margin-bottom:12px;color:var(--theme-color);text-transform:capitalize;">
+              <i class="ri-folder-line"></i> {{ section }} Ledger
+            </h3>
+            <div class="table-responsive">
+              <table>
+                <thead><tr><th>Month</th><th>Particulars</th><th>Debit</th><th>Credit</th><th>Amount</th></tr></thead>
+                <tbody>
+                  @if (ledgerData()[section]?.length) {
+                    @for (row of ledgerData()[section]; track $index) {
+                      <tr>
+                        <td>{{ row.month ?? row.date }}</td>
+                        <td>{{ row.particulars ?? row.description ?? row.name }}</td>
+                        <td style="color:var(--danger);font-weight:700;">{{ row.debit > 0 ? '₹' + (row.debit | number) : '-' }}</td>
+                        <td style="color:var(--success);font-weight:700;">{{ row.credit > 0 ? '₹' + (row.credit | number) : '-' }}</td>
+                        <td style="font-weight:700;">₹{{ row.amount | number }}</td>
+                      </tr>
+                    }
+                    <tr style="background:var(--input-bg);font-weight:800;">
+                      <td colspan="2" style="text-align:right;">Section Total</td>
+                      <td style="color:var(--danger);">₹{{ sectionTotal(section, 'debit') | number }}</td>
+                      <td style="color:var(--success);">₹{{ sectionTotal(section, 'credit') | number }}</td>
+                      <td>₹{{ sectionTotal(section, 'amount') | number }}</td>
+                    </tr>
+                  } @else {
+                    <tr><td colspan="5" class="empty-state">No {{ section }} entries.</td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+
+        <div class="card-container" style="background:var(--theme-color);color:#fff;border:none;margin-top:16px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;">
+            <h3 style="font-size:16px;font-weight:800;margin:0;color:#fff;">Grand Total</h3>
+            <span style="font-size:22px;font-weight:900;">₹{{ grandTotal | number }}</span>
+          </div>
+        </div>
+      </div>
+    } @else if (!ledgerLoading()) {
+      <div class="card-container" style="margin-top:16px;">
+        <p class="empty-state">Select a site and click "Load Ledger" to view the site ledger.</p>
+      </div>
+    }
+  }
+</div>

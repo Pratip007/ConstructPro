@@ -1,0 +1,248 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1><i class="ri-money-rupee-circle-line"></i> {{ editingId() ? 'Edit Receipt' : 'Balance Received' }}</h1>
+    <div style="display: flex; gap: 10px;">
+      @if (filteredReceipts().length) {
+        <button class="btn-export" (click)="exportExcel()"><i class="ri-file-excel-2-line"></i> Excel</button>
+        <button class="btn-export" (click)="exportPdf()"><i class="ri-file-pdf-line"></i> PDF</button>
+        <button class="btn-export" (click)="printReport()"><i class="ri-printer-line"></i> Print</button>
+      }
+    </div>
+  </div>
+
+  <app-summary-cards [cards]="summaryCards()"></app-summary-cards>
+
+  <!-- Receipt Entry Form -->
+  <div class="card-container" style="margin-top: 20px;">
+    <h3 style="font-size: 14px; font-weight: 700; margin-bottom: 16px; color: var(--accent);">
+      {{ editingId() ? 'Edit Receipt' : 'New Receipt Entry' }}
+    </h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <app-searchable-dropdown
+          [items]="companyItems()"
+          [label]="'Company'"
+          [placeholder]="'Select Company...'"
+          [required]="true"
+          [ngModel]="selectedCompany()"
+          (ngModelChange)="selectedCompany.set($event); onCompanyChange()"
+          name="company"
+        ></app-searchable-dropdown>
+      </div>
+      <div class="form-group">
+        <app-searchable-dropdown
+          [items]="siteItems()"
+          [label]="'Site Filter'"
+          [placeholder]="'All Sites'"
+          [ngModel]="selectedSite()"
+          (ngModelChange)="selectedSite.set($event)"
+          name="site"
+        ></app-searchable-dropdown>
+      </div>
+      <div class="form-group">
+        <label>Select Invoice <span style="color: var(--danger);">*</span></label>
+        <select [ngModel]="selectedInvoiceId()" (ngModelChange)="onInvoiceSelect($event)" name="invoice">
+          <option value="">-- Select Invoice --</option>
+          @for (inv of filteredInvoices(); track inv.id) {
+            <option [value]="inv.id">
+              {{ inv.display_id ?? inv.invoice_no ?? inv.id }} — ₹{{ inv.base_amount?.toLocaleString() }}
+              @if (inv.due_amount != null) {
+                (Due: ₹{{ inv.due_amount?.toLocaleString() }})
+              }
+            </option>
+          }
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Amount Received (₹) <span style="color: var(--danger);">*</span></label>
+        <input type="number" [ngModel]="amount()" (ngModelChange)="amount.set($event)" name="amount" placeholder="Enter Amount" />
+      </div>
+      <div class="form-group">
+        <label>
+          TDS Deduction (₹)
+          <span style="margin-left: 8px; display: inline-flex; gap: 4px;">
+            @for (pct of tdsPresets; track pct) {
+              <button
+                type="button"
+                (click)="applyTdsPercent(pct)"
+                [style.background]="tdsPercent() === pct ? 'var(--accent)' : 'var(--input-bg)'"
+                [style.color]="tdsPercent() === pct ? '#fff' : 'var(--text-primary)'"
+                style="border: 1px solid var(--border-color); border-radius: 4px; padding: 1px 6px; font-size: 11px; cursor: pointer;">
+                {{ pct }}%
+              </button>
+            }
+          </span>
+        </label>
+        <input type="number" [ngModel]="tdsAmount()" (ngModelChange)="tdsAmount.set($event)" name="tds" placeholder="TDS Amount" />
+      </div>
+      <div class="form-group">
+        <label>Net Received</label>
+        <input type="text" [value]="'₹' + netReceived().toLocaleString()" readonly style="font-weight: 700; color: var(--success); background: var(--input-bg);" />
+      </div>
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" [ngModel]="receiveDate()" (ngModelChange)="receiveDate.set($event)" name="date" />
+      </div>
+      <div class="form-group">
+        <label>Payment Mode</label>
+        <select [ngModel]="paymentMode()" (ngModelChange)="paymentMode.set($event)" name="paymentMode">
+          <option value="">-- Select Mode --</option>
+          @for (m of paymentModes; track m) {
+            <option [value]="m">{{ m }}</option>
+          }
+        </select>
+      </div>
+      <div class="form-group">
+        <app-searchable-dropdown
+          [items]="bankItems()"
+          [label]="'Bank'"
+          [placeholder]="'Select Bank...'"
+          [ngModel]="bank()"
+          (ngModelChange)="bank.set($event)"
+          name="bank"
+        ></app-searchable-dropdown>
+      </div>
+      <div class="form-group">
+        <label>Reference / Cheque No</label>
+        <input type="text" [ngModel]="referenceNo()" (ngModelChange)="referenceNo.set($event)" name="refNo" placeholder="Cheque / Reference No" />
+      </div>
+      <div class="form-group">
+        <label>Remarks</label>
+        <input type="text" [ngModel]="remarks()" (ngModelChange)="remarks.set($event)" name="remarks" placeholder="Remarks" />
+      </div>
+    </div>
+
+    <!-- Invoice Details Card -->
+    @if (selectedInvoice(); as inv) {
+      <div style="margin-top: 16px; padding: 12px 16px; background: var(--input-bg); border-radius: 8px; display: flex; flex-wrap: wrap; gap: 16px; align-items: center;">
+        <div>
+          <span style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase;">Base</span>
+          <div style="font-weight: 700;">₹{{ inv.base_amount?.toLocaleString() }}</div>
+        </div>
+        <div>
+          <span style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase;">GST</span>
+          <div style="font-weight: 700;">₹{{ inv.gst_amount?.toLocaleString() }}</div>
+        </div>
+        <div>
+          <span style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase;">Gross</span>
+          <div style="font-weight: 800; color: var(--accent);">₹{{ (inv.gross_amount ?? (inv.base_amount + inv.gst_amount))?.toLocaleString() }}</div>
+        </div>
+        <div style="border-left: 2px solid var(--border-color); padding-left: 16px;">
+          <span style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase;">Already Paid</span>
+          <div style="font-weight: 700; color: var(--success);">₹{{ alreadyPaid().toLocaleString() }}</div>
+        </div>
+        <div>
+          <span style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase;">Balance Due</span>
+          <div style="font-weight: 800; color: var(--danger);">₹{{ balanceDue().toLocaleString() }}</div>
+        </div>
+      </div>
+    }
+
+    <div style="margin-top: 20px; display: flex; gap: 10px;">
+      <button class="btn-primary" (click)="saveReceipt()" [disabled]="saving()">
+        <i [class]="editingId() ? 'ri-save-line' : 'ri-add-line'"></i>
+        {{ saving() ? 'Saving...' : (editingId() ? 'Update Receipt' : 'Add Receipt') }}
+      </button>
+      @if (editingId()) {
+        <button class="btn-secondary" (click)="cancelEdit()">Cancel</button>
+      }
+    </div>
+  </div>
+
+  <!-- Receipts Table -->
+  <div class="table-responsive" id="receipt-table" style="margin-top: 20px;">
+    @if (loading()) {
+      <div class="empty-state"><div class="skeleton" style="height: 200px;"></div></div>
+    } @else {
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Invoice</th>
+            <th>Amount (₹)</th>
+            <th>TDS (₹)</th>
+            <th>Net (₹)</th>
+            <th>Mode</th>
+            <th>Ref No</th>
+            <th>Remarks</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of filteredReceipts(); track r.id) {
+            <tr>
+              <td>{{ r.date }}</td>
+              <td style="font-family: monospace; color: var(--accent);">{{ r.invoice_id }}</td>
+              <td style="font-weight: 700; color: var(--success);">₹{{ r.amount?.toLocaleString() }}</td>
+              <td style="color: var(--warning);">{{ r.tds_amount ? '₹' + r.tds_amount.toLocaleString() : '—' }}</td>
+              <td style="font-weight: 700;">₹{{ ((r.amount ?? 0) - (r.tds_amount ?? 0)).toLocaleString() }}</td>
+              <td>{{ r.payment_method ?? '—' }}</td>
+              <td>{{ r.reference_number ?? '—' }}</td>
+              <td>{{ r.remarks ?? '—' }}</td>
+              <td>
+                <div style="display: flex; gap: 6px;">
+                  <button class="btn-secondary" style="padding: 4px 10px; font-size: 12px;" (click)="editReceipt(r)" title="Edit">
+                    <i class="ri-pencil-line"></i>
+                  </button>
+                  <button class="btn-danger" style="padding: 4px 10px; font-size: 12px;" (click)="deleteReceipt(r)" title="Delete">
+                    <i class="ri-delete-bin-line"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="9" class="empty-state">No receipts found.</td></tr>
+          }
+        </tbody>
+        @if (filteredReceipts().length) {
+          <tfoot>
+            <tr style="font-weight: 800; background: var(--input-bg);">
+              <td colspan="2" style="text-align: right;">Total</td>
+              <td style="color: var(--success);">₹{{ summaryCards()[0].value.toLocaleString() }}</td>
+              <td style="color: var(--warning);">₹{{ summaryCards()[1].value.toLocaleString() }}</td>
+              <td>₹{{ summaryCards()[2].value.toLocaleString() }}</td>
+              <td colspan="4"></td>
+            </tr>
+          </tfoot>
+        }
+      </table>
+    }
+  </div>
+
+  <!-- Payment History for Selected Invoice -->
+  @if (selectedInvoice() && paymentHistory().length) {
+    <div class="card-container" style="margin-top: 20px; border-left: 4px solid var(--info);">
+      <h3 style="font-size: 14px; font-weight: 700; margin-bottom: 12px; color: var(--info);">
+        <i class="ri-history-line"></i> Payment History — {{ selectedInvoice()?.display_id ?? selectedInvoice()?.invoice_no }}
+      </h3>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Amount (₹)</th>
+              <th>TDS (₹)</th>
+              <th>Net (₹)</th>
+              <th>Mode</th>
+              <th>Reference</th>
+              <th>Remarks</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of paymentHistory(); track p.id) {
+              <tr>
+                <td>{{ p.date }}</td>
+                <td style="font-weight: 700; color: var(--success);">₹{{ p.amount?.toLocaleString() }}</td>
+                <td>{{ p.tds_amount ? '₹' + p.tds_amount.toLocaleString() : '—' }}</td>
+                <td style="font-weight: 700;">₹{{ ((p.amount ?? 0) - (p.tds_amount ?? 0)).toLocaleString() }}</td>
+                <td>{{ p.payment_method ?? '—' }}</td>
+                <td>{{ p.reference_number ?? '—' }}</td>
+                <td>{{ p.remarks ?? '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+</div>
